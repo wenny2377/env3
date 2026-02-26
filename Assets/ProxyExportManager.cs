@@ -1,152 +1,173 @@
 using Newtonsoft.Json;
 using UnityEngine;
+using UnityEngine.Networking;
+using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System;
 
 public class ProxyExportManager : MonoBehaviour
 {
-    [Header("Hierarchy Structure Settings")]
-    [Tooltip("Drag the Proxies_Root object from the Hierarchy here")]
+    [Header("API Connection Settings")]
+    [Tooltip("Your Python Flask /scene endpoint URL")]
+    public string apiEndpoint = "http://localhost:5000/scene"; 
+    
+    [Header("Automation Settings")]
+    [Tooltip("Automatically scan once when Play is pressed")]
+    public bool scanOnStart = true;
+    [Tooltip("Auto update interval (seconds), 600 seconds = 10 minutes")]
+    public float updateInterval = 600f;
+
+    [Header("Scene Structure Settings")]
+    [Tooltip("Drag Proxies_Root from the Hierarchy here")]
     public Transform proxiesRoot;
+    public string cameraTag = "MockCamera"; // Pivot camera tag inside the room
 
-    [Header("Layer and Tag Settings")]
-    public LayerMask roomLayer;       // Set as RoomLayer
-    public LayerMask viewLayer;       // Layer where scene objects are visible (usually Default)
-    public string cameraTag = "MockCamera"; // Tag name of pivot camera objects
-
-    [Header("Snapshot Settings")]
+    [Header("Physics & Rendering Settings")]
+    public LayerMask roomLayer;       // Set to RoomLayer (for RoomArea)
+    public LayerMask viewLayer;       // Set to Default (furniture layer)
     public Camera snapshotCam;        // Dedicated snapshot camera
-    public int resolution = 512;      // Image resolution
+    public int resolution = 512;
 
-    [ContextMenu("Execute Full Global Scan")]
-    public void ExecuteScan()
+    private void Start()
+    {
+        // 1. Automatically execute first scan after game starts
+        if (scanOnStart)
+        {
+            Invoke("StartGlobalScan", 3f); // Delay 3 seconds to ensure scene initialization
+        }
+
+        // 2. Enable scheduled update (every X seconds)
+        InvokeRepeating("StartGlobalScan", updateInterval, updateInterval);
+    }
+
+    [ContextMenu("🚀 Run Full Scene Scan Manually")]
+    public void StartGlobalScan()
+    {
+        Debug.Log($"<color=cyan>[Scene Sync]</color> Starting scan and updating MongoDB data... Time: {DateTime.Now}");
+        StartCoroutine(ExecuteScanRoutine());
+    }
+
+    private IEnumerator ExecuteScanRoutine()
     {
         if (proxiesRoot == null || snapshotCam == null)
         {
-            Debug.LogError("Error: Please assign ProxiesRoot and SnapshotCamera in the Inspector.");
-            return;
+            Debug.LogError("Error: Please assign ProxiesRoot and SnapshotCam in the Inspector.");
+            yield break;
         }
 
-        // 1. Find all pivot objects tagged as MockCamera
         GameObject[] pivots = GameObject.FindGameObjectsWithTag(cameraTag);
         if (pivots.Length == 0)
         {
-            Debug.LogError("Error: No objects with the tag 'MockCamera' were found in the scene.");
-            return;
+            Debug.LogError("Error: No MockCamera found in the scene.");
+            yield break;
         }
 
-        List<Dictionary<string, object>> allData = new List<Dictionary<string, object>>();
+        List<Dictionary<string, object>> objectList = new List<Dictionary<string, object>>();
 
-        // 2. Iterate through all child objects under Proxies_Root (scene proxies)
+        // Iterate through all furniture proxy objects under Proxies_Root
         foreach (Transform proxy in proxiesRoot)
         {
             BoxCollider col = proxy.GetComponent<BoxCollider>();
             if (col == null) continue;
 
-            Debug.Log($"Processing object: {proxy.name}");
-
-            // 3. Find the closest pivot to this object
+            // A. Find the closest snapshot pivot for this object
             Transform bestPivot = GetBestPivot(proxy.position, pivots);
-
-            // 4. Determine which room the object belongs to
+            
+            // B. Identify which room the object belongs to
             string room = IdentifyRoom(col.bounds.center);
-
-            // 5. Move camera to pivot and capture snapshot
+            
+            // C. Capture snapshot and convert to Base64 string
             string base64Img = CaptureFromPivot(bestPivot, col.bounds);
 
-            // 6. Package data in MongoDB-style format
+            // D. Format data (aligned with your Python pipeline fields)
             var entry = new Dictionary<string, object> {
-                { "instance_id", proxy.gameObject.GetInstanceID().ToString() },
-                { "label", proxy.name.Split('_')[0] }, // e.g. bed_01 → bed
-                { "pos", new { x = col.bounds.center.x, y = col.bounds.center.y, z = col.bounds.center.z } },
-                { "room_name", room },
-                { "image_data", base64Img },
-                { "timestamp", DateTimeOffset.Now.ToUnixTimeMilliseconds() }
+                { "id", proxy.gameObject.GetInstanceID() },
+                { "label", proxy.name.ToLower() }, // e.g., "LivingRoom_Sofa" -> "sofa"
+                { "x", col.bounds.center.x },
+                { "y", col.bounds.center.y },
+                { "z", col.bounds.center.z },
+                { "room", room },
+                { "image", base64Img }
             };
-
-            allData.Add(entry);
+            objectList.Add(entry);
         }
 
-        // 7. Save JSON file to the project's Assets folder
-        string savePath = Application.dataPath + "/scene_snapshots.json";
-        File.WriteAllText(savePath, JsonConvert.SerializeObject(allData, Formatting.Indented));
-
-        Debug.Log($"<color=green>Export complete! Data saved to: {savePath}</color>");
-
-#if UNITY_EDITOR
-        UnityEditor.AssetDatabase.Refresh();
-#endif
+        // 3. Send JSON data to backend via WebRequest
+        string json = JsonConvert.SerializeObject(new { 
+            objects = objectList, 
+            timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") 
+        });
+        
+        yield return SendToDatabase(json);
     }
 
-    // Find the closest pivot helper method
+    private IEnumerator SendToDatabase(string json)
+    {
+        using (UnityWebRequest request = new UnityWebRequest(apiEndpoint, "POST"))
+        {
+            byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(json);
+            request.uploadHandler = new UploadHandlerRaw(bodyRaw);
+            request.downloadHandler = new DownloadHandlerBuffer();
+            request.SetRequestHeader("Content-Type", "application/json");
+
+            yield return request.SendWebRequest();
+
+            if (request.result == UnityWebRequest.Result.Success)
+                Debug.Log($"<color=lime>[Sync Success]</color> Scene snapshot updated successfully at {DateTime.Now}.");
+            else
+                Debug.LogError($"<color=red>[Sync Failed]</color> Unable to connect to AI Pipeline: {request.error}");
+        }
+    }
+
+    // --- Utility Functions (Private) ---
+
     Transform GetBestPivot(Vector3 targetPos, GameObject[] pivots)
     {
         Transform best = pivots[0].transform;
         float minDist = Vector3.Distance(targetPos, best.position);
-
         foreach (var p in pivots)
         {
             float dist = Vector3.Distance(targetPos, p.transform.position);
-            if (dist < minDist)
-            {
-                minDist = dist;
-                best = p.transform;
-            }
+            if (dist < minDist) { minDist = dist; best = p.transform; }
         }
         return best;
     }
 
-    // Room identification helper method
     string IdentifyRoom(Vector3 pos)
     {
-        // Use a small overlap sphere to detect RoomLayer triggers
-        Collider[] hits = Physics.OverlapSphere(pos, 0.1f, roomLayer, QueryTriggerInteraction.Collide);
-
+        Collider[] hits = Physics.OverlapSphere(pos, 0.2f, roomLayer, QueryTriggerInteraction.Collide);
         foreach (var hit in hits)
         {
             RoomArea ra = hit.GetComponent<RoomArea>();
             if (ra != null) return ra.roomName;
-
-            // If no RoomArea script is attached, return the GameObject name
             return hit.gameObject.name;
         }
-
         return "Unknown Room";
     }
 
-    // Core snapshot function
     string CaptureFromPivot(Transform pivot, Bounds bounds)
     {
-        // A. Set camera position and orientation
         snapshotCam.transform.position = pivot.position;
         snapshotCam.transform.LookAt(bounds.center);
-
-        // B. Automatically adjust orthographic size based on object size
         snapshotCam.orthographic = true;
-        snapshotCam.orthographicSize = Mathf.Max(bounds.size.x, bounds.size.y) * 0.8f;
-
-        // Render only the specified view layer (exclude proxy layer)
+        snapshotCam.orthographicSize = Mathf.Max(bounds.size.x, bounds.size.y) * 0.9f;
         snapshotCam.cullingMask = viewLayer;
 
-        // C. Render to texture
         RenderTexture rt = new RenderTexture(resolution, resolution, 24);
         snapshotCam.targetTexture = rt;
         snapshotCam.Render();
 
-        Texture2D tex = new Texture2D(resolution, resolution, TextureFormat.RGBA32, false);
+        Texture2D tex = new Texture2D(resolution, resolution, TextureFormat.RGB24, false);
         RenderTexture.active = rt;
         tex.ReadPixels(new Rect(0, 0, resolution, resolution), 0, 0);
         tex.Apply();
 
-        // D. Cleanup and encode
-        byte[] bytes = tex.EncodeToPNG();
+        byte[] bytes = tex.EncodeToJPG();
         snapshotCam.targetTexture = null;
         RenderTexture.active = null;
 
         DestroyImmediate(tex);
         DestroyImmediate(rt);
-
         return Convert.ToBase64String(bytes);
     }
 }
