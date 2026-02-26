@@ -27,7 +27,7 @@ public class RobotCameraManager : MonoBehaviour
 
         ObservationPayload payload = new ObservationPayload
         {
-            image = base64Img,
+            image_data = base64Img,
             source = "Robot_FPV_Verification",
             userID = userID,
             timestamp = System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")

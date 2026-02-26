@@ -54,7 +54,7 @@ public class NetworkClient : MonoBehaviour
 [Serializable]
 public class ObservationPayload
 {
-    public string image;       // Base64 JPG
+    public string image_data;       // Base64 JPG
     public string source;      // e.g., "Robot_FPV"
     public string userID;      // Optional, for stationary cameras
     public Vector3 robot_pos;  // Robot's current position

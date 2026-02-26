@@ -5,63 +5,68 @@ using UnityEngine;
 [RequireComponent(typeof(BoxCollider))]
 public class RoomArea : MonoBehaviour
 {
-    [Header("語義設置")]
+    [Header("Room Settings")]
     public string roomName = "New Room";
 
-    [Header("自動化設定")]
-    [Tooltip("若開啟，將自動抓取子物件中所有標記為 MockCamera Tag 的物件作為 Pivots")]
+    [Header("Auto Setup")]
+    [Tooltip("If enabled, automatically collect all child objects tagged 'MockCamera' as pivots")]
     public bool autoFetchPivotsFromChildren = true;
 
-    [Header("定點感測網路")]
-    public Transform[] cameraPivots; // 若沒開啟自動抓取，則手動拖入
+    [Header("Camera Pivot References")]
+    public Transform[] cameraPivots; // If auto-fetch is disabled, assign manually
 
-    [Header("編輯器視覺化 (Gizmos)")]
+    [Header("Scene Visualization (Gizmos)")]
     public Color areaColor = new Color(0, 1, 0, 0.3f);
     public bool showAreaInScene = true;
 
     private void Awake()
     {
-        // 自動化優化：如果開啟自動抓取，就省去手動拖拽
+        // Automatic initialization: collect child pivots if enabled
         if (autoFetchPivotsFromChildren)
         {
             List<Transform> childPivots = new List<Transform>();
+
             foreach (Transform child in transform)
             {
-                // 這裡檢查 Tag 是否為 MockCamera
+                // Check if child has the tag "MockCamera"
                 if (child.CompareTag("MockCamera"))
                 {
                     childPivots.Add(child);
                 }
             }
-            if (childPivots.Count > 0) cameraPivots = childPivots.ToArray();
+
+            if (childPivots.Count > 0)
+                cameraPivots = childPivots.ToArray();
         }
     }
 
     private void Reset()
     {
+        // Ensure collider is set as trigger
         BoxCollider col = GetComponent<BoxCollider>();
         col.isTrigger = true;
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        // 1. 檢查進入的是不是 User
+        // 1. Check if the entering object is the User
         if (other.CompareTag("User"))
         {
             UserEntity user = other.GetComponent<UserEntity>();
 
             if (user != null)
             {
-                Debug.Log($"<color=green>[RoomArea]</color> {user.userID} 進入 {roomName}，啟動房間感測網路。");
+                Debug.Log($"<color=green>[RoomArea]</color> {user.userID} entered {roomName}, activating spatial perception...");
 
-                // 2. 核心改動：不再只傳一個最近的點，而是把該房間所有的相機點傳給 Manager
+                // 2. Core logic: instead of selecting one pivot,
+                // send ALL room camera pivots to the Manager
                 if (cameraPivots != null && cameraPivots.Length > 0)
                 {
                     if (StaticCameraManager.Instance != null)
                     {
-                        // 呼叫優化後的 RequestSnapshot，傳入整個陣列
+                        // Call optimized RequestSnapshot and pass the pivot array
                         StaticCameraManager.Instance.RequestSnapshot(
-                            cameraPivots,  // 傳入陣列，解決妳不想一個一個設定的問題
+                            cameraPivots,      // Pass array to avoid manual pivot switching
                             roomName,
                             user.userID,
                             user.currentActivity
@@ -75,12 +80,14 @@ public class RoomArea : MonoBehaviour
     private void OnDrawGizmos()
     {
         if (!showAreaInScene) return;
+
         BoxCollider col = GetComponent<BoxCollider>();
         if (col == null) return;
 
         Gizmos.color = areaColor;
         Gizmos.matrix = transform.localToWorldMatrix;
         Gizmos.DrawCube(col.center, col.size);
+
         Gizmos.color = new Color(areaColor.r, areaColor.g, areaColor.b, 1.0f);
         Gizmos.DrawWireCube(col.center, col.size);
     }
