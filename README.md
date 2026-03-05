@@ -1,88 +1,259 @@
-## 📁 Project Structure (Assets)
+# 🎮 Unity 端設定指南
 
-本專案於 Unity 2022.3 開發，旨在構建一個整合多模態大型模型 (VLM) 的居家服務機器人模擬環境。
-
-### 🤖 Core Logic & Scripts (核心邏輯)
-
-| 檔案名稱 | 功能描述 |
-| --- | --- |
-| **`StaticCameraManager.cs`** | **居家監控系統中心**。負責管理房間內的固定攝影機，偵測 User 行為，並透過協程 (Coroutine) 進行目標鎖定與派遣指令發送。 |
-| **`RobotPatro.cs`** | **機器人巡邏與派遣控制**。控制機器人在 NavMesh 上的移動邏輯，支援「自動巡邏」與「緊急中斷（前往驗證點）」的狀態切換。 |
-| **`UserEntity.cs`** | **用戶實體管理**。定義 User（如 Mom, Dad）的狀態、ID 及行為模型切換邏輯。 |
-| **`RobotCameraManager.cs`** | **機器人視覺模組**。負責從機器人視角擷取快照 (Snapshot)，並將視覺資訊傳輸至後端 AI 管線。 |
-| **`GodModeController.cs`** | **系統總控台**。協調監控系統、機器人與環境物件之間的全局互動。 |
-| **`NetworkClient.cs`** | **通訊介面**。負責與後端 AI Server（Gemma 3, MongoDB, FAISS）進行資料交換。 |
-| **`RoomArea.cs`** | **區域感測邏輯**。定義房間邊界，當 User 進入特定區域時觸發掃描與監控網路。 |
-| **`ObservationLogic.cs`** | **觀察點計算**。優化機器人拍攝目標時的最佳位姿與角度判定。 |
-
-### 🏠 Environment & Assets (場景與資源)
-
-* **`/Apartment`**: 居家環境模型與場景佈置。
-* **`/mom` & `/dad**`: User 角色模型及其行為動畫（如：typing, drinking, sleeping）。
-* **`/eve`**: 機器人實體模型（Eve 模型與 URDF 配置）。
-* **`/Scenes`**: 存放主要的實驗場景（如：SampleScene）。
-* **`/urdf`**: 存放機器人的描述文件，用於精確的物理模擬。
-* **`scene_snapshots.json`**: 存儲環境狀態與行為特徵的快照紀錄。
+靜態多相機感知系統 — Unity 整合文件
 
 ---
 
-### 🚀 技術亮點 (Technical Highlights)
+## 📁 Scripts 結構
 
-* **多人併行監控**：`StaticCameraManager` 採用 `Dictionary` 管理多對象監控行程，確保多個 User 同時存在時，系統能獨立追蹤而不互相干擾。
-* **狀態中斷機制**：機器人具備緊急任務介入功能，可立即中斷例行巡邏，前往由 VLM 指定的行為異常點進行驗證。
-* **動態模型檢索**：`UserEntity` 結合 `Renderer` 檢查機制，確保即便在動畫切換瞬間，監控系統仍能精確鎖定用戶的視覺中心。
-
----
-
-## 🛠️ 系統運作流程 (System Workflow)
-
-本模擬環境的核心邏輯圍繞著「偵測、派遣、驗證」三個階段：
-
-1. **偵測 (Detection)**:
-* 當 `UserEntity`（用戶）進入 `RoomArea`（房間區域）時，`StaticCameraManager` 會被啟動並鎖定目標。
-* 監控系統會持續掃描用戶的 `currentActivity`。
-
-
-2. **派遣 (Dispatch)**:
-* 當偵測到特定行為（如 `drinking`, `typing`），系統會計算目標位置並呼叫 `RobotPatro.cs`。
-* 機器人會中斷目前的 `TogglePatrol`（自動巡邏），改為執行 `InterruptAndMoveTo` 前往驗證點。
-
-
-3. **驗證與回傳 (Verification & Feedback)**:
-* 機器人抵達後，透過 `RobotCameraManager` 拍攝特寫照片。
-* 影像資料經由 `NetworkClient.cs` 傳送至後端 AI Server 進行語義分析。
+```
+Assets/Scripts/
+├── Camera/
+│   ├── CameraNode.cs           # 掛在每個相機 Pivot 上的資料容器
+│   ├── StaticCameraManager.cs  # 評分演算法 + 動態張數決策
+│   ├── VirtualCameraBrain.cs   # 離屏渲染 + Payload 封裝傳送
+│   └── RoomArea.cs             # 房間觸發區，用戶進入時啟動感知
+├── Network/
+│   ├── NetworkClient.cs        # HTTP POST 傳送至 Flask 後端
+│   └── SharedPayload.cs        # 統一資料結構（不需掛在物件上）
+├── Entity/
+│   └── UserEntity.cs           # 用戶行為切換 + 瞄準點計算
+└── Debug/
+    ├── CameraDebugViewer.cs    # Game 視窗即時影像預覽
+    └── GodModeController.cs    # 鍵盤控制用戶行為（開發用）
+```
 
 ---
 
-## 🔧 技術修正日誌 (Technical Fixes)
+## 🗂️ Hierarchy 結構
 
-在開發過程中，針對多人環境下的監控穩定性進行了以下優化：
+```
+Scene
+├── Rooms_Root
+│   ├── Kitchen              ← RoomArea.cs + BoxCollider (IsTrigger ✅)
+│   ├── LivingRoom           ← RoomArea.cs + BoxCollider (IsTrigger ✅)
+│   ├── BedRoom(dad)         ← RoomArea.cs + BoxCollider (IsTrigger ✅)
+│   └── BedRoom(mom)         ← RoomArea.cs + BoxCollider (IsTrigger ✅)
+│
+├── Camera_Pivots
+│   ├── Kitchen
+│   │   ├── Kitchen_Cam1     ← CameraNode.cs (roomName = "Kitchen")
+│   │   ├── Kitchen_Cam2     ← CameraNode.cs (roomName = "Kitchen")
+│   │   └── Kitchen_Cam3     ← CameraNode.cs (roomName = "Kitchen")
+│   ├── LivingRoom
+│   │   ├── LivingRoom_Cam1  ← CameraNode.cs (roomName = "LivingRoom")
+│   │   ├── LivingRoom_Cam2
+│   │   ├── LivingRoom_Cam3
+│   │   └── LivingRoom_Cam4
+│   ├── Dad's Room
+│   │   ├── DadRoom_Cam1     ← CameraNode.cs (roomName = "BedRoom(dad)")
+│   │   ├── DadRoom_Cam2
+│   │   ├── DadRoom_Cam3
+│   │   └── DadRoom_Cam4
+│   └── Mom's room
+│       ├── Mom'sRoom_Cam1   ← CameraNode.cs (roomName = "BedRoom(mom)")
+│       ├── Mom'sRoom_Cam2
+│       ├── Mom'sRoom_Cam3
+│       └── Mom'sRoom_Cam4
+│
+├── [空物件] SystemManagers
+│   ├── StaticCameraManager  ← StaticCameraManager.cs
+│   ├── VirtualCameraBrain   ← VirtualCameraBrain.cs + CameraDebugViewer.cs
+│   └── NetworkClient        ← NetworkClient.cs
+│
+├── VirtualCamera            ← 專用隱形相機（見下方說明）
+│
+└── Users
+    ├── User_Mom             ← UserEntity.cs, Tag: User, Layer: User
+    │   ├── mom_typing       ← CapsuleCollider, Layer: User
+    │   ├── mom_drinking     ← CapsuleCollider, Layer: User
+    │   ├── mom_cooking      ← CapsuleCollider, Layer: User
+    │   └── mom_idle         ← CapsuleCollider, Layer: User
+    └── User_Dad             ← UserEntity.cs, Tag: User, Layer: User
+        ├── dad_sleeping     ← CapsuleCollider, Layer: User
+        └── ...
+```
 
-* **併行監控優化**: 將原本全域的 `StopAllCoroutines()` 修正為使用 `Dictionary<string, Coroutine>` 獨立管理不同用戶的監控行程，解決了多人同時在場時行程互相干擾的問題。
-* **動態模型中心鎖定**: 修正了僅掃描第一層子物件的限制，改用 `GetComponentInChildren<Renderer>()` 配合 `activeInHierarchy` 判定，確保在動畫切換瞬間仍能精確定位。
-* **任務優先級管理**: 透過 `_isProcessing` 旗標與 `RobotPatro` 的回呼機制 (Callback)，確保機器人在執行緊急驗證任務時，邏輯狀態鎖定完整，避免指令衝突。
-
+> ⚠️ `Rooms_Root` 和 `Camera_Pivots` 是完全獨立的分支，`RoomArea` 透過 `CameraNode.roomName` 自動配對，不需要是父子關係。
 
 ---
 
-## 🎯 設計目的 (Design Objectives)
+## ⚙️ Inspector 設定
 
-本系統的開發核心基於「主動式居家安全監測」的概念，解決傳統固定式監控系統（CCTV）的視覺盲點與反應遲鈍問題。其具體設計目標如下：
+### CameraNode.cs（每個 Pivot 都要掛）
 
-### 1. 實現行為觸發的自動化反應 (Context-Aware Triggering)
+| 欄位 | 說明 | 範例 |
+|------|------|------|
+| `nodeName` | 節點識別名稱 | `Kitchen_Cam1` |
+| `roomName` | **必須與對應 RoomArea.roomName 完全一致（含大小寫）** | `Kitchen` |
+| `scoreMultiplier` | 評分倍率（0.5–2.0）。俯角廣視野 → `1.2`，偏斜角度 → `0.8` | `1.0` |
 
-傳統監控僅提供被動紀錄，本系統設計目的是讓環境能「理解」用戶行為。當監控系統偵測到特定高風險或需驗證的行為（如：老人在非進餐時間頻繁翻找、長時間維持同一姿勢）時，能自動將語義需求轉化為機器人的物理派遣指令。
+---
 
-### 2. 解決居家環境中的視覺遮擋問題 (Handling Occlusion)
+### RoomArea.cs
 
-固定攝影機（Static Camera）常受限於家具遮擋。本系統設計了「中斷與前往（Interrupt & Move To）」機制，當固定攝影機鎖定行為但細節不明確時，派遣移動式機器人（Eve）前往現場進行近距離特寫（Snapshot），為後端 VLM 提供更高品質的視覺輸入。
+| 欄位 | 說明 |
+|------|------|
+| `roomName` | 房間名稱，與 CameraNode.roomName 完全一致 |
+| `autoFetchByRoomName` | ✅ 勾選後自動從全場景收集相符的 CameraNode |
+| `ignoreTagCheck` | 開發測試時可勾選，跳過 Tag 檢查 |
+| `cameraPivots` | 自動填入後可在 Inspector 確認收集結果 |
 
-### 3. 多用戶環境下的強健監控 (Multi-user Robustness)
+**BoxCollider 必要設定：**
+- `Is Trigger` ✅
 
-在真實居家環境中，家中可能同時有多位成員（如 Mom 與 Dad）。本系統的設計目的之一是透過 **Concurrent Monitoring Dictionary** 機構，確保系統在多人併行活動時，不會因為單一對象的移動而漏掉其他人的安全監控，實現全天候、無死角的居家照護支援。
+---
 
-### 4. 降低雲端運算負載 (Optimizing Computation)
+### StaticCameraManager.cs
 
-系統僅在「偵測到有效行為」時才啟動機器人相機與 VLM 通訊。這種設計能有效減少長時間傳輸高解析度影像造成的頻寬浪費與隱私疑慮，僅在必要時刻（Emergency/Validation）進行資料擷取。
+| 欄位 | 說明 | 預設值 |
+|------|------|--------|
+| `userLayer` | 用戶所在的 Physics Layer，選 `User` | — |
+| `scanInterval` | Idle 狀態的輪詢間隔（秒）| `0.5` |
+| `singleViewThreshold` | 最高分 ≥ 此值 → 傳 1 張 | `0.85` |
+| `dualViewThreshold` | 最高分 ≥ 此值 → 傳 2 張，否則傳 3 張 | `0.60` |
+| `maxOutputImages` | 最多傳出張數上限 | `3` |
 
+---
 
+### VirtualCameraBrain.cs
+
+| 欄位 | 說明 |
+|------|------|
+| `virtualCam` | 拖入場景中的 `VirtualCamera` 物件 |
+| `resolution` | 渲染解析度，`512` 對 VLM 辨識已足夠 |
+| `jpegQuality` | JPEG 壓縮品質（建議 `75`） |
+
+---
+
+### NetworkClient.cs
+
+| 欄位 | 說明 |
+|------|------|
+| `flaskUrl` | Python 後端位址，預設 `http://127.0.0.1:5000/predict` |
+
+---
+
+## 📷 VirtualCamera 建立步驟
+
+1. Hierarchy 右鍵 → **Camera** → 命名為 `VirtualCamera`
+2. Inspector 調整：
+   - `Target Display` → `Display 8`（不輸出到任何螢幕）
+   - Camera 元件 → **取消勾選 enabled**（不自動渲染）
+   - 刪除 `Audio Listener`（避免場景有兩個 Listener 警告）
+3. 將 `VirtualCamera` 拖入 `VirtualCameraBrain` Inspector 的 `virtualCam` 欄位
+
+> VirtualCamera 是一台「按快門才工作」的隱形相機。平常完全不渲染，只有 StaticCameraManager 觸發時才瞬移到 CameraNode 位置、拍一張、立即回到休眠狀態。
+
+---
+
+## 🏷️ Layer 與 Tag 設定
+
+### 新增 User Layer
+`Edit` → `Project Settings` → `Tags and Layers` → User Layer 欄位填入 `User`
+
+### 新增 User Tag
+`Edit` → `Project Settings` → `Tags and Layers` → Tags 區塊新增 `User`
+
+### 套用到物件
+
+| 物件 | Tag | Layer |
+|------|-----|-------|
+| `User_Mom`、`User_Dad` | `User` | `User` |
+| 所有子動畫物件 | — | `User` |
+
+> 選 User_Mom 改 Layer 時，彈窗選 **Yes, change children** 一次套用所有子物件。
+
+### 子動畫物件加 CapsuleCollider
+
+每個子動畫物件（`mom_typing` 等）需要掛 `CapsuleCollider`：
+
+```
+Direction : Y-Axis
+Height    : 1.8
+Radius    : 0.3
+Center    : X=0, Y=0.9, Z=0
+```
+
+Raycast 需要打中實體 Collider 才能計算可視性分數。
+
+---
+
+## 🎮 GodModeController 按鍵對照
+
+| 按鍵 | 動作 |
+|------|------|
+| `1` | Mom → sleeping |
+| `2` | Mom → typing |
+| `3` | Mom → drinking |
+| `4` | Mom → sitting |
+| `7` | Dad → sleeping |
+| `8` | Dad → typing |
+| `9` | Dad → drinking |
+| `0` | Dad → swinging |
+| `P` | 機器人巡邏 Toggle |
+| `Space` | 清除所有動作 |
+
+---
+
+## 🔍 評分演算法
+
+```
+totalScore = visibility × 0.5 + angle × 0.3 + distance × 0.2
+```
+
+| 元素 | 權重 | 計算方式 |
+|------|------|---------|
+| **Visibility** | 50% | 三點 Raycast（頭 / 胸 / 腰），命中 1/2/3 條對應 0.33 / 0.67 / 1.0，0 條直接淘汰 |
+| **Angle** | 30% | `Dot(camera.forward, toTarget)`，正對為 +1，背對為 -1 |
+| **Distance** | 20% | 3m 最佳分，10m 衰減半徑，≥13m 得 0 分 |
+
+最終分數再乘以 `CameraNode.scoreMultiplier`。
+
+**動態張數決策：**
+
+| 最高分 | 傳出張數 |
+|--------|---------|
+| ≥ 0.85 | 1 張 |
+| 0.60 – 0.84 | 2 張 |
+| < 0.60 | 3 張 |
+| 全部遮擋 | 跳過，等待下次掃描 |
+
+---
+
+## 📡 傳送 Payload 結構（Unity → Python）
+
+```json
+{
+  "image_list":        ["<base64_jpeg>", "<base64_jpeg>"],
+  "image_count":       2,
+  "source_nodes":      ["Kitchen_Cam1", "Kitchen_Cam2"],
+  "node_scores":       [0.91, 0.74],
+  "userID":            "User_Mom",
+  "activity":          "drinking",
+  "user_pos":          { "x": 3.2, "y": 0.0, "z": 1.5 },
+  "timestamp":         "2025-01-01 12:00:00",
+  "robot_rotation_y":  0,
+  "camera_fov":        0
+}
+```
+
+---
+
+## 🐛 常見問題排查
+
+### 所有節點遮擋 → 重新等待
+1. 確認子動畫物件（`mom_typing` 等）有掛 `CapsuleCollider`
+2. 確認子動畫物件的 Layer 是 `User`
+3. 確認 `StaticCameraManager.userLayer` 選的是 `User`
+4. Console 查看 `[AimDebug]` 的 aimPos 座標是否合理（不應該是 0,0,0）
+
+### RoomArea 觸發但沒有進入 StaticCameraManager
+1. 確認 `CameraNode.roomName` 與 `RoomArea.roomName` **大小寫完全一致**
+2. Play 後 Console 確認有 `[RoomArea] 已綁定 N 個相機` 的訊息
+3. 若沒有，檢查 Camera_Pivots 下的物件是否有掛 `CameraNode.cs`
+
+### RoomArea 完全沒有觸發
+1. 確認 `BoxCollider` 的 `Is Trigger` 已勾選
+2. 確認 `User_Mom` 的 Tag 是 `User`（或勾選 `ignoreTagCheck`）
+3. 確認 `User_Mom` 有 `Rigidbody` 元件
