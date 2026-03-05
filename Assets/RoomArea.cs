@@ -1,94 +1,102 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// 房間觸發區域（偵錯增強版）
+/// 解決子模型分散導致觸發失敗的問題
+/// </summary>
 [RequireComponent(typeof(BoxCollider))]
 public class RoomArea : MonoBehaviour
 {
-    [Header("Room Settings")]
-    public string roomName = "New Room";
+    [Header("房間設定")]
+    public string roomName = "LivingRoom";
 
-    [Header("Auto Setup")]
-    [Tooltip("If enabled, automatically collect all child objects tagged 'MockCamera' as pivots")]
-    public bool autoFetchPivotsFromChildren = true;
+    [Header("自動收集相機")]
+    public bool autoFetchByRoomName = true;
+    public Transform[] cameraPivots;
 
-    [Header("Camera Pivot References")]
-    public Transform[] cameraPivots; // If auto-fetch is disabled, assign manually
+    [Header("調試選項")]
+    public bool ignoreTagCheck = true; // 演示時建議勾選，防止 Tag 沒設好失敗
+    public Color areaColor = new Color(0.1f, 1f, 0.1f, 0.2f);
 
-    [Header("Scene Visualization (Gizmos)")]
-    public Color areaColor = new Color(0, 1, 0, 0.3f);
-    public bool showAreaInScene = true;
-
-    private void Awake()
+    void Start()
     {
-        // Automatic initialization: collect child pivots if enabled
-        if (autoFetchPivotsFromChildren)
-        {
-            List<Transform> childPivots = new List<Transform>();
-
-            foreach (Transform child in transform)
-            {
-                // Check if child has the tag "MockCamera"
-                if (child.CompareTag("MockCamera"))
-                {
-                    childPivots.Add(child);
-                }
-            }
-
-            if (childPivots.Count > 0)
-                cameraPivots = childPivots.ToArray();
-        }
-    }
-
-    private void Reset()
-    {
-        // Ensure collider is set as trigger
+        if (autoFetchByRoomName) FetchNodes();
+        
+        // 自動確保 BoxCollider 設定正確
         BoxCollider col = GetComponent<BoxCollider>();
         col.isTrigger = true;
     }
 
-    private void OnTriggerEnter(Collider other)
+    private void FetchNodes()
     {
-        // 1. Check if the entering object is the User
-        if (other.CompareTag("User"))
+        CameraNode[] allNodes = FindObjectsOfType<CameraNode>();
+        List<Transform> matched = new List<Transform>();
+        foreach (CameraNode node in allNodes)
         {
-            UserEntity user = other.GetComponent<UserEntity>();
+            if (node.roomName == roomName) matched.Add(node.transform);
+        }
+        cameraPivots = matched.ToArray();
+        
+        if (cameraPivots.Length > 0)
+            Debug.Log($"<color=white>[RoomArea]</color> {roomName} 已綁定 {cameraPivots.Length} 個相機");
+        else
+            Debug.LogWarning($"<color=yellow>[RoomArea]</color> {roomName} 找不到相機節點！");
+    }
 
-            if (user != null)
+    // ─────────────────────────────────────────────
+    // 核心觸發邏輯
+    // ─────────────────────────────────────────────
+    void OnTriggerEnter(Collider other)
+    {
+        // 1. 物理診斷：只要有東西撞到就先噴 Log，幫你確認 Collider 是否有效
+        Debug.Log($"<color=yellow>【Physics】{other.name} 撞進了 {roomName} 感應區</color>");
+
+        // 2. 檢查標籤 (Tag)
+        if (!ignoreTagCheck && !other.CompareTag("User")) return;
+
+        // 3. 關鍵修正：從碰撞體往上找父物件的 UserEntity
+        // 因為你的 Collider 可能在 User_Mom/Mom_Typing 子物件上
+        UserEntity user = other.GetComponentInParent<UserEntity>();
+
+        if (user != null)
+        {
+            Debug.Log($"<color=green>【Trigger】確認為用戶 {user.userID}，目前狀態：{user.currentActivity}</color>");
+
+            if (cameraPivots == null || cameraPivots.Length == 0)
             {
-                Debug.Log($"<color=green>[RoomArea]</color> {user.userID} entered {roomName}, activating spatial perception...");
+                Debug.LogWarning($"[RoomArea] {roomName} 找不到相機節點，無法拍照");
+                return;
+            }
 
-                // 2. Core logic: instead of selecting one pivot,
-                // send ALL room camera pivots to the Manager
-                if (cameraPivots != null && cameraPivots.Length > 0)
-                {
-                    if (StaticCameraManager.Instance != null)
-                    {
-                        // Call optimized RequestSnapshot and pass the pivot array
-                        StaticCameraManager.Instance.RequestSnapshot(
-                            cameraPivots,      // Pass array to avoid manual pivot switching
-                            roomName,
-                            user.userID,
-                            user.currentActivity
-                        );
-                    }
-                }
+            if (StaticCameraManager.Instance != null)
+            {
+                // 執行拍照流程
+                StaticCameraManager.Instance.RequestSnapshot(
+                    cameraPivots,
+                    roomName,
+                    user.userID,
+                    user.currentActivity
+                );
+            }
+            else
+            {
+                Debug.LogError("[RoomArea] 找不到 StaticCameraManager 單例！");
             }
         }
     }
 
-    private void OnDrawGizmos()
+    // ─────────────────────────────────────────────
+    // 輔助視覺化
+    // ─────────────────────────────────────────────
+    void OnDrawGizmos()
     {
-        if (!showAreaInScene) return;
-
         BoxCollider col = GetComponent<BoxCollider>();
         if (col == null) return;
-
-        Gizmos.color = areaColor;
         Gizmos.matrix = transform.localToWorldMatrix;
+        Gizmos.color = areaColor;
         Gizmos.DrawCube(col.center, col.size);
-
-        Gizmos.color = new Color(areaColor.r, areaColor.g, areaColor.b, 1.0f);
+        Gizmos.color = new Color(areaColor.r, areaColor.g, areaColor.b, 1f);
         Gizmos.DrawWireCube(col.center, col.size);
     }
 }
