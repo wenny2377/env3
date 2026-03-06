@@ -25,9 +25,6 @@ public class CameraNode : MonoBehaviour
         Gizmos.color = Color.Lerp(Color.red, Color.green, lastScore);
         Gizmos.DrawWireSphere(transform.position, 0.15f);
 
-        // 相機朝向箭頭
-        Gizmos.color = Color.cyan;
-        Gizmos.DrawRay(transform.position, transform.forward * 0.6f);
 
 #if UNITY_EDITOR
         // Scene 視圖標籤：節點名稱 + 即時分數

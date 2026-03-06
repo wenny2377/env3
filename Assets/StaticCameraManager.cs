@@ -204,21 +204,9 @@ public class StaticCameraManager : MonoBehaviour
     private void DrawDebugRay(Vector3 from, Vector3 to, float score)
     {
         Debug.DrawLine(from, to, Color.Lerp(Color.red, Color.green, score), 0.5f);
-        if (score >= dualViewThreshold) CreateLaser(from, to);
+        
     }
 
-    private void CreateLaser(Vector3 start, Vector3 end)
-    {
-        GameObject go = new GameObject("VLM_Laser");
-        LineRenderer lr = go.AddComponent<LineRenderer>();
-        lr.positionCount = 2;
-        lr.SetPosition(0, start);
-        lr.SetPosition(1, end);
-        lr.startWidth = lr.endWidth = 0.04f;
-        lr.material = new Material(Shader.Find("Sprites/Default"));
-        lr.startColor = lr.endColor = Color.cyan;
-        Destroy(go, 2f);
-    }
 
     private class CameraScore
     {
