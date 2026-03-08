@@ -15,7 +15,7 @@ Assets/Scripts/
 │   └── RoomArea.cs             # 房間觸發區，用戶進入時啟動感知
 ├── Network/
 │   ├── NetworkClient.cs        # HTTP POST 傳送至 Flask 後端
-│   └── SharedPayload.cs        # 統一資料結構（不需掛在物件上）
+│   └── SharedDataStructures.cs # 統一資料結構（不需掛在物件上）
 ├── Entity/
 │   └── UserEntity.cs           # 用戶行為切換 + 瞄準點計算
 └── Debug/
@@ -50,8 +50,8 @@ Scene
 │   │   ├── DadRoom_Cam2
 │   │   ├── DadRoom_Cam3
 │   │   └── DadRoom_Cam4
-│   └── Mom's room
-│       ├── Mom'sRoom_Cam1   ← CameraNode.cs (roomName = "BedRoom(mom)")
+│   └── Mom's Room
+│       ├── Mom'sRoom_Cam1   ← CameraNode.cs (roomName = "Mom'sRoom")
 │       ├── Mom'sRoom_Cam2
 │       ├── Mom'sRoom_Cam3
 │       └── Mom'sRoom_Cam4
@@ -87,6 +87,8 @@ Scene
 | `nodeName` | 節點識別名稱 | `Kitchen_Cam1` |
 | `roomName` | **必須與對應 RoomArea.roomName 完全一致（含大小寫）** | `Kitchen` |
 | `scoreMultiplier` | 評分倍率（0.5–2.0）。俯角廣視野 → `1.2`，偏斜角度 → `0.8` | `1.0` |
+
+> ⚠️ `CameraNode.roomName` 會直接作為 `room_name` 傳送給 Python 後端，Python 用它從 MongoDB 查詢同房間家具清單並注入 VLM prompt。**大小寫必須與 MongoDB `scene_snapshots.room` 欄位一致。**
 
 ---
 
@@ -231,6 +233,7 @@ totalScore = visibility × 0.5 + angle × 0.3 + distance × 0.2
   "node_scores":       [0.91, 0.74],
   "userID":            "User_Mom",
   "activity":          "drinking",
+  "room_name":         "Kitchen",
   "user_pos":          { "x": 3.2, "y": 0.0, "z": 1.5 },
   "timestamp":         "2025-01-01 12:00:00",
   "robot_rotation_y":  0,
@@ -238,9 +241,39 @@ totalScore = visibility × 0.5 + angle × 0.3 + distance × 0.2
 }
 ```
 
+> `activity` 是 Unity 模擬環境的 ground truth，**只用於事後評估，不傳給 VLM**。  
+> `room_name` 是 Python 端的關鍵輸入，VLM prompt 和 MongoDB 家具查詢都依賴它。
+
+---
+
+## 🗄️ room_name 對齊規則
+
+`CameraNode.roomName` → `MultiImagePayload.room_name` → Python `scene_snapshots.room`
+
+三者必須**完全一致（含大小寫與特殊字元）**，否則 Python 無法從 MongoDB 查到同房間家具清單，VLM 會幻覺出不存在的家具。
+
+| Unity RoomArea | CameraNode.roomName | MongoDB scene_snapshots.room |
+|----------------|--------------------|-----------------------------|
+| Kitchen | `Kitchen` | `Kitchen` |
+| LivingRoom | `LivingRoom` | `LivingRoom` |
+| BedRoom(dad) | `BedRoom(dad)` | `BedRoom(dad)` |
+| BedRoom(mom) | `Mom'sRoom` | `Mom'sRoom` |
+
+> 如果不確定 MongoDB 裡的 room 值，用 `db.scene_snapshots.distinct("room")` 查詢確認。
+
 ---
 
 ## 🐛 常見問題排查
+
+### `room=` 是空的（Python log）
+1. 確認 `CameraNode.roomName` 有填值（不是空字串）
+2. 確認 `StaticCameraManager` → `VirtualCameraBrain` 的 `roomName` 參數有沿鏈傳遞
+3. Python 端有 fallback：從 `source_nodes[0]` 解析（`"Mom'sRoom_Cam1"` → `"Mom'sRoom"`），但最好從 Unity 正確傳入
+
+### VLM 辨識房間錯誤（把臥室看成客廳）
+1. 確認 `room_name` 有正確傳入（見上）
+2. 確認 `/scene` 同步已執行，MongoDB 裡有該房間的家具資料
+3. 用 `db.scene_snapshots.find({"room": "Mom'sRoom"})` 確認家具存在
 
 ### 所有節點遮擋 → 重新等待
 1. 確認子動畫物件（`mom_typing` 等）有掛 `CapsuleCollider`
