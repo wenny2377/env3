@@ -24,12 +24,12 @@ public class MultiImagePayload
 
     // ── 用戶資訊（必填）──
     public string       userID;
-    public string       activity;    // 觸發拍攝的行為，對應 Python 的 activity_hint
+    public string       activity;    // 觸發拍攝的行為（ground truth，不送給 VLM）
+    public string       room_name;   // ← 新增：相機所在房間名稱，對齊 Python room_name
     public Vector3_Data user_pos;    // UserEntity 世界座標 → Python bind_and_update 的 est_pos
     public string       timestamp;
 
     // ── 機器人欄位（選填，定點相機模式填預設值）──
-    // 角色未定前保留，確定不需要再刪除
     public Vector3_Data robot_pos;          // 定點模式：不填（null）
     public float        robot_rotation_y;   // 定點模式：0
     public float        camera_fov;         // 定點模式：0
