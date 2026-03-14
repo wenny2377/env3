@@ -23,7 +23,7 @@ using UnityEngine.Networking;
 ///
 /// Inspector ¥²¶ס¡G
 ///   userMom, userDad, cameraManager, virtualCameraBrain
-///   ¦U©׀¶¡¬Û¾ק²M³ז¡]kitchenNodes / livingRoomNodes / studyNodes¡^
+///   ¦U©׀¶¡¬Û¾ק²M³ז¡]kitchenNodes / livingRoomNodes / dadRoomNodes¡^
 /// </summary>
 public class ExperimentRunner : MonoBehaviour
 {
@@ -43,7 +43,7 @@ public class ExperimentRunner : MonoBehaviour
     [Tooltip("¼p©׀ / «ֶָU / ®ׁ©׀¦U 2~4 ¥x\n·|¦b Start() ¦Û°Ê×`¥U¨ל StaticCameraManager")]
     public List<CameraNode> kitchenNodes;
     public List<CameraNode> livingRoomNodes;
-    public List<CameraNode> studyNodes;
+    public List<CameraNode> dadRoomNodes;
 
     [Header("¹ךֵח¼ׂ¦¡")]
     public ExperimentMode mode = ExperimentMode.Exp1_VLM;
@@ -147,8 +147,8 @@ public class ExperimentRunner : MonoBehaviour
                 cameraManager.RegisterRoomCameras("Kitchen", kitchenNodes);
             if (livingRoomNodes != null && livingRoomNodes.Count > 0)
                 cameraManager.RegisterRoomCameras("LivingRoom", livingRoomNodes);
-            if (studyNodes != null && studyNodes.Count > 0)
-                cameraManager.RegisterRoomCameras("Study", studyNodes);
+            if (dadRoomNodes != null && dadRoomNodes.Count > 0)
+                cameraManager.RegisterRoomCameras("DadRoom", dadRoomNodes);
         }
         else
         {
@@ -297,7 +297,7 @@ public class ExperimentRunner : MonoBehaviour
                 {
                     string b = momQueue[i];
                     Debug.Log($"[Exp4] Mom.{b} @ {slot.name} {slot.virtualHour:F0}:00");
-                    if (useTimestamp) yield return StartCoroutine(PostVirtualHour(slot.virtualHour));
+                    if (useTimestamp) PostVirtualHourFireAndForget(slot.virtualHour);
                     yield return StartCoroutine(RunSingleEpisode(userMom, b, slot.virtualHour));
                     yield return new WaitForSeconds(minIntervalInSlot);
                     totalRuns++;
@@ -307,7 +307,7 @@ public class ExperimentRunner : MonoBehaviour
                 {
                     string b = dadQueue[i];
                     Debug.Log($"[Exp4] Dad.{b} @ {slot.name} {slot.virtualHour:F0}:00");
-                    if (useTimestamp) yield return StartCoroutine(PostVirtualHour(slot.virtualHour));
+                    if (useTimestamp) PostVirtualHourFireAndForget(slot.virtualHour);
                     yield return StartCoroutine(RunSingleEpisode(userDad, b, slot.virtualHour));
                     yield return new WaitForSeconds(minIntervalInSlot);
                     totalRuns++;
@@ -353,7 +353,7 @@ public class ExperimentRunner : MonoBehaviour
             currentVirtualHour = hour;
             Debug.Log($"[Exp5] Episode {ep + 1}/{limit}: {user.userID}.{behavior}");
 
-            if (useTimestamp) yield return StartCoroutine(PostVirtualHour(hour));
+            if (useTimestamp) PostVirtualHourFireAndForget(hour);
             yield return StartCoroutine(RunSingleEpisode(user, behavior, hour));
             totalRuns++;
         }
@@ -395,20 +395,28 @@ public class ExperimentRunner : MonoBehaviour
     }
 
     // שששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששש
-    // »²§U¡GPOST µךְְ®ֹ¶¡¨ל«ב÷Ý¡]ֵ‎«ב÷Ý°O¿‎ sin/cos ®ֹ¶¡¯S¼x¡^
+    // »²§U¡GPOST µךְְ®ֹ¶¡¨ל«ב÷Ý
+    //
+    // Fire-and-forget¡G©I¥s«ב¥ß§Y×נ¦^¡A₪£µ¥«ב÷Ý¦^ְ³
+    // ¡ק °Êµe₪£³Q«ב÷Ý×‎¶כ¡AFlask ¨S¶}₪]₪£·|¥d¦ם
     // שששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששש
 
-    IEnumerator PostVirtualHour(float hour)
+    void PostVirtualHourFireAndForget(float hour)
+    {
+        StartCoroutine(PostVirtualHourRoutine(hour));
+    }
+
+    IEnumerator PostVirtualHourRoutine(float hour)
     {
         string json = $"{{\"virtual_hour\":{hour:F1}}}";
         var req = new UnityWebRequest($"{backendUrl}/set_virtual_hour", "POST");
         req.uploadHandler = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(json));
         req.downloadHandler = new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
+        req.timeout = 3;
         yield return req.SendWebRequest();
-        // ¥¢±ׁ₪£₪₪ֲ_¹ךֵח¡A¥u log
         if (req.result != UnityWebRequest.Result.Success)
-            Debug.LogWarning($"[Exp] PostVirtualHour ¥¢±ׁ: {req.error}¡]Flask ¬O§_¦b°ץ¦ז¡H¡^");
+            Debug.LogWarning($"[Exp] PostVirtualHour ¥¢±ׁ: {req.error}¡]Flask ¥¼±ׂ°Ê®ֹ¥i©¿²₪¡^");
     }
 
     // שששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששש

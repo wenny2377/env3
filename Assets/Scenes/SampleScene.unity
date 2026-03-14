@@ -329,69 +329,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 786573508}
   m_LocalEulerAnglesHint: {x: 0, y: 90, z: 0}
---- !u!1 &126052086
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 126052088}
-  - component: {fileID: 126052087}
-  m_Layer: 0
-  m_Name: '[NavMesh]'
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 0
---- !u!114 &126052087
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 126052086}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7a5ac11cc976e418e8d13136b07e1f52, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_AgentTypeID: 0
-  m_CollectObjects: 0
-  m_Size: {x: 10, y: 10, z: 10}
-  m_Center: {x: 0, y: 2, z: 0}
-  m_LayerMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_UseGeometry: 0
-  m_DefaultArea: 0
-  m_GenerateLinks: 0
-  m_IgnoreNavMeshAgent: 1
-  m_IgnoreNavMeshObstacle: 1
-  m_OverrideTileSize: 0
-  m_TileSize: 256
-  m_OverrideVoxelSize: 0
-  m_VoxelSize: 0.1
-  m_MinRegionArea: 2
-  m_NavMeshData: {fileID: 23800000, guid: 536a135d0a444064fa61e5925b433d48, type: 2}
-  m_BuildHeightMesh: 0
---- !u!4 &126052088
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 126052086}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.0776416, y: -0.15868053, z: 2.911352}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &267607254
 GameObject:
   m_ObjectHideFlags: 0
@@ -451,7 +388,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 2533380991935591012, guid: dbd0409ef42d6b748b9202d12e2d0d7b, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 3.18
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2533380991935591012, guid: dbd0409ef42d6b748b9202d12e2d0d7b, type: 3}
       propertyPath: m_LocalPosition.y
@@ -459,7 +396,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2533380991935591012, guid: dbd0409ef42d6b748b9202d12e2d0d7b, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 3.56
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2533380991935591012, guid: dbd0409ef42d6b748b9202d12e2d0d7b, type: 3}
       propertyPath: m_LocalRotation.w
@@ -809,139 +746,12 @@ Transform:
   m_GameObject: {fileID: 322112113}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 1.68, y: 0, z: 6.22}
+  m_LocalPosition: {x: 1.2, y: 0.525, z: 5.43}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 989247574}
   m_LocalEulerAnglesHint: {x: 0, y: 90, z: 0}
---- !u!1 &339845994
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 339845999}
-  - component: {fileID: 339845998}
-  - component: {fileID: 339845997}
-  - component: {fileID: 339845996}
-  - component: {fileID: 339845995}
-  m_Layer: 3
-  m_Name: BedRoom(mom)
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &339845995
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 339845994}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3a6920d60e0c7bb4f9c954e45d1f3834, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  roomName: BedRoom(mom)
-  autoFetchByRoomName: 1
-  cameraPivots:
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  ignoreTagCheck: 1
-  areaColor: {r: 1, g: 0, b: 0.9041014, a: 0.3}
---- !u!65 &339845996
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 339845994}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 1
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
-  m_Center: {x: 0, y: 0, z: 0}
---- !u!23 &339845997
-MeshRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 339845994}
-  m_Enabled: 0
-  m_CastShadows: 1
-  m_ReceiveShadows: 1
-  m_DynamicOccludee: 1
-  m_StaticShadowCaster: 0
-  m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
-  m_RayTracingMode: 2
-  m_RayTraceProcedural: 0
-  m_RenderingLayerMask: 1
-  m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
-  m_StaticBatchInfo:
-    firstSubMesh: 0
-    subMeshCount: 0
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
-  m_ReceiveGI: 1
-  m_PreserveUVs: 0
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_StitchLightmapSeams: 1
-  m_SelectedEditorRenderState: 3
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_AdditionalVertexStreams: {fileID: 0}
---- !u!33 &339845998
-MeshFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 339845994}
-  m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
---- !u!4 &339845999
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 339845994}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -5.57, y: 1.43, z: 5.66}
-  m_LocalScale: {x: 5.9123464, y: 3.1390278, z: 4.708745}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1565739702}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &426000999
 GameObject:
   m_ObjectHideFlags: 0
@@ -993,9 +803,13 @@ MonoBehaviour:
   userID: User_Mom
   drinkSpot: {fileID: 0}
   sittingSpot: {fileID: 0}
-  typingSpot: {fileID: 0}
-  readingSpot: {fileID: 0}
   idleSpot: {fileID: 0}
+  drinkWaypoints:
+  - {fileID: 0}
+  - {fileID: 0}
+  sittingWaypoints: []
+  idleWaypoints: []
+  walkSpeed: 1.4
   arrivalThreshold: 0.4
   rotationSpeed: 8
   noddingDuration: 1.5
@@ -1008,8 +822,8 @@ MonoBehaviour:
   stateWalk: Walk
   stateDrink: Drink
   stateSittingIdle: SittingIdle
-  stateTyping: Typing
   stateReading: Reading
+  stateTyping: Typing
   stateNodding: Nodding
 --- !u!195 &426001002
 NavMeshAgent:
@@ -1313,7 +1127,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a578be30b6015f1429f8e5118b2b9a51, type: 3}
       propertyPath: m_LocalScale.y
-      value: 0.3
+      value: 0.32
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a578be30b6015f1429f8e5118b2b9a51, type: 3}
       propertyPath: m_LocalScale.z
@@ -1325,7 +1139,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a578be30b6015f1429f8e5118b2b9a51, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.4492966
+      value: 0.43718
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a578be30b6015f1429f8e5118b2b9a51, type: 3}
       propertyPath: m_LocalPosition.z
@@ -1554,13 +1368,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 836976211}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 3.22, y: 0, z: -1.61}
+  m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
+  m_LocalPosition: {x: 3.05, y: 0, z: 0.47}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 989247574}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
 --- !u!1 &850405317
 GameObject:
   m_ObjectHideFlags: 0
@@ -1617,7 +1431,7 @@ Transform:
   m_GameObject: {fileID: 886232080}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 4.6, y: 0, z: -3.01}
+  m_LocalPosition: {x: 2.9, y: 0, z: 1.97}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2749,11 +2563,12 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 836976212}
+  - {fileID: 1406736168}
   - {fileID: 322112114}
   - {fileID: 283813366}
   - {fileID: 1919893029}
   - {fileID: 886232081}
-  m_Father: {fileID: 1464156697}
+  m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1074887083
 GameObject:
@@ -3281,6 +3096,37 @@ Transform:
   - {fileID: 1503849964}
   m_Father: {fileID: 828247091}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1406736167
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1406736168}
+  m_Layer: 0
+  m_Name: Drink way1
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1406736168
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1406736167}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
+  m_LocalPosition: {x: 1.78, y: 0, z: 2.82}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 989247574}
+  m_LocalEulerAnglesHint: {x: 0, y: 90, z: 0}
 --- !u!1 &1431994161
 GameObject:
   m_ObjectHideFlags: 0
@@ -3432,19 +3278,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   userMom: {fileID: 0}
   userDad: {fileID: 0}
-  cameraManager: {fileID: 0}
-  kitchenNodes: []
-  livingRoomNodes: []
-  studyNodes: []
   robot: {fileID: 0}
   robotSpeed: 2
   kitchenServiceSpot: {fileID: 0}
   sofaServiceSpot: {fileID: 0}
-  deskServiceSpot: {fileID: 0}
-  robotServiceItem: {fileID: 0}
-  captureDelay: 2
+  robotIdleSpot: {fileID: 0}
+  banana: {fileID: 0}
+  apple: {fileID: 0}
+  backendUrl: http://localhost:5000
+  dialogDelay: 1.5
   robotDispatchDelay: 1.5
-  nodDelay: 0.5
   postNodDelay: 2
 --- !u!1 &1461207934
 GameObject:
@@ -3561,7 +3404,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1464156697}
   - component: {fileID: 1464156700}
-  - component: {fileID: 1464156699}
   - component: {fileID: 1464156698}
   m_Layer: 0
   m_Name: User_Mom
@@ -3579,12 +3421,11 @@ Transform:
   m_GameObject: {fileID: 1464156696}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -0.757}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1177344330}
-  - {fileID: 989247574}
   m_Father: {fileID: 1604172018}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1464156698
@@ -3602,9 +3443,12 @@ MonoBehaviour:
   userID: User_Mom
   drinkSpot: {fileID: 836976212}
   sittingSpot: {fileID: 322112114}
-  typingSpot: {fileID: 283813366}
-  readingSpot: {fileID: 1919893029}
   idleSpot: {fileID: 886232081}
+  drinkWaypoints:
+  - {fileID: 1406736168}
+  sittingWaypoints: []
+  idleWaypoints: []
+  walkSpeed: 1.4
   arrivalThreshold: 0.4
   rotationSpeed: 8
   noddingDuration: 1.5
@@ -3617,31 +3461,9 @@ MonoBehaviour:
   stateWalk: Walk
   stateDrink: Drink
   stateSittingIdle: SittingIdle
-  stateTyping: Typing
   stateReading: Reading
+  stateTyping: Typing
   stateNodding: Nodding
---- !u!195 &1464156699
-NavMeshAgent:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1464156696}
-  m_Enabled: 1
-  m_AgentTypeID: 0
-  m_Radius: 0.5
-  m_Speed: 3.5
-  m_Acceleration: 8
-  avoidancePriority: 50
-  m_AngularSpeed: 120
-  m_StoppingDistance: 0
-  m_AutoTraverseOffMeshLink: 1
-  m_AutoBraking: 1
-  m_AutoRepath: 1
-  m_Height: 2
-  m_BaseOffset: 0
-  m_WalkableMask: 4294967295
-  m_ObstacleAvoidanceType: 4
 --- !u!95 &1464156700
 Animator:
   serializedVersion: 5
@@ -3985,7 +3807,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &1565739702
 Transform:
   m_ObjectHideFlags: 0
@@ -4002,7 +3824,6 @@ Transform:
   - {fileID: 282226499}
   - {fileID: 1817084594}
   - {fileID: 44392370}
-  - {fileID: 339845999}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1594131263
@@ -4519,15 +4340,11 @@ MonoBehaviour:
   - {fileID: 977725252}
   - {fileID: 963603337}
   - {fileID: 1503849965}
-  studyNodes:
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  mode: 0
+  dadRoomNodes: []
+  mode: 2
   exp1_samplesPerBehavior: 1
   exp3a_repeatCount: 30
-  exp4_totalObservations: 120
+  exp4_totalObservations: 100
   exp5_episodes: 30
   waitAfterCapture: 3
   waitBetweenEpisodes: 2
@@ -5021,7 +4838,7 @@ Transform:
   m_GameObject: {fileID: 1919893028}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.7071068, z: -0, w: 0.7071068}
-  m_LocalPosition: {x: 1.48, y: 0, z: 5.48}
+  m_LocalPosition: {x: 1.34, y: 0, z: 5.27}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -5279,8 +5096,8 @@ SceneRoots:
   - {fileID: 1541835303}
   - {fileID: 1767811853}
   - {fileID: 1565739702}
+  - {fileID: 989247574}
   - {fileID: 1604172018}
-  - {fileID: 126052088}
   - {fileID: 906039671}
   - {fileID: 1491212908}
   - {fileID: 828247091}

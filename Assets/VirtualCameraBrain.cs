@@ -208,9 +208,11 @@ public class VirtualCameraBrain : MonoBehaviour
             mainCamera.transform.rotation = originalRot;
         }
 
-        // ── 一次 POST 全部截圖 ─────────────────────────────────
-        yield return StartCoroutine(
-            PostMultiImage(user, activity, imageList, nodeNames, nodeScores));
+        // ── 一次 POST 全部截圖（fire-and-forget）────────────────
+        // 不 yield return → 截圖完成後立即返回給呼叫方
+        // → ExperimentRunner 不等 Flask 回應就繼續下一個 episode
+        // → Flask 沒開的情況下動畫照常執行，只有 log 警告
+        StartCoroutine(PostMultiImage(user, activity, imageList, nodeNames, nodeScores));
     }
 
     /// <summary>

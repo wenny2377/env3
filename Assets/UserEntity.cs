@@ -1,145 +1,106 @@
 ﻿using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.AI;
 
 /// <summary>
-/// UserEntity — 最終版（無 SitDown / StandUp 動畫）
+/// UserEntity — S1~S8 設計（無 SitDown/StandUp，純 Transform 移動）
 ///
-/// 行為鏈路：
-///   Drink  : Walk → 到位 → SmoothRotate → Drink(loop) ← StaticCameraManager 截圖
-///   Sit    : Walk → 接近點 → SmoothRotate → agent.enabled=false → teleport 到椅面 → SittingIdle(loop)
-///   Typing : Walk → 接近點 → SmoothRotate → agent.enabled=false → teleport → Typing(loop)
-///   Reading: Walk → 接近點 → SmoothRotate → agent.enabled=false → teleport → Reading(loop)
+/// Mom（客廳）:
+///   S1 Drink   : Walk → Kitchen DrinkSpot → Drink(loop)
+///   S2 Sit     : Walk → 沙發 SittingSpot → teleport → SittingIdle(loop)
+///   S3 Reading : Walk → 沙發 SittingSpot（同位置）→ teleport → Reading(loop)
+///   S4 Idle    : 原地 Idle(loop)，baseline，不截圖
 ///
-/// ReturnToIdle（坐姿）:
-///   PlayAnim(Idle) → Y=0 → agent.enabled=true → Warp → Walk → IdleSpot
+/// Dad（書房）:
+///   S5 Drink   : Walk → 客廳茶几 DrinkSpot → Drink(loop)
+///   S6 Sit     : Walk → 書桌椅 SittingSpot → teleport → SittingIdle(loop)
+///   S7 Typing  : Walk → 書桌椅 SittingSpot（同位置）→ teleport → Typing(loop)
+///   S8 Idle    : 原地 Idle(loop)，baseline，不截圖
 ///
-/// 為什麼坐下用 agent.enabled=false：
-///   agent.isStopped=true 仍會每幀把 Y 貼回地板
-///   enabled=false 才能讓 transform.Y 停在椅面高度
-///   站起來前必須先 Y=0，再 enabled=true + Warp()，否則位置跳動
+/// 坐下流程（無 SitDown 動畫）:
+///   WalkTo 接近點（椅前 0.3m，Y=0）→ SmoothRotate → teleport 到椅面 → 播 loop
 ///
-/// Animator Controller 設定（必做）：
-///   States: Idle(Default★) Walk Drink SittingIdle Typing Reading Nodding
-///   全部無 Transition 箭頭，無 Parameters
-///   Apply Root Motion → OFF（一定要關）
-///   每個 Clip → Bake XZ ✅ → Y Based Upon Feet → Loop clip 才勾
+/// ReturnToIdle:
+///   坐姿 → PlayAnim(Idle) → Y=0 → Walk → IdleSpot
+///   站姿 → Walk → IdleSpot
 ///
-/// SittingSpot 設定：
-///   Position.Y = 椅面高度（沙發約 0.40，辦公椅約 0.50）
-///   Position   = 椅墊中心（往椅背退 0.05~0.15m 避免手插桌）
-///   Rotation   = 坐下後面對的方向
-///   Scene 視窗藍箭頭 = 角色坐下後面對的方向
-///
-/// 手持物件 offset 調整（Play Mode）：
-///   讓角色進入 Drink 狀態 → 在 Scene 拖動杯子到正確位置
-///   → 按 C 鍵輸出 offset 數值 → 停止 Play → 填入 Inspector
+/// Waypoints（選填）:
+///   Mom：Kitchen + Living Room 完全開放，所有路線直線，全部留空
+///   Dad Drink：Dad Room → 門口（下方）→ Living Room → 茶几，需 2 個路點
+///     drinkWaypoints[0] = WP1_DoorDadSide   （門框 Dad Room 側，Y=0）
+///     drinkWaypoints[1] = WP2_DoorLivingSide （門框 Living Room 側，Y=0）
+///     idleWaypoints[0]  = WP2_DoorLivingSide （回程，反向）
+///     idleWaypoints[1]  = WP1_DoorDadSide    （回程，反向）
+///   Dad Sit/Typing：同房間直線，留空
 /// </summary>
 [RequireComponent(typeof(Animator))]
-[RequireComponent(typeof(NavMeshAgent))]
 public class UserEntity : MonoBehaviour
 {
-    // ══════════════════════════════════════════════════════
-    // Inspector 欄位
-    // ══════════════════════════════════════════════════════
-
     [Header("使用者 ID")]
     public string userID = "User_Mom";
 
-    [Header("定點空物件（Z 軸朝向家具正面）")]
-    [Tooltip("飲水機前 0.5m，Z 軸朝飲水機")]
+    [Header("定點（Z 軸朝向家具正面）")]
+    [Tooltip("Mom: Kitchen 桌前，Y=0\nDad: 客廳茶几前，Y=0")]
     public Transform drinkSpot;
 
-    [Tooltip("沙發椅墊中心\nPosition.Y = 椅面高度（沙發約 0.40）\nZ 軸朝角色坐下後面對的方向")]
+    [Tooltip("Mom: 客廳沙發椅墊，Y=椅面高度(~0.40)\nDad: 書桌椅椅墊，Y=椅面高度(~0.50)\nSit 和 Reading / Typing 共用同一個 Spot")]
     public Transform sittingSpot;
 
-    [Tooltip("書桌椅墊中心（Dad 專用）\nPosition.Y = 椅面高度（辦公椅約 0.50）\nZ 軸朝螢幕方向")]
-    public Transform typingSpot;
-
-    [Tooltip("沙發或床邊（Mom 專用）\nPosition.Y = 椅面高度")]
-    public Transform readingSpot;
-
-    [Tooltip("客廳入口待機點，Y = 0（地板高度）")]
+    [Tooltip("Mom: 客廳入口，Y=0\nDad: 書房入口，Y=0")]
     public Transform idleSpot;
 
-    [Header("NavMesh")]
-    [Tooltip("距目標幾公尺算到達")]
-    public float arrivalThreshold = 0.4f;
+    [Header("路點（選填，有牆才填，Y=0）")]
+    [Tooltip("前往 drinkSpot 途中的路點\nMom: 走廊轉角點\nDad: 書房門口 + 走廊點")]
+    public Transform[] drinkWaypoints;
 
-    [Header("轉向速度（6~10，太快有跳轉感）")]
+    [Tooltip("前往 sittingSpot 途中的路點（通常不需要）")]
+    public Transform[] sittingWaypoints;
+
+    [Tooltip("回到 idleSpot 途中的路點（去程反向）\nMom: 留空\nDad: [0]=WP2_DoorLivingSide  [1]=WP1_DoorDadSide")]
+    public Transform[] idleWaypoints;
+
+    [Header("移動設定")]
+    public float walkSpeed = 1.4f;
+    public float arrivalThreshold = 0.08f;
     public float rotationSpeed = 8f;
 
-    [Header("Nodding 動畫時長（秒）")]
+    [Header("Nodding 時長（秒）")]
     public float noddingDuration = 1.5f;
 
-    // ── 物件跟手 ─────────────────────────────────────────
-    [Header("物件跟手")]
-    [Tooltip("杯子或其他手持物件，留空則不啟用跟手")]
+    [Header("手持物件（選填）")]
     public GameObject heldItem;
-
-    [Tooltip("Mixamo 骨架通常是 mixamorig:RightHand\n展開角色 Hierarchy 確認完整名稱")]
     public string rightHandBoneName = "mixamorig:RightHand";
-
-    [Tooltip("物件相對右手骨架的位置偏移\nPlay Mode 按 C 鍵輸出正確值")]
     public Vector3 itemPositionOffset = Vector3.zero;
-
-    [Tooltip("物件相對右手骨架的旋轉偏移")]
     public Vector3 itemRotationOffset = Vector3.zero;
-
-    [Tooltip("哪些 Activity 顯示物件（逗號分隔）\n例如：Drink\n空白 = 永遠顯示")]
+    [Tooltip("哪些 Activity 顯示物件，逗號分隔，空白=永遠顯示")]
     public string itemVisibleDuring = "Drink";
 
-    // ── Animator State 名稱 ──────────────────────────────
-    [Header("Animator State 名稱（必須與 Controller 完全一致）")]
+    [Header("Animator State 名稱（與 Controller 完全一致）")]
     public string stateIdle = "Idle";
     public string stateWalk = "Walk";
     public string stateDrink = "Drink";
     public string stateSittingIdle = "SittingIdle";
-    public string stateTyping = "Typing";
     public string stateReading = "Reading";
+    public string stateTyping = "Typing";
     public string stateNodding = "Nodding";
 
-    // ══════════════════════════════════════════════════════
-    // 公開屬性（StaticCameraManager / ExperimentRunner 讀取）
-    // ══════════════════════════════════════════════════════
-
-    /// <summary>
-    /// SmartScanRoutine 讀取：
-    ///   "Idle" / "Walking" → 不截圖
-    ///   "Drink" / "SittingIdle" / "Typing" / "Reading" → 觸發截圖
-    /// </summary>
+    // ── 公開屬性 ──────────────────────────────────────────
     public string currentActivity { get; private set; } = "Idle";
-
     public bool IsBusy { get; private set; } = false;
-
-    /// <summary>VirtualCameraBrain 對準的胸口位置（約 1.2m）</summary>
     public Vector3 GetAimPosition() => transform.position + Vector3.up * 1.2f;
 
-    // ══════════════════════════════════════════════════════
-    // 私有成員
-    // ══════════════════════════════════════════════════════
-
+    // ── 私有 ──────────────────────────────────────────────
     Animator anim;
-    NavMeshAgent agent;
     Transform rightHandBone;
     string[] showDuring;
+    bool isSitting = false;
 
     // ══════════════════════════════════════════════════════
-    // Unity 生命週期
-    // ══════════════════════════════════════════════════════
-
     void Start()
     {
         anim = GetComponent<Animator>();
-        agent = GetComponent<NavMeshAgent>();
-        agent.updateRotation = true;
-        agent.isStopped = true;
-
         rightHandBone = FindBoneRecursive(transform, rightHandBoneName);
         if (rightHandBone == null && heldItem != null)
-            Debug.LogWarning($"[{userID}] 找不到骨架 '{rightHandBoneName}'\n" +
-                             "展開角色 Hierarchy → 找 RightHand → 複製完整名稱填入 Inspector");
+            Debug.LogWarning($"[{userID}] 找不到骨架 '{rightHandBoneName}'");
 
         showDuring = string.IsNullOrWhiteSpace(itemVisibleDuring)
             ? new string[0]
@@ -149,11 +110,6 @@ public class UserEntity : MonoBehaviour
         PlayAnim(stateIdle);
     }
 
-    // ──────────────────────────────────────────────────────
-    // LateUpdate：物件貼合手骨架
-    // 必須 LateUpdate：Update() 時 Animator 還沒算完骨架位置
-    // ──────────────────────────────────────────────────────
-
     void LateUpdate()
     {
         if (heldItem == null || rightHandBone == null || !heldItem.activeSelf) return;
@@ -161,16 +117,16 @@ public class UserEntity : MonoBehaviour
         heldItem.transform.rotation = rightHandBone.rotation * Quaternion.Euler(itemRotationOffset);
     }
 
-    // Play Mode 按 C 鍵輸出 offset 值，調好後刪除此區塊
 #if UNITY_EDITOR
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.C) && heldItem != null && rightHandBone != null)
         {
-            Vector3 localPos = rightHandBone.InverseTransformPoint(heldItem.transform.position);
-            Vector3 localRot = (Quaternion.Inverse(rightHandBone.rotation) * heldItem.transform.rotation).eulerAngles;
-            Debug.Log($"[{userID}] itemPositionOffset = {localPos}");
-            Debug.Log($"[{userID}] itemRotationOffset = {localRot}");
+            Debug.Log($"[{userID}] posOffset = " +
+                rightHandBone.InverseTransformPoint(heldItem.transform.position));
+            Debug.Log($"[{userID}] rotOffset = " +
+                (Quaternion.Inverse(rightHandBone.rotation) *
+                 heldItem.transform.rotation).eulerAngles);
         }
     }
 #endif
@@ -180,8 +136,8 @@ public class UserEntity : MonoBehaviour
     // ══════════════════════════════════════════════════════
 
     /// <summary>
-    /// 走到定點 → 執行行為（loop 狀態）
-    /// activity: "drink" | "sit" | "typing" | "reading" | "idle"
+    /// activity: "drink"|"sit"|"reading"|"typing"|"idle"
+    /// ExperimentRunner / DemoRunner 呼叫
     /// </summary>
     public IEnumerator SwitchActivity(string activity)
     {
@@ -192,18 +148,16 @@ public class UserEntity : MonoBehaviour
         {
             case "drink": yield return StartCoroutine(DoDrink()); break;
             case "sit": yield return StartCoroutine(DoSit()); break;
-            case "typing": yield return StartCoroutine(DoTyping()); break;
             case "reading": yield return StartCoroutine(DoReading()); break;
-            case "idle": yield return StartCoroutine(DoReturnToIdle()); break;
-            default:
-                Debug.LogWarning($"[{userID}] 未知 activity: {activity}");
-                break;
+            case "typing": yield return StartCoroutine(DoTyping()); break;
+            case "idle": SetActivity("Idle"); PlayAnim(stateIdle); break;
+            default: Debug.LogWarning($"[{userID}] 未知 activity: {activity}"); break;
         }
 
         IsBusy = false;
     }
 
-    /// <summary>結束行為，走回 IdleSpot</summary>
+    /// <summary>走回 IdleSpot（ExperimentRunner 每次 episode 後呼叫）</summary>
     public IEnumerator ReturnToIdle()
     {
         IsBusy = true;
@@ -211,126 +165,101 @@ public class UserEntity : MonoBehaviour
         IsBusy = false;
     }
 
-    /// <summary>點頭接受提案（DemoRunner 呼叫）</summary>
+    /// <summary>點頭（DemoRunner Phase2 使用）</summary>
     public IEnumerator Nod()
     {
         PlayAnim(stateNodding);
         yield return new WaitForSeconds(noddingDuration);
-
-        string resume = currentActivity switch
+        // 恢復目前 loop 動畫
+        PlayAnim(currentActivity switch
         {
             "Drink" => stateDrink,
             "SittingIdle" => stateSittingIdle,
-            "Typing" => stateTyping,
             "Reading" => stateReading,
+            "Typing" => stateTyping,
             _ => stateIdle
-        };
-        PlayAnim(resume);
+        });
     }
 
-    /// <summary>StaticCameraManager 直接設定 Animator State</summary>
-    public void SetAnim(string stateName) => PlayAnim(stateName);
+    public void SetAnim(string s) => PlayAnim(s);
 
     // ══════════════════════════════════════════════════════
-    // 行為鏈路（私有）
+    // 行為鏈路
     // ══════════════════════════════════════════════════════
 
+    // S1/S5：Drink
     IEnumerator DoDrink()
     {
-        if (drinkSpot == null) { Debug.LogWarning($"[{userID}] drinkSpot 未設定"); yield break; }
-
+        if (drinkSpot == null) { Warn("drinkSpot"); yield break; }
         SetActivity("Walking");
-        yield return StartCoroutine(NavWalkTo(drinkSpot.position));
+        yield return StartCoroutine(WalkVia(drinkSpot.position, drinkWaypoints));
         yield return StartCoroutine(SmoothRotateTo(drinkSpot.forward));
-
         SetActivity("Drink");
         PlayAnim(stateDrink);
-        // StaticCameraManager 偵測到 "Drink" 後會自動觸發截圖
-        // ExperimentRunner 等 waitAfterCapture 秒後才呼叫 ReturnToIdle
-        // 此處不自動返回，讓外部控制停留時間
+        // StaticCameraManager 自動截圖；ExperimentRunner 等 waitAfterCapture 後呼叫 ReturnToIdle
     }
 
+    // S2/S6：Sit（teleport 到椅面，無 SitDown 動畫）
     IEnumerator DoSit()
     {
-        if (sittingSpot == null) { Debug.LogWarning($"[{userID}] sittingSpot 未設定"); yield break; }
-
+        if (sittingSpot == null) { Warn("sittingSpot"); yield break; }
         SetActivity("Walking");
-        // NavMesh 只在地板（Y=0），接近點強制 Y=0
-        yield return StartCoroutine(NavWalkTo(GetApproachPos(sittingSpot)));
+        yield return StartCoroutine(WalkVia(GetApproachPos(sittingSpot), sittingWaypoints));
         yield return StartCoroutine(SmoothRotateTo(sittingSpot.forward));
-
-        // agent.enabled=false → Y 不再被 NavMesh 強制貼地
-        agent.enabled = false;
-        transform.position = sittingSpot.position;   // teleport 到椅面高度
+        transform.position = sittingSpot.position;
         transform.rotation = sittingSpot.rotation;
-
+        isSitting = true;
         SetActivity("SittingIdle");
         PlayAnim(stateSittingIdle);
     }
 
-    IEnumerator DoTyping()
-    {
-        if (typingSpot == null) { Debug.LogWarning($"[{userID}] typingSpot 未設定（Dad 才需要）"); yield break; }
-
-        SetActivity("Walking");
-        yield return StartCoroutine(NavWalkTo(GetApproachPos(typingSpot)));
-        yield return StartCoroutine(SmoothRotateTo(typingSpot.forward));
-
-        agent.enabled = false;
-        transform.position = typingSpot.position;
-        transform.rotation = typingSpot.rotation;
-
-        SetActivity("Typing");
-        PlayAnim(stateTyping);
-    }
-
+    // S3：Reading（同一個 sittingSpot，不同動畫）
     IEnumerator DoReading()
     {
-        if (readingSpot == null) { Debug.LogWarning($"[{userID}] readingSpot 未設定（Mom 才需要）"); yield break; }
-
+        if (sittingSpot == null) { Warn("sittingSpot（Reading 用）"); yield break; }
         SetActivity("Walking");
-        yield return StartCoroutine(NavWalkTo(GetApproachPos(readingSpot)));
-        yield return StartCoroutine(SmoothRotateTo(readingSpot.forward));
-
-        agent.enabled = false;
-        transform.position = readingSpot.position;
-        transform.rotation = readingSpot.rotation;
-
+        yield return StartCoroutine(WalkVia(GetApproachPos(sittingSpot), sittingWaypoints));
+        yield return StartCoroutine(SmoothRotateTo(sittingSpot.forward));
+        transform.position = sittingSpot.position;
+        transform.rotation = sittingSpot.rotation;
+        isSitting = true;
         SetActivity("Reading");
         PlayAnim(stateReading);
     }
 
-    // 坐姿 → 站立正確順序：
-    //   1. PlayAnim(Idle) → 切站姿動畫
-    //   2. Y = 0          → 回地板（必須在 agent.enabled=true 之前）
-    //   3. agent.enabled = true
-    //   4. agent.Warp()   → 告知 NavMesh 新位置（不 Warp 會卡死）
-    //   5. Walk → IdleSpot
+    // S7：Typing（同一個 sittingSpot，不同動畫）
+    IEnumerator DoTyping()
+    {
+        if (sittingSpot == null) { Warn("sittingSpot（Typing 用）"); yield break; }
+        SetActivity("Walking");
+        yield return StartCoroutine(WalkVia(GetApproachPos(sittingSpot), sittingWaypoints));
+        yield return StartCoroutine(SmoothRotateTo(sittingSpot.forward));
+        transform.position = sittingSpot.position;
+        transform.rotation = sittingSpot.rotation;
+        isSitting = true;
+        SetActivity("Typing");
+        PlayAnim(stateTyping);
+    }
+
+    // ReturnToIdle
     IEnumerator DoReturnToIdle()
     {
         SetItemVisible(false);
 
-        bool wasSitting = currentActivity == "SittingIdle" ||
-                          currentActivity == "Typing" ||
-                          currentActivity == "Reading";
-
-        if (wasSitting)
+        if (isSitting)
         {
             PlayAnim(stateIdle);
             SetActivity("Idle");
-
-            Vector3 standPos = transform.position;
-            standPos.y = 0f;
-            transform.position = standPos;
-
-            agent.enabled = true;
-            agent.Warp(standPos);
+            Vector3 p = transform.position;
+            p.y = 0f;
+            transform.position = p;
+            isSitting = false;
         }
 
         if (idleSpot != null)
         {
             SetActivity("Walking");
-            yield return StartCoroutine(NavWalkTo(idleSpot.position));
+            yield return StartCoroutine(WalkVia(idleSpot.position, idleWaypoints));
         }
 
         SetActivity("Idle");
@@ -338,134 +267,115 @@ public class UserEntity : MonoBehaviour
     }
 
     // ══════════════════════════════════════════════════════
-    // NavMesh 移動
+    // 移動
     // ══════════════════════════════════════════════════════
 
-    IEnumerator NavWalkTo(Vector3 targetPos)
+    IEnumerator WalkVia(Vector3 target, Transform[] wps)
     {
-        // 若上次坐下關閉了 agent，先重啟
-        if (!agent.enabled)
-        {
-            Vector3 p = transform.position;
-            p.y = 0f;
-            transform.position = p;
-            agent.enabled = true;
-            agent.Warp(p);
-        }
-
-        agent.updateRotation = true;
-        agent.isStopped = false;
-        agent.SetDestination(targetPos);
-        PlayAnim(stateWalk);
-
-        // 等路徑計算完成
-        yield return null;
-        yield return new WaitUntil(() => !agent.pathPending);
-
-        // 等到達（remainingDistance 有時初始為 0，多等一幀）
-        yield return null;
-        while (!agent.pathPending && agent.remainingDistance > arrivalThreshold)
-            yield return null;
-
-        agent.isStopped = true;
-        agent.velocity = Vector3.zero;
-        agent.updateRotation = false;   // 交還給 SmoothRotateTo
+        if (wps != null)
+            foreach (var wp in wps)
+                if (wp != null)
+                    yield return StartCoroutine(WalkTo(wp.position));
+        yield return StartCoroutine(WalkTo(target));
     }
 
-    IEnumerator SmoothRotateTo(Vector3 targetForward)
+    IEnumerator WalkTo(Vector3 target)
     {
-        targetForward.y = 0f;
-        if (targetForward.sqrMagnitude < 0.001f) yield break;
+        target.y = 0f;
+        transform.position = new Vector3(transform.position.x, 0f, transform.position.z);
+        PlayAnim(stateWalk);
 
-        Quaternion targetRot = Quaternion.LookRotation(targetForward.normalized);
-        while (Quaternion.Angle(transform.rotation, targetRot) > 0.5f)
+        while (true)
         {
-            transform.rotation = Quaternion.Slerp(
-                transform.rotation, targetRot,
+            Vector3 cur = new Vector3(transform.position.x, 0f, transform.position.z);
+            if (Vector3.Distance(cur, target) <= arrivalThreshold) break;
+            transform.position = Vector3.MoveTowards(cur, target, walkSpeed * Time.deltaTime);
+            Vector3 dir = (target - cur).normalized;
+            if (dir.sqrMagnitude > 0.001f)
+                transform.rotation = Quaternion.Slerp(transform.rotation,
+                    Quaternion.LookRotation(dir), Time.deltaTime * rotationSpeed);
+            yield return null;
+        }
+        transform.position = new Vector3(target.x, 0f, target.z);
+    }
+
+    IEnumerator SmoothRotateTo(Vector3 fwd)
+    {
+        fwd.y = 0f;
+        if (fwd.sqrMagnitude < 0.001f) yield break;
+        Quaternion tgt = Quaternion.LookRotation(fwd.normalized);
+        while (Quaternion.Angle(transform.rotation, tgt) > 0.5f)
+        {
+            transform.rotation = Quaternion.Slerp(transform.rotation, tgt,
                 Time.deltaTime * rotationSpeed);
             yield return null;
         }
-        transform.rotation = targetRot;
+        transform.rotation = tgt;
     }
 
     // ══════════════════════════════════════════════════════
-    // 輔助方法
+    // 輔助
     // ══════════════════════════════════════════════════════
 
-    /// <summary>
-    /// NavMesh 接近點：spot 正前方 0.3m，Y 強制為 0
-    /// NavMesh 烘焙只在地板，傳入椅面 Y 會找不到路徑
-    /// </summary>
     Vector3 GetApproachPos(Transform spot)
     {
-        Vector3 pos = spot.position - spot.forward * 0.3f;
-        pos.y = 0f;
-        return pos;
+        Vector3 p = spot.position - spot.forward * 0.3f;
+        p.y = 0f;
+        return p;
     }
 
-    void SetActivity(string activity)
+    void SetActivity(string a)
     {
-        currentActivity = activity;
+        currentActivity = a;
         if (showDuring.Length == 0) return;
-        SetItemVisible(System.Array.IndexOf(showDuring, activity) >= 0);
+        SetItemVisible(System.Array.IndexOf(showDuring, a) >= 0);
     }
 
-    void PlayAnim(string stateName)
-    {
-        anim.Play(stateName, 0, 0f);
-    }
+    void PlayAnim(string s) => anim.Play(s, 0, 0f);
+    void SetItemVisible(bool v) { if (heldItem != null) heldItem.SetActive(v); }
+    void Warn(string s) => Debug.LogWarning($"[{userID}] {s} 未設定");
 
-    void SetItemVisible(bool visible)
+    Transform FindBoneRecursive(Transform parent, string name)
     {
-        if (heldItem != null) heldItem.SetActive(visible);
-    }
-
-    /// <summary>
-    /// 遞迴搜尋骨架，支援完整名稱和後綴匹配
-    /// "RightHand" 可匹配 "mixamorig:RightHand"
-    /// </summary>
-    Transform FindBoneRecursive(Transform parent, string boneName)
-    {
-        foreach (Transform child in parent)
+        foreach (Transform c in parent)
         {
-            if (child.name == boneName || child.name.EndsWith(boneName))
-                return child;
-            var found = FindBoneRecursive(child, boneName);
-            if (found != null) return found;
+            if (c.name == name || c.name.EndsWith(name)) return c;
+            var f = FindBoneRecursive(c, name);
+            if (f != null) return f;
         }
         return null;
     }
 
-    // ══════════════════════════════════════════════════════
-    // Gizmo：Scene 視窗顯示定點位置與朝向
-    // 球體 = 定點位置，箭頭 = 角色坐下後面對的方向
-    // ══════════════════════════════════════════════════════
-
     void OnDrawGizmos()
     {
         DrawSpot(drinkSpot, Color.yellow, "Drink");
-        DrawSpot(sittingSpot, Color.green, "Sit");
-        DrawSpot(typingSpot, Color.cyan, "Typing");
-        DrawSpot(readingSpot, Color.magenta, "Reading");
-
+        DrawSpot(sittingSpot, Color.green, "Sit/Read/Type");
         if (idleSpot != null)
         {
             Gizmos.color = Color.white;
             Gizmos.DrawWireSphere(idleSpot.position, 0.15f);
-#if UNITY_EDITOR
-            UnityEditor.Handles.Label(idleSpot.position + Vector3.up * 0.3f, "Idle");
-#endif
         }
+        DrawWaypointPath(drinkWaypoints, drinkSpot, Color.yellow);
+        DrawWaypointPath(sittingWaypoints, sittingSpot, Color.green);
     }
 
-    void DrawSpot(Transform spot, Color color, string label)
+    void DrawSpot(Transform spot, Color c, string label)
     {
         if (spot == null) return;
-        Gizmos.color = color;
+        Gizmos.color = c;
         Gizmos.DrawWireSphere(spot.position, 0.2f);
         Gizmos.DrawRay(spot.position, spot.forward * 0.8f);
 #if UNITY_EDITOR
         UnityEditor.Handles.Label(spot.position + Vector3.up * 0.35f, label);
 #endif
+    }
+
+    void DrawWaypointPath(Transform[] wps, Transform final, Color c)
+    {
+        if (wps == null || wps.Length == 0 || idleSpot == null) return;
+        Gizmos.color = new Color(c.r, c.g, c.b, 0.4f);
+        Vector3 prev = idleSpot.position;
+        foreach (var wp in wps) { if (wp != null) { Gizmos.DrawLine(prev, wp.position); prev = wp.position; } }
+        if (final != null) Gizmos.DrawLine(prev, final.position);
     }
 }

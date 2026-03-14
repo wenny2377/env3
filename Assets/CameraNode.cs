@@ -30,7 +30,7 @@ public class CameraNode : MonoBehaviour
     [Header("節點識別")]
     public string nodeName = "Cam_Node_01";
 
-    [Tooltip("必須與 RoomArea.roomName 完全一致\n例如：LivingRoom / Study")]
+    [Tooltip("必須與 RoomArea.roomName 完全一致\n例如：LivingRoom / Kitchen / DadRoom")]
     public string roomName = "LivingRoom";
 
     [Header("模擬相機 FOV（度）")]
