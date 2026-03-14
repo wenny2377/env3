@@ -1,20 +1,10 @@
 using System;
 using UnityEngine;
 
-/// <summary>
-/// 統一資料結構定義檔（最終版）
-/// VirtualCameraBrain 和 NetworkClient 共用同一份定義
-/// 不要在其他 .cs 裡重複定義這些 class
-/// </summary>
-
-// ─────────────────────────────────────────────
-// Unity → Python 傳送 Payload
-// 對齊 Python PerceptionEngine.analyze_action_burst(payload)
-// ─────────────────────────────────────────────
 [Serializable]
 public class MultiImagePayload
 {
-    // ── VLM 核心（必填）──
+
     public string[] image_list;      // Base64 JPEG 字串陣列
     public int      image_count;     // 本次傳出幾張
 
@@ -29,24 +19,15 @@ public class MultiImagePayload
     public Vector3_Data user_pos;    // UserEntity 世界座標 → Python bind_and_update 的 est_pos
     public string       timestamp;
 
-    // ── 機器人欄位（選填，定點相機模式填預設值）──
-    public Vector3_Data robot_pos;          // 定點模式：不填（null）
-    public float        robot_rotation_y;   // 定點模式：0
-    public float        camera_fov;         // 定點模式：0
 }
 
-// ─────────────────────────────────────────────
-// Python → Unity 回應
-// ─────────────────────────────────────────────
 [Serializable]
 public class PredictResponse
 {
     public string action;
 }
 
-// ─────────────────────────────────────────────
-// Vector3 序列化輔助（JsonUtility 不支援原生 Vector3）
-// ─────────────────────────────────────────────
+
 [Serializable]
 public class Vector3_Data
 {

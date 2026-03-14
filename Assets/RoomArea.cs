@@ -2,8 +2,19 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 房間觸發區域（偵錯增強版）
-/// 解決子模型分散導致觸發失敗的問題
+/// RoomArea — 房間觸發區域
+///
+/// 職責：
+///   1. 角色進入 BoxCollider 時，把該房間的 CameraNode 清單注冊到 StaticCameraManager
+///   2. 讓 ProxyExportManager.IdentifyRoom() 能透過 OverlapSphere 查到房間名稱
+///
+/// autoFetchByRoomName：
+///   勾選 → Start() 自動找場景中 CameraNode.roomName == 此 roomName 的節點
+///   不勾 → 手動把節點拖入 cameraPivots 陣列
+///
+/// ignoreTagCheck：
+///   勾選（推薦）→ 任何 Collider 進入都觸發，不依賴 Tag
+///   不勾 → 只有 Tag="User" 的物件觸發
 /// </summary>
 [RequireComponent(typeof(BoxCollider))]
 public class RoomArea : MonoBehaviour
@@ -11,84 +22,61 @@ public class RoomArea : MonoBehaviour
     [Header("房間設定")]
     public string roomName = "LivingRoom";
 
-    [Header("自動收集相機")]
+    [Header("自動收集相機節點")]
+    [Tooltip("勾選：自動找場景中 roomName 相同的 CameraNode\n不勾：手動拖入下方 cameraPivots")]
     public bool autoFetchByRoomName = true;
     public Transform[] cameraPivots;
 
     [Header("調試選項")]
-    public bool ignoreTagCheck = true; // 演示時建議勾選，防止 Tag 沒設好失敗
+    [Tooltip("勾選：任何碰撞體都觸發（推薦）\n不勾：只有 Tag=User 的物件觸發")]
+    public bool ignoreTagCheck = true;
     public Color areaColor = new Color(0.1f, 1f, 0.1f, 0.2f);
 
     void Start()
     {
-        if (autoFetchByRoomName) FetchNodes();
-        
-        // 自動確保 BoxCollider 設定正確
-        BoxCollider col = GetComponent<BoxCollider>();
-        col.isTrigger = true;
+        GetComponent<BoxCollider>().isTrigger = true;
+        if (autoFetchByRoomName) FetchNodesByRoomName();
     }
 
-    private void FetchNodes()
+    void FetchNodesByRoomName()
     {
-        CameraNode[] allNodes = FindObjectsOfType<CameraNode>();
-        List<Transform> matched = new List<Transform>();
-        foreach (CameraNode node in allNodes)
-        {
-            if (node.roomName == roomName) matched.Add(node.transform);
-        }
+        var allNodes = FindObjectsOfType<CameraNode>();
+        var matched = new List<Transform>();
+        foreach (var n in allNodes)
+            if (n.roomName == roomName) matched.Add(n.transform);
         cameraPivots = matched.ToArray();
-        
+
         if (cameraPivots.Length > 0)
-            Debug.Log($"<color=white>[RoomArea]</color> {roomName} 已綁定 {cameraPivots.Length} 個相機");
+            Debug.Log($"[RoomArea] {roomName} 綁定 {cameraPivots.Length} 個虛擬節點");
         else
-            Debug.LogWarning($"<color=yellow>[RoomArea]</color> {roomName} 找不到相機節點！");
+            Debug.LogWarning($"[RoomArea] {roomName} 找不到 CameraNode！確認 roomName 完全一致");
     }
 
-    // ─────────────────────────────────────────────
-    // 核心觸發邏輯
-    // ─────────────────────────────────────────────
     void OnTriggerEnter(Collider other)
     {
-        // 1. 物理診斷：只要有東西撞到就先噴 Log，幫你確認 Collider 是否有效
-        Debug.Log($"<color=yellow>【Physics】{other.name} 撞進了 {roomName} 感應區</color>");
-
-        // 2. 檢查標籤 (Tag)
+        Debug.Log($"[RoomArea] {other.name} 進入 {roomName}");
         if (!ignoreTagCheck && !other.CompareTag("User")) return;
 
-        // 3. 關鍵修正：從碰撞體往上找父物件的 UserEntity
-        // 因為你的 Collider 可能在 User_Mom/Mom_Typing 子物件上
         UserEntity user = other.GetComponentInParent<UserEntity>();
+        if (user == null) return;
 
-        if (user != null)
+        if (StaticCameraManager.Instance == null)
         {
-            Debug.Log($"<color=green>【Trigger】確認為用戶 {user.userID}，目前狀態：{user.currentActivity}</color>");
-
-            if (cameraPivots == null || cameraPivots.Length == 0)
-            {
-                Debug.LogWarning($"[RoomArea] {roomName} 找不到相機節點，無法拍照");
-                return;
-            }
-
-            if (StaticCameraManager.Instance != null)
-            {
-                // 執行拍照流程
-                StaticCameraManager.Instance.RequestSnapshot(
-                    cameraPivots,
-                    roomName,
-                    user.userID,
-                    user.currentActivity
-                );
-            }
-            else
-            {
-                Debug.LogError("[RoomArea] 找不到 StaticCameraManager 單例！");
-            }
+            Debug.LogError("[RoomArea] StaticCameraManager.Instance 為 null");
+            return;
         }
+
+        var nodeList = new List<CameraNode>();
+        foreach (var t in cameraPivots)
+        {
+            if (t == null) continue;
+            var n = t.GetComponent<CameraNode>();
+            if (n != null) nodeList.Add(n);
+        }
+        if (nodeList.Count > 0)
+            StaticCameraManager.Instance.RegisterRoomCameras(roomName, nodeList);
     }
 
-    // ─────────────────────────────────────────────
-    // 輔助視覺化
-    // ─────────────────────────────────────────────
     void OnDrawGizmos()
     {
         BoxCollider col = GetComponent<BoxCollider>();
