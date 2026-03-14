@@ -3,236 +3,236 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
 
+/// <summary>
+/// DynamicSyncManager — 角色位置 + 道具位置串流
+///
+/// 兩條資料流，全部送到 Flask /dynamic_sync：
+///   A. 角色位置（每 0.5 秒）→ source = "unity_user"
+///   B. 道具位置（每 5 秒，有移動才送）→ source = "unity"
+///
+/// Flask /dynamic_sync 期望格式：
+///   { "objects": [
+///       { "label": "user_mom", "room": "", "position": [x, z], "source": "unity_user" },
+///       { "label": "banana",   "room": "LivingRoom", "position": [x, z], "source": "unity" }
+///   ]}
+/// </summary>
 public class DynamicSyncManager : MonoBehaviour
 {
-
-    [Header("Users (required)")]
+    [Header("使用者（必填）")]
     public UserEntity userMom;
     public UserEntity userDad;
 
-    [Header("Dynamic Objects (movable objects such as Cup / Keyboard)")]
-    [Tooltip("The positions of these objects will be synchronized\nUsually objects that do not need SceneSyncManager handling")]
+    [Header("動態道具（可動物件，例如 Cup / Banana）")]
     public List<GameObject> dynamicObjects = new List<GameObject>();
 
-    [Header("Backend URL")]
+    [Header("後端 URL")]
     public string backendUrl = "http://localhost:5000";
 
-    [Header("Frequency Settings")]
-    [Tooltip("User position streaming interval (recommended 0.5s)\nUsed to calculate velocity and anchor prediction")]
-    public float positionInterval = 0.5f;
-
-    [Tooltip("Dynamic object sync interval (recommended 3~5s)\nPOST only when objects actually move")]
+    [Header("串流頻率（秒）")]
+    public float positionInterval  = 0.5f;
     public float objectSyncInterval = 5.0f;
 
-    [Header("Performance Control")]
-    [Tooltip("If position change is smaller than this threshold, POST will be skipped to reduce unnecessary requests\nRecommended 0.01~0.05")]
-    public float positionChangeTolerance = 0.02f;
+    [Header("最小移動距離（低於此值不 POST）")]
+    public float moveTolerance = 0.02f;
 
-    [Tooltip("Show every POST content in Console (for debugging)")]
+    [Header("除錯")]
     public bool verboseLog = false;
 
-    Dictionary<string, Vector3> lastPostedPosition = new Dictionary<string, Vector3>();
-    Dictionary<string, Vector3> lastObjectPosition = new Dictionary<string, Vector3>();
+    // ── 私有 ──────────────────────────────────────────────
+    Dictionary<string, Vector3> lastPos    = new Dictionary<string, Vector3>();
+    Dictionary<string, Vector3> lastObjPos = new Dictionary<string, Vector3>();
 
-    // velocity calculation (previous frame position)
-    Dictionary<string, Vector3> prevFramePosition = new Dictionary<string, Vector3>();
+    static readonly System.Globalization.CultureInfo Inv =
+        System.Globalization.CultureInfo.InvariantCulture;
 
-
+    // ══════════════════════════════════════════════════════
     void Start()
     {
-        // initialize position records
-        InitUserTracking(userMom);
-        InitUserTracking(userDad);
-
-        foreach (var obj in dynamicObjects)
-            if (obj != null)
-                lastObjectPosition[obj.name] = obj.transform.position;
-
-        // start loops
-        StartCoroutine(PositionStreamLoop());
-        StartCoroutine(ObjectSyncLoop());
+        StartCoroutine(PositionLoop());
+        StartCoroutine(ObjectLoop());
     }
 
-    void InitUserTracking(UserEntity user)
-    {
-        if (user == null) return;
-        lastPostedPosition[user.userID] = user.transform.position;
-        prevFramePosition[user.userID] = user.transform.position;
-    }
+    // ══════════════════════════════════════════════════════
+    // A. 角色位置
+    // ══════════════════════════════════════════════════════
 
-
-    IEnumerator PositionStreamLoop()
+    IEnumerator PositionLoop()
     {
         while (true)
         {
             yield return new WaitForSeconds(positionInterval);
-            yield return StartCoroutine(PostUserPositions());
+            yield return StartCoroutine(SendPositions());
         }
     }
 
-    IEnumerator PostUserPositions()
+    IEnumerator SendPositions()
     {
-        var userList = new List<object>();
+        var entries = new List<string>();
 
-        foreach (var user in new[] { userMom, userDad })
+        foreach (var user in new UserEntity[] { userMom, userDad })
         {
             if (user == null) continue;
 
             Vector3 pos = user.transform.position;
 
-            // skip if change is too small
-            bool changed = !lastPostedPosition.ContainsKey(user.userID) ||
-                           Vector3.Distance(pos, lastPostedPosition[user.userID]) > positionChangeTolerance;
+            // 沒有移動就跳過
+            if (lastPos.ContainsKey(user.userID) &&
+                Vector3.Distance(pos, lastPos[user.userID]) < moveTolerance)
+                continue;
 
-            // velocity calculation = (current position - previous position) / interval
-            Vector3 prev = prevFramePosition.ContainsKey(user.userID)
-                ? prevFramePosition[user.userID]
-                : pos;
-            Vector3 velocity = (pos - prev) / positionInterval;
-            prevFramePosition[user.userID] = pos;
+            lastPos[user.userID] = pos;
 
-            userList.Add(new
-            {
-                user_id = user.userID,
-                x = pos.x,
-                y = pos.y,
-                z = pos.z,
-                vx = velocity.x,
-                vy = velocity.y,
-                vz = velocity.z,
-                activity = user.currentActivity,
-                timestamp = System.DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fff")
-            });
-
-            if (changed)
-                lastPostedPosition[user.userID] = pos;
+            // 手動建 JSON object string，避免匿名型別的序列化問題
+            string entry = BuildObjectJson(
+                label:    user.userID.ToLower(),
+                room:     "",
+                x:        pos.x,
+                z:        pos.z,
+                source:   "unity_user",
+                extra:    "\"activity\":\"" + EscStr(user.currentActivity) + "\""
+            );
+            entries.Add(entry);
         }
 
-        if (userList.Count == 0) yield break;
+        if (entries.Count == 0) yield break;
 
-        string json = SimpleJson(new Dictionary<string, object>
-        {
-            { "users", userList }
-        });
-
-        yield return StartCoroutine(Post($"{backendUrl}/user_position", json, "position"));
+        string json = "{\"objects\":[" + string.Join(",", entries) + "]}";
+        yield return StartCoroutine(PostJson(backendUrl + "/dynamic_sync", json, "position"));
     }
 
+    // ══════════════════════════════════════════════════════
+    // B. 道具位置
+    // ══════════════════════════════════════════════════════
 
-    IEnumerator ObjectSyncLoop()
+    IEnumerator ObjectLoop()
     {
         while (true)
         {
             yield return new WaitForSeconds(objectSyncInterval);
-            yield return StartCoroutine(PostDynamicObjects());
+            yield return StartCoroutine(SendObjects());
         }
     }
 
-    IEnumerator PostDynamicObjects()
+    IEnumerator SendObjects()
     {
         if (dynamicObjects.Count == 0) yield break;
 
-        var objectList = new List<object>();
-        bool anyChanged = false;
+        var entries    = new List<string>();
+        bool anyMoved  = false;
 
         foreach (var obj in dynamicObjects)
         {
             if (obj == null) continue;
 
             Vector3 pos = obj.transform.position;
-            bool changed = !lastObjectPosition.ContainsKey(obj.name) ||
-                           Vector3.Distance(pos, lastObjectPosition[obj.name]) > positionChangeTolerance;
+            string  key = obj.name;
 
-            objectList.Add(new
-            {
-                id = obj.name,
-                x = pos.x,
-                y = pos.y,
-                z = pos.z
-            });
+            bool moved = !lastObjPos.ContainsKey(key) ||
+                         Vector3.Distance(pos, lastObjPos[key]) > moveTolerance;
 
-            if (changed)
+            if (moved)
             {
-                lastObjectPosition[obj.name] = pos;
-                anyChanged = true;
+                lastObjPos[key] = pos;
+                anyMoved = true;
             }
+
+            string room  = DetectRoom(obj.transform.position);
+            string entry = BuildObjectJson(
+                label:  obj.name.ToLower(),
+                room:   room,
+                x:      pos.x,
+                z:      pos.z,
+                source: "unity",
+                extra:  ""
+            );
+            entries.Add(entry);
         }
 
-        // skip POST if nothing moved
-        if (!anyChanged) yield break;
+        if (!anyMoved) yield break;
 
-        string json = SimpleJson(new Dictionary<string, object>
-        {
-            { "objects", objectList },
-            { "timestamp", System.DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fff") }
-        });
-
-        yield return StartCoroutine(Post($"{backendUrl}/dynamic_sync", json, "objects"));
+        string json = "{\"objects\":[" + string.Join(",", entries) + "]}";
+        yield return StartCoroutine(PostJson(backendUrl + "/dynamic_sync", json, "objects"));
     }
 
+    // ══════════════════════════════════════════════════════
+    // HTTP POST
+    // ══════════════════════════════════════════════════════
 
-    IEnumerator Post(string url, string json, string label)
+    IEnumerator PostJson(string url, string json, string label)
     {
         if (verboseLog)
-            Debug.Log($"[DynamicSync] POST /{label} -> {json}");
+            Debug.Log("[DynamicSync] POST /" + label + " → " + json);
+
+        byte[] body = System.Text.Encoding.UTF8.GetBytes(json);
 
         using var req = new UnityWebRequest(url, "POST");
-        byte[] body = System.Text.Encoding.UTF8.GetBytes(json);
-        req.uploadHandler = new UploadHandlerRaw(body);
+        req.uploadHandler   = new UploadHandlerRaw(body);
         req.downloadHandler = new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
+        req.timeout = 5;
 
         yield return req.SendWebRequest();
 
         if (req.result != UnityWebRequest.Result.Success)
-            Debug.LogWarning($"[DynamicSync] /{label} POST failed: {req.error}");
+            Debug.LogWarning("[DynamicSync] /" + label + " POST failed: " + req.error);
     }
 
-    string SimpleJson(object obj)
+    // ══════════════════════════════════════════════════════
+    // 輔助：手動建 JSON object string
+    // ══════════════════════════════════════════════════════
+
+    string BuildObjectJson(string label, string room, float x, float z,
+                           string source, string extra)
     {
-        if (obj == null) return "null";
-        if (obj is string s) return $"\"{EscapeJson(s)}\"";
-        if (obj is bool b) return b ? "true" : "false";
-        if (obj is float f) return f.ToString("F4", System.Globalization.CultureInfo.InvariantCulture);
-        if (obj is double d) return d.ToString("F4", System.Globalization.CultureInfo.InvariantCulture);
-        if (obj is int i) return i.ToString();
+        string xs = x.ToString("F3", Inv);
+        string zs = z.ToString("F3", Inv);
 
-        if (obj is Dictionary<string, object> dict)
-        {
-            var pairs = new List<string>();
-            foreach (var kv in dict)
-                pairs.Add($"\"{EscapeJson(kv.Key)}\":{SimpleJson(kv.Value)}");
-            return "{" + string.Join(",", pairs) + "}";
-        }
+        string json = "{\"label\":\"" + EscStr(label) + "\","
+                    + "\"room\":\""   + EscStr(room)   + "\","
+                    + "\"position\":[" + xs + "," + zs + "],"
+                    + "\"source\":\"" + EscStr(source) + "\"";
 
-        if (obj is List<object> list)
-        {
-            var items = new List<string>();
-            foreach (var item in list) items.Add(SimpleJson(item));
-            return "[" + string.Join(",", items) + "]";
-        }
+        if (!string.IsNullOrEmpty(extra))
+            json += "," + extra;
 
-        var type = obj.GetType();
-        var props = type.GetProperties();
-        if (props.Length > 0)
-        {
-            var pairs = new List<string>();
-            foreach (var p in props)
-                pairs.Add($"\"{EscapeJson(p.Name)}\":{SimpleJson(p.GetValue(obj))}");
-            return "{" + string.Join(",", pairs) + "}";
-        }
-
-        return $"\"{EscapeJson(obj.ToString())}\"";
+        json += "}";
+        return json;
     }
 
-    string EscapeJson(string s) =>
-        s.Replace("\\", "\\\\").Replace("\"", "\\\"")
-         .Replace("\n", "\\n").Replace("\r", "\\r").Replace("\t", "\\t");
+    // JSON 字串跳脫（只處理最基本的幾個字元）
+    string EscStr(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return "";
+        return s.Replace("\\", "\\\\")
+                .Replace("\"", "\\\"")
+                .Replace("\n", "\\n")
+                .Replace("\r", "\\r");
+    }
 
+    // ══════════════════════════════════════════════════════
+    // 輔助：偵測物件所在房間
+    // ══════════════════════════════════════════════════════
 
-    public void ForcePositionSync() =>
-        StartCoroutine(PostUserPositions());
+    string DetectRoom(Vector3 pos)
+    {
+        // 用 OverlapSphere 找 RoomArea trigger
+        Collider[] hits = Physics.OverlapSphere(pos, 0.5f,
+            Physics.AllLayers, QueryTriggerInteraction.Collide);
 
-    public void ForceObjectSync() =>
-        StartCoroutine(PostDynamicObjects());
+        foreach (var hit in hits)
+        {
+            RoomArea ra = hit.GetComponent<RoomArea>();
+            if (ra != null) return ra.roomName;
+        }
+
+        // Fallback：名稱推算（不依賴物理層設定）
+        return "";
+    }
+
+    // ══════════════════════════════════════════════════════
+    // 對外 API
+    // ══════════════════════════════════════════════════════
+
+    public void ForcePositionSync() => StartCoroutine(SendPositions());
+    public void ForceObjectSync()   => StartCoroutine(SendObjects());
 }

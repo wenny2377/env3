@@ -81,7 +81,7 @@ public class VirtualCameraBrain : MonoBehaviour
 
     [Header("截圖解析度（正方形）")]
     [Tooltip("建議 512×512\nVLM 夠用，Base64 大小約 200~400KB 每張")]
-    public int renderWidth = 512;
+    public int renderWidth  = 512;
     public int renderHeight = 512;
 
     [Header("截圖後復原相機")]
@@ -93,10 +93,10 @@ public class VirtualCameraBrain : MonoBehaviour
     // 私有成員
     // ══════════════════════════════════════════════════════
 
-    float virtualHour = -1f;
-    Vector3 originalPos;
+    float      virtualHour   = -1f;
+    Vector3    originalPos;
     Quaternion originalRot;
-    bool originalSaved = false;
+    bool       originalSaved = false;
 
     // ══════════════════════════════════════════════════════
     // Unity 生命週期
@@ -115,8 +115,8 @@ public class VirtualCameraBrain : MonoBehaviour
         }
 
         // 記錄原始位置，截圖後還原用
-        originalPos = mainCamera.transform.position;
-        originalRot = mainCamera.transform.rotation;
+        originalPos   = mainCamera.transform.position;
+        originalRot   = mainCamera.transform.rotation;
         originalSaved = true;
 
         Debug.Log($"[VirtualCameraBrain] 初始化完成 | topN={topN} | " +
@@ -140,9 +140,9 @@ public class VirtualCameraBrain : MonoBehaviour
     ///              StaticCameraManager.ScoreCamerasRanked() 的輸出
     /// </summary>
     public IEnumerator ExecuteMultiCapture(
-        UserEntity user,
+        UserEntity       user,
         List<CameraNode> sortedNodes,
-        string activity)
+        string           activity)
     {
         if (mainCamera == null)
         {
@@ -158,8 +158,8 @@ public class VirtualCameraBrain : MonoBehaviour
 
         int captureCount = Mathf.Min(topN, sortedNodes.Count);
 
-        var imageList = new List<string>();   // Base64 PNG
-        var nodeNames = new List<string>();   // 節點名稱（對應 image_list 順序）
+        var imageList  = new List<string>();   // Base64 PNG
+        var nodeNames  = new List<string>();   // 節點名稱（對應 image_list 順序）
         var nodeScores = new List<float>();    // 節點分數
 
         // ── 逐一瞬移相機到每個節點並截圖 ─────────────────────
@@ -231,21 +231,33 @@ public class VirtualCameraBrain : MonoBehaviour
     // ══════════════════════════════════════════════════════
 
     IEnumerator PostMultiImage(
-        UserEntity user,
-        string activity,
+        UserEntity   user,
+        string       activity,
         List<string> imageList,
         List<string> nodeNames,
-        List<float> nodeScores)
+        List<float>  nodeScores)
     {
         float hour = virtualHour >= 0f
             ? virtualHour
             : (float)System.DateTime.Now.Hour;
 
-        // 手動拼 JSON（避免 Newtonsoft 依賴，JsonUtility 不支援 List<string>）
-        // 若已安裝 Newtonsoft.Json 可換成 JsonConvert.SerializeObject
+        // room_name：從第一個節點名稱推算
+        // 例如 "Kitchen_Cam1" → "Kitchen"，"LivingRoom_Cam2" → "LivingRoom"
+        string roomName = "";
+        if (nodeNames.Count > 0)
+        {
+            int camIdx = nodeNames[0].LastIndexOf("_Cam");
+            roomName = camIdx > 0 ? nodeNames[0].Substring(0, camIdx) : nodeNames[0];
+        }
+
+        // Flask /predict 期望的欄位名稱：
+        //   userID（Flask: data.get('userID')）
+        //   activity, room_name, virtual_hour
+        //   image_list, image_count, source_nodes, node_scores
         string json = "{"
-            + $"\"user_id\":\"{Esc(user.userID)}\","
+            + $"\"userID\":\"{Esc(user.userID)}\","
             + $"\"activity\":\"{Esc(activity)}\","
+            + $"\"room_name\":\"{Esc(roomName)}\","
             + $"\"virtual_hour\":{hour.ToString("F1", InvCulture)},"
             + $"\"image_count\":{imageList.Count},"
             + $"\"image_list\":{StrArrayJson(imageList)},"
@@ -255,7 +267,7 @@ public class VirtualCameraBrain : MonoBehaviour
 
         using var req = new UnityWebRequest(predictUrl, "POST");
         byte[] body = System.Text.Encoding.UTF8.GetBytes(json);
-        req.uploadHandler = new UploadHandlerRaw(body);
+        req.uploadHandler   = new UploadHandlerRaw(body);
         req.downloadHandler = new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
         req.timeout = 30;   // VLM 推理可能需要較長時間
