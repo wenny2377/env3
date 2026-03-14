@@ -122,6 +122,37 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &21884939
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 21884940}
+  m_Layer: 0
+  m_Name: Drink way2
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &21884940
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 21884939}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
+  m_LocalPosition: {x: 2.816, y: 0, z: 2.82}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 989247574}
+  m_LocalEulerAnglesHint: {x: 0, y: 90, z: 0}
 --- !u!1 &44392365
 GameObject:
   m_ObjectHideFlags: 0
@@ -329,6 +360,11 @@ Transform:
   m_Children: []
   m_Father: {fileID: 786573508}
   m_LocalEulerAnglesHint: {x: 0, y: 90, z: 0}
+--- !u!1 &256259578 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 502b710100d83160a82e9a20bd593624, type: 3}
+  m_PrefabInstance: {fileID: 921208117}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &267607254
 GameObject:
   m_ObjectHideFlags: 0
@@ -752,6 +788,11 @@ Transform:
   m_Children: []
   m_Father: {fileID: 989247574}
   m_LocalEulerAnglesHint: {x: 0, y: 90, z: 0}
+--- !u!1 &356983336 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: c97016925d467d45c991ac3ed5baacab, type: 3}
+  m_PrefabInstance: {fileID: 1137564777}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &426000999
 GameObject:
   m_ObjectHideFlags: 0
@@ -804,13 +845,11 @@ MonoBehaviour:
   drinkSpot: {fileID: 0}
   sittingSpot: {fileID: 0}
   idleSpot: {fileID: 0}
-  drinkWaypoints:
-  - {fileID: 0}
-  - {fileID: 0}
+  drinkWaypoints: []
   sittingWaypoints: []
   idleWaypoints: []
   walkSpeed: 1.4
-  arrivalThreshold: 0.4
+  arrivalThreshold: 0.08
   rotationSpeed: 8
   noddingDuration: 1.5
   heldItem: {fileID: 0}
@@ -1183,7 +1222,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -3243602521655207705, guid: a578be30b6015f1429f8e5118b2b9a51, type: 3}
       propertyPath: m_LocalScale.z
-      value: 110
+      value: 125.29001
       objectReference: {fileID: 0}
     - target: {fileID: -3243602521655207705, guid: a578be30b6015f1429f8e5118b2b9a51, type: 3}
       propertyPath: m_LocalPosition.x
@@ -1191,7 +1230,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -3243602521655207705, guid: a578be30b6015f1429f8e5118b2b9a51, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1.03
+      value: 1.21
       objectReference: {fileID: 0}
     - target: {fileID: -3243602521655207705, guid: a578be30b6015f1429f8e5118b2b9a51, type: 3}
       propertyPath: m_LocalPosition.z
@@ -1301,9 +1340,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2aa8bcc1088cdfc4e9cb04c4309db854, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  userMom: {fileID: 0}
-  userDad: {fileID: 0}
-  dynamicObjects: []
+  userMom: {fileID: 1464156698}
+  userDad: {fileID: 426001001}
+  dynamicObjects:
+  - {fileID: 256259578}
+  - {fileID: 356983336}
+  - {fileID: 1476048765}
   backendUrl: http://localhost:5000
   positionInterval: 0.5
   objectSyncInterval: 5
@@ -1431,7 +1473,7 @@ Transform:
   m_GameObject: {fileID: 886232080}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 2.9, y: 0, z: 1.97}
+  m_LocalPosition: {x: 3.46, y: 0.355, z: 3.24}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1582,12 +1624,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3f169d1cd3948e343b098b2e536d40b2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  userMom: {fileID: 1464156698}
-  userDad: {fileID: 426001001}
+  userMom: {fileID: 0}
+  userDad: {fileID: 0}
   captureStates: Drink,SittingIdle,Typing,Reading
   defaultSettleTime: 0.4
   settleFrames: 2
-  minScoreThreshold: 0.6
+  minScoreThreshold: 0.5
   fallbackDelay: 0.5
   fallbackMaxRetry: 3
   virtualCameraBrain: {fileID: 0}
@@ -2564,6 +2606,7 @@ Transform:
   m_Children:
   - {fileID: 836976212}
   - {fileID: 1406736168}
+  - {fileID: 21884940}
   - {fileID: 322112114}
   - {fileID: 283813366}
   - {fileID: 1919893029}
@@ -3121,7 +3164,7 @@ Transform:
   m_GameObject: {fileID: 1406736167}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 1.78, y: 0, z: 2.82}
+  m_LocalPosition: {x: 0.95, y: 0, z: 2.82}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -3446,10 +3489,11 @@ MonoBehaviour:
   idleSpot: {fileID: 886232081}
   drinkWaypoints:
   - {fileID: 1406736168}
+  - {fileID: 21884940}
   sittingWaypoints: []
   idleWaypoints: []
   walkSpeed: 1.4
-  arrivalThreshold: 0.4
+  arrivalThreshold: 0.08
   rotationSpeed: 8
   noddingDuration: 1.5
   heldItem: {fileID: 0}
@@ -3485,6 +3529,11 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!1 &1476048765 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 27667568caf904bcebdec5772fa385cd, type: 3}
+  m_PrefabInstance: {fileID: 934661762}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1491212907
 GameObject:
   m_ObjectHideFlags: 0
@@ -4335,16 +4384,21 @@ MonoBehaviour:
   - {fileID: 55496496}
   - {fileID: 1871381808}
   - {fileID: 1625648085}
+  - {fileID: 1183909642}
   livingRoomNodes:
   - {fileID: 1203532556}
   - {fileID: 977725252}
   - {fileID: 963603337}
   - {fileID: 1503849965}
-  dadRoomNodes: []
-  mode: 2
+  dadRoomNodes:
+  - {fileID: 1798282032}
+  - {fileID: 1603672535}
+  - {fileID: 267607256}
+  - {fileID: 1074887085}
+  mode: 0
   exp1_samplesPerBehavior: 1
   exp3a_repeatCount: 30
-  exp4_totalObservations: 100
+  exp4_totalObservations: 120
   exp5_episodes: 30
   waitAfterCapture: 3
   waitBetweenEpisodes: 2
@@ -4873,10 +4927,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e92738372874b355832abf2d40c0033, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mainCamera: {fileID: 1716548755}
+  mainCamera: {fileID: 0}
   predictUrl: http://127.0.0.1:5000/predict
   topN: 2
-  captureWaitFrames: 1
+  captureWaitFrames: 2
   renderWidth: 512
   renderHeight: 512
   restoreCamera: 1

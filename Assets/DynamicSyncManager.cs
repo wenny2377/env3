@@ -3,103 +3,44 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
 
-/// <summary>
-/// DynamicSyncManager ¡X °Ê÷A×«¥ף§Y®ֹ¦ך¬y¨ל«ב÷Ý
-///
-/// ­t³d¨ג±ר¸ך®ֶ¬y¡G
-///
-///   A. ¨ֿ¥־×ּ¦ל¸m¦ך¬y¡]/user_position¡^
-///      ¨C positionInterval ¬ם POST ₪@¦¸ User_Mom ©M User_Dad ×÷
-///      ¥@¬ֹ®y¼׀ + ³t«׳¦V¶q + ·ם«e¦ז¬°
-///      «ב÷Ý¥־³o­׃­p÷ג¯S¼x¦V¶q¡]position_norm / velocity_norm / anchor_distances¡^
-///
-///   B. °Ê÷A×«¥ף§ף·s¡]/dynamic_sync¡^
-///      ¨C objectSyncInterval ¬ם POST ₪@¦¸©ׂ¦³¡u¥i°Ê×«¥ף¡v×÷¦ל¸m
-///      ¥i°Ê×«¥ף¡GCup¡BKeyboard µ¥₪ג«ש¹D¨ד¡A¥i¯א³Q¨₪¦ג®³¨««ב¦ל¸m§ןֵÜ
-///      ְR÷A®a¨ד₪£»Ý­n¡A¾a SceneSyncManager ×÷ /scene ₪@¦¸©Ê¦P¨B
-///
-/// ¨ג±ר¬y×÷ְW²v¿W¥ß³]©w¡G
-///   positionInterval  ¹w³] 0.5s¡]Manifold »Ý­n³sִע¦ל¸m¦פ÷ג³t«׳¡^
-///   objectSyncInterval ¹w³] 5.0s¡]¹D¨ד¦ל¸m₪£»Ý­n¨÷»עְWֱc¡^
-///
-/// ±¾¸ü¦ל¸m¡G[_System] / DynamicSyncManager
-///
-/// Inspector ¥²¶ס¡G
-///   userMom, userDad ¡ק UserEntity
-///   dynamicObjects   ¡ק ³ץ´÷₪₪·|²¾°Ê×÷¹D¨ד¡]Cup, Keyboard µ¥¡^
-///
-/// POST /user_position JSON¡G
-///   {
-///     "users": [
-///       {
-///         "user_id":   "User_Mom",
-///         "x": 1.2, "y": 0.0, "z": 3.4,
-///         "vx": 0.5, "vy": 0.0, "vz": 0.2,
-///         "activity": "Drink",
-///         "timestamp": "2026-03-14T10:00:00.000"
-///       },
-///       ...
-///     ]
-///   }
-///
-/// POST /dynamic_sync JSON¡G
-///   {
-///     "objects": [
-///       { "id": "Cup", "x": 1.1, "y": 0.8, "z": 3.3 },
-///       { "id": "Keyboard", "x": 4.5, "y": 0.75, "z": 1.2 }
-///     ],
-///     "timestamp": "2026-03-14T10:00:00.000"
-///   }
-/// </summary>
 public class DynamicSyncManager : MonoBehaviour
 {
-    // שששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששש
-    // Inspector ִז¦ל
-    // שששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששש
 
-    [Header("¨ֿ¥־×ּ¡]¥²¶ס¡^")]
+    [Header("Users (required)")]
     public UserEntity userMom;
     public UserEntity userDad;
 
-    [Header("°Ê÷A×«¥ף¡]¥i°Ê¹D¨ד¡A¨ׂ¦p Cup / Keyboard¡^")]
-    [Tooltip("³o¨ַ×«¥ף×÷¦ל¸m·|©w´ֱ¦P¨B¨ל«ב÷Ý\nְR÷A®a¨ד₪£»Ý­n¶ס¡A¾a SceneSyncManager ³B²z")]
+    [Header("Dynamic Objects (movable objects such as Cup / Keyboard)")]
+    [Tooltip("The positions of these objects will be synchronized\nUsually objects that do not need SceneSyncManager handling")]
     public List<GameObject> dynamicObjects = new List<GameObject>();
 
-    [Header("«ב÷Ý URL")]
+    [Header("Backend URL")]
     public string backendUrl = "http://localhost:5000";
 
-    [Header("¦ך¬yְW²v¡]¬ם¡^")]
-    [Tooltip("¨ֿ¥־×ּ¦ל¸m¦ך¬y¶¡¹j¡]«״ִ³ 0.5s¡^\n«ב÷Ý¥־¨׃¦פ÷ג³t«׳¦V¶q©M anchor ¶Zֲק")]
+    [Header("Frequency Settings")]
+    [Tooltip("User position streaming interval (recommended 0.5s)\nUsed to calculate velocity and anchor prediction")]
     public float positionInterval = 0.5f;
 
-    [Tooltip("°Ê÷A×«¥ף¦P¨B¶¡¹j¡]«״ִ³ 3~5s¡^\n¥u¦b×«¥ף½T¹ך²¾°Ê«ב₪~ POST")]
+    [Tooltip("Dynamic object sync interval (recommended 3~5s)\nPOST only when objects actually move")]
     public float objectSyncInterval = 5.0f;
 
-    [Header("®ִ¯א±±¨מ")]
-    [Tooltip("¦ל¸mֵÜ₪ֶ₪p©ף¦¹¶Zֲק´N₪£ POST¡]´מ₪ײ₪£¥²­n×÷½׀¨D¡^\n«״ִ³ 0.01~0.05")]
+    [Header("Performance Control")]
+    [Tooltip("If position change is smaller than this threshold, POST will be skipped to reduce unnecessary requests\nRecommended 0.01~0.05")]
     public float positionChangeTolerance = 0.02f;
 
-    [Tooltip("₪ִ¿ן«ב¦b Console ֵד¥Ü¨C¦¸ POST ×÷₪÷®e¡]°£¿ש¥־¡^")]
+    [Tooltip("Show every POST content in Console (for debugging)")]
     public bool verboseLog = false;
 
-    // שששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששש
-    // ¨p¦³¦¨­û
-    // שששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששש
-
-    // °O¿‎₪W₪@¦¸ POST ×÷¦ל¸m¡A¥־¨׃§Pֲ_¬O§_»Ý­n§ף·s
     Dictionary<string, Vector3> lastPostedPosition = new Dictionary<string, Vector3>();
     Dictionary<string, Vector3> lastObjectPosition = new Dictionary<string, Vector3>();
 
-    // ³t«׳¦פ÷ג¡]₪W₪@´V¦ל¸m¡^
+    // velocity calculation (previous frame position)
     Dictionary<string, Vector3> prevFramePosition = new Dictionary<string, Vector3>();
 
-    // שששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששש
-    // Unity ¥ֽ©R¶g´ֱ
-    // שששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששש
 
     void Start()
     {
-        // ×ל©l₪ֶ¦ל¸m°O¿‎
+        // initialize position records
         InitUserTracking(userMom);
         InitUserTracking(userDad);
 
@@ -107,7 +48,7 @@ public class DynamicSyncManager : MonoBehaviour
             if (obj != null)
                 lastObjectPosition[obj.name] = obj.transform.position;
 
-        // ±ׂ°Ê¨ג±ר¦ך¬y
+        // start loops
         StartCoroutine(PositionStreamLoop());
         StartCoroutine(ObjectSyncLoop());
     }
@@ -119,9 +60,6 @@ public class DynamicSyncManager : MonoBehaviour
         prevFramePosition[user.userID] = user.transform.position;
     }
 
-    // שששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששש
-    // A. ¨ֿ¥־×ּ¦ל¸m¦ך¬y
-    // שששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששש
 
     IEnumerator PositionStreamLoop()
     {
@@ -142,11 +80,11 @@ public class DynamicSyncManager : MonoBehaviour
 
             Vector3 pos = user.transform.position;
 
-            // ֵÜ₪ֶ¶q₪׃₪p´N¸ץ¹L¡]¦‎₪´¥[₪J¦C×םֵ‎«ב÷Ý×¾¹D×¬÷A¡^
+            // skip if change is too small
             bool changed = !lastPostedPosition.ContainsKey(user.userID) ||
                            Vector3.Distance(pos, lastPostedPosition[user.userID]) > positionChangeTolerance;
 
-            // ³t«׳¦פ÷ג¡G(²{¦b¦ל¸m - ₪W₪@¦¸°O¿‎¦ל¸m) / ¶¡¹j
+            // velocity calculation = (current position - previous position) / interval
             Vector3 prev = prevFramePosition.ContainsKey(user.userID)
                 ? prevFramePosition[user.userID]
                 : pos;
@@ -180,9 +118,6 @@ public class DynamicSyncManager : MonoBehaviour
         yield return StartCoroutine(Post($"{backendUrl}/user_position", json, "position"));
     }
 
-    // שששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששש
-    // B. °Ê÷A×«¥ף¦P¨B
-    // שששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששש
 
     IEnumerator ObjectSyncLoop()
     {
@@ -206,7 +141,7 @@ public class DynamicSyncManager : MonoBehaviour
 
             Vector3 pos = obj.transform.position;
             bool changed = !lastObjectPosition.ContainsKey(obj.name) ||
-                              Vector3.Distance(pos, lastObjectPosition[obj.name]) > positionChangeTolerance;
+                           Vector3.Distance(pos, lastObjectPosition[obj.name]) > positionChangeTolerance;
 
             objectList.Add(new
             {
@@ -223,26 +158,23 @@ public class DynamicSyncManager : MonoBehaviour
             }
         }
 
-        // ¥‏³¡³£¨S°Ê´N₪£ POST
+        // skip POST if nothing moved
         if (!anyChanged) yield break;
 
         string json = SimpleJson(new Dictionary<string, object>
         {
-            { "objects",   objectList },
+            { "objects", objectList },
             { "timestamp", System.DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fff") }
         });
 
         yield return StartCoroutine(Post($"{backendUrl}/dynamic_sync", json, "objects"));
     }
 
-    // שששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששש
-    // HTTP POST ¦@¥־₪ט×k
-    // שששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששש
 
     IEnumerator Post(string url, string json, string label)
     {
         if (verboseLog)
-            Debug.Log($"[DynamicSync] POST /{label} ¡ק {json}");
+            Debug.Log($"[DynamicSync] POST /{label} -> {json}");
 
         using var req = new UnityWebRequest(url, "POST");
         byte[] body = System.Text.Encoding.UTF8.GetBytes(json);
@@ -253,15 +185,8 @@ public class DynamicSyncManager : MonoBehaviour
         yield return req.SendWebRequest();
 
         if (req.result != UnityWebRequest.Result.Success)
-            Debug.LogWarning($"[DynamicSync] /{label} POST ¥¢±ׁ: {req.error}");
+            Debug.LogWarning($"[DynamicSync] /{label} POST failed: {req.error}");
     }
-
-    // שששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששש
-    // ֲ²©צ JSON §ַ¦C₪ֶ¡]ֱ׳§K Newtonsoft ¨ּ¿א¡^
-    //
-    // ¥u₪ה´©¡Gstring / float / int / bool / List<object> / Dictionary
-    // ¦p×G₪w¦w¸ֻ Newtonsoft.Json ¥i¥H×½±µ´«¦¨ JsonConvert.SerializeObject
-    // שששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששש
 
     string SimpleJson(object obj)
     {
@@ -287,7 +212,6 @@ public class DynamicSyncManager : MonoBehaviour
             return "[" + string.Join(",", items) + "]";
         }
 
-        // °־¦W«¬§O / ₪ֿ®g§ַ¦C₪ֶ
         var type = obj.GetType();
         var props = type.GetProperties();
         if (props.Length > 0)
@@ -305,15 +229,10 @@ public class DynamicSyncManager : MonoBehaviour
         s.Replace("\\", "\\\\").Replace("\"", "\\\"")
          .Replace("\n", "\\n").Replace("\r", "\\r").Replace("\t", "\\t");
 
-    // שששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששש
-    // ¹ן¥~ API¡]ExperimentRunner / UserEntity ¥i©I¥s¡^
-    // שששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששששש
 
-    /// <summary>¥ß§Y±j¨מ¦P¨B₪@¦¸¦ל¸m¡]¹ךֵח¶}©l®ֹ©I¥s¡^</summary>
     public void ForcePositionSync() =>
         StartCoroutine(PostUserPositions());
 
-    /// <summary>¥ß§Y±j¨מ¦P¨B₪@¦¸°Ê÷A×«¥ף</summary>
     public void ForceObjectSync() =>
         StartCoroutine(PostDynamicObjects());
 }
