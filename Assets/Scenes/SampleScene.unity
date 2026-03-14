@@ -274,13 +274,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 55496494}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.41893673, y: 0.13529909, z: 0.13529906, w: 0.8876263}
-  m_LocalPosition: {x: 1.5, y: 1.4, z: 2}
+  m_LocalRotation: {x: 0.32664078, y: 0.29516026, z: 0.13529904, w: 0.8876263}
+  m_LocalPosition: {x: 1.84, y: 2.3, z: -5.59}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 2126993823}
-  m_LocalEulerAnglesHint: {x: 45, y: 30, z: 30}
+  m_LocalEulerAnglesHint: {x: 30, y: 45, z: 30}
 --- !u!114 &55496496
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -345,7 +345,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &126052087
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -417,13 +417,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 267607254}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.054150686, y: -0.88535637, z: 0.46088734, w: -0.028189063}
-  m_LocalPosition: {x: -0.28, y: -1.13, z: 5.9}
+  m_LocalRotation: {x: -0.17670347, y: 0.81949127, z: -0.42660016, w: -0.3394442}
+  m_LocalPosition: {x: 1.56, y: 2.3, z: 1.51}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 540568514}
-  m_LocalEulerAnglesHint: {x: 55, y: -180, z: 7}
+  m_LocalEulerAnglesHint: {x: 55, y: 225, z: 0}
 --- !u!114 &267607256
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -850,10 +850,10 @@ MonoBehaviour:
   roomName: BedRoom(mom)
   autoFetchByRoomName: 1
   cameraPivots:
-  - {fileID: 1468842638}
-  - {fileID: 2047168887}
-  - {fileID: 1105949216}
-  - {fileID: 936555552}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
   ignoreTagCheck: 1
   areaColor: {r: 1, g: 0, b: 0.9041014, a: 0.3}
 --- !u!65 &339845996
@@ -1528,7 +1528,6 @@ Transform:
   - {fileID: 2126993823}
   - {fileID: 1397305117}
   - {fileID: 540568514}
-  - {fileID: 1969022512}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &836976211
@@ -1556,7 +1555,7 @@ Transform:
   m_GameObject: {fileID: 836976211}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 5.02, y: 0, z: 0}
+  m_LocalPosition: {x: 3.22, y: 0, z: -1.61}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1868,55 +1867,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 27667568caf904bcebdec5772fa385cd, type: 3}
---- !u!1 &936555551
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 936555552}
-  - component: {fileID: 936555553}
-  m_Layer: 0
-  m_Name: Mom'sRoom_Cam4
-  m_TagString: MockCamera
-  m_Icon: {fileID: -964228994112308473, guid: 0000000000000000d000000000000000, type: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &936555552
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 936555551}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0.06259415, y: -0.8549884, z: 0.51103705, w: -0.0625939}
-  m_LocalPosition: {x: -10.01, y: 0.17, z: 12.48}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1969022512}
-  m_LocalEulerAnglesHint: {x: 60, y: -200, z: -20}
---- !u!114 &936555553
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 936555551}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1c2dc602bd0c9a939963392bef162fe5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  nodeName: Mom'sRoom_Cam4
-  roomName: BedRoom(mom)
-  fieldOfView: 70
-  scoreMultiplier: 1
-  lastScore: 0
 --- !u!1 &937598347
 GameObject:
   m_ObjectHideFlags: 0
@@ -2156,13 +2106,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 963603335}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.054150686, y: -0.88535637, z: 0.46088734, w: -0.028189063}
-  m_LocalPosition: {x: 4.19, y: 3.92, z: 10.12}
+  m_LocalRotation: {x: -0.17670347, y: 0.81949127, z: -0.42660016, w: -0.3394442}
+  m_LocalPosition: {x: 5.72, y: 1.94, z: 7.64}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1397305117}
-  m_LocalEulerAnglesHint: {x: 55, y: -180, z: 7}
+  m_LocalEulerAnglesHint: {x: 55, y: 225, z: 0}
 --- !u!114 &963603337
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2404,6 +2354,10 @@ PrefabInstance:
       propertyPath: m_StaticEditorFlags
       value: 2147483647
       objectReference: {fileID: 0}
+    - target: {fileID: 4248282594264375251, guid: c393ace4b60e4a0499625847c5e85698, type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: 0bad7f3c4e273c048a330d381379a1c4, type: 2}
     - target: {fileID: 4352565753649436871, guid: c393ace4b60e4a0499625847c5e85698, type: 3}
       propertyPath: m_StaticEditorFlags
       value: 2147483647
@@ -2703,6 +2657,7 @@ PrefabInstance:
     - {fileID: 2253784987211457180, guid: c393ace4b60e4a0499625847c5e85698, type: 3}
     - {fileID: 6943908160018701084, guid: c393ace4b60e4a0499625847c5e85698, type: 3}
     - {fileID: 2729833875418529185, guid: c393ace4b60e4a0499625847c5e85698, type: 3}
+    - {fileID: 5213581230532596760, guid: c393ace4b60e4a0499625847c5e85698, type: 3}
     m_AddedGameObjects: []
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 1639667601586911704, guid: c393ace4b60e4a0499625847c5e85698, type: 3}
@@ -2740,13 +2695,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 977725250}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.2619608, y: -0.15645367, z: 0.0034076944, w: 0.9523063}
-  m_LocalPosition: {x: 4, y: 4, z: 5}
+  m_LocalRotation: {x: 0.23911765, y: -0.3696438, z: 0.09904577, w: 0.89239913}
+  m_LocalPosition: {x: 5.91, y: 2.3, z: 2.61}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1397305117}
-  m_LocalEulerAnglesHint: {x: 30, y: -20, z: -5}
+  m_LocalEulerAnglesHint: {x: 30, y: -45, z: 0}
 --- !u!114 &977725252
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2825,13 +2780,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1074887083}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.06259415, y: -0.8549884, z: 0.51103705, w: -0.0625939}
-  m_LocalPosition: {x: -1.66, y: 3.23, z: 3.55}
+  m_LocalRotation: {x: 0.19134171, y: 0.8001032, z: -0.46193978, w: 0.33141357}
+  m_LocalPosition: {x: -2.61, y: 2.3, z: 1.62}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 540568514}
-  m_LocalEulerAnglesHint: {x: 60, y: -200, z: -20}
+  m_LocalEulerAnglesHint: {x: 60, y: 135, z: 0}
 --- !u!114 &1074887085
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2846,55 +2801,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   nodeName: DadRoom_Cam4
   roomName: BedRoom(dad)
-  fieldOfView: 70
-  scoreMultiplier: 1
-  lastScore: 0
---- !u!1 &1105949215
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1105949216}
-  - component: {fileID: 1105949217}
-  m_Layer: 0
-  m_Name: Mom'sRoom_Cam3
-  m_TagString: MockCamera
-  m_Icon: {fileID: -964228994112308473, guid: 0000000000000000d000000000000000, type: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1105949216
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1105949215}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0.054150686, y: -0.88535637, z: 0.46088734, w: -0.028189063}
-  m_LocalPosition: {x: -4.92, y: 4.11, z: 8.88}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1969022512}
-  m_LocalEulerAnglesHint: {x: 55, y: -180, z: 7}
---- !u!114 &1105949217
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1105949215}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1c2dc602bd0c9a939963392bef162fe5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  nodeName: Mom'sRoom_Cam3
-  roomName: BedRoom(mom)
   fieldOfView: 70
   scoreMultiplier: 1
   lastScore: 0
@@ -3093,6 +2999,55 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 2533380991935591012, guid: dbd0409ef42d6b748b9202d12e2d0d7b, type: 3}
   m_PrefabInstance: {fileID: 273204465}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1183909640
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1183909641}
+  - component: {fileID: 1183909642}
+  m_Layer: 0
+  m_Name: Kitchen_Cam4
+  m_TagString: MockCamera
+  m_Icon: {fileID: 5721338939258241955, guid: 0000000000000000d000000000000000, type: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1183909641
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1183909640}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0.1150751, y: 0.8811196, z: -0.27781588, w: 0.36497167}
+  m_LocalPosition: {x: 1.66, y: 2.3, z: 1.48}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2126993823}
+  m_LocalEulerAnglesHint: {x: 35, y: 135, z: 0}
+--- !u!114 &1183909642
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1183909640}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1c2dc602bd0c9a939963392bef162fe5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  nodeName: Kitchen_Cam3
+  roomName: Kitchen
+  fieldOfView: 70
+  scoreMultiplier: 1
+  lastScore: 0
 --- !u!1 &1203532554
 GameObject:
   m_ObjectHideFlags: 0
@@ -3118,13 +3073,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1203532554}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.2619608, y: 0.15645358, z: -0.003407672, w: 0.9523063}
-  m_LocalPosition: {x: 0, y: 3, z: 5}
+  m_LocalRotation: {x: 0.23911765, y: 0.3696438, z: -0.09904577, w: 0.89239913}
+  m_LocalPosition: {x: 0.36, y: 2.3, z: 3.3}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1397305117}
-  m_LocalEulerAnglesHint: {x: 30, y: 20, z: 5}
+  m_LocalEulerAnglesHint: {x: 30, y: 45, z: 0}
 --- !u!114 &1203532556
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3316,7 +3271,7 @@ Transform:
   m_GameObject: {fileID: 1397305116}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.65, y: 0, z: -2.99}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -3708,55 +3663,6 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
---- !u!1 &1468842637
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1468842638}
-  - component: {fileID: 1468842639}
-  m_Layer: 0
-  m_Name: Mom'sRoom_Cam1
-  m_TagString: MockCamera
-  m_Icon: {fileID: -964228994112308473, guid: 0000000000000000d000000000000000, type: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1468842638
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1468842637}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0.2619608, y: 0.15645358, z: -0.003407672, w: 0.9523063}
-  m_LocalPosition: {x: -9.25, y: 2.27, z: 7.91}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1969022512}
-  m_LocalEulerAnglesHint: {x: 30, y: 20, z: 5}
---- !u!114 &1468842639
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1468842637}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1c2dc602bd0c9a939963392bef162fe5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  nodeName: Mom'sRoom_Cam1
-  roomName: BedRoom(mom)
-  fieldOfView: 70
-  scoreMultiplier: 1
-  lastScore: 0
 --- !u!1 &1491212907
 GameObject:
   m_ObjectHideFlags: 0
@@ -3824,13 +3730,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1503849963}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.06259415, y: -0.8549884, z: 0.51103705, w: -0.0625939}
-  m_LocalPosition: {x: 0.66, y: 4, z: 10.26}
+  m_LocalRotation: {x: 0.19134171, y: 0.8001032, z: -0.46193978, w: 0.33141357}
+  m_LocalPosition: {x: 0.5, y: 2.3, z: 7}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1397305117}
-  m_LocalEulerAnglesHint: {x: 60, y: -200, z: -20}
+  m_LocalEulerAnglesHint: {x: 60, y: 135, z: 0}
 --- !u!114 &1503849965
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4231,13 +4137,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1603672533}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.2619608, y: -0.15645367, z: 0.0034076944, w: 0.9523063}
-  m_LocalPosition: {x: -0.33, y: 0.56, z: -0.1}
+  m_LocalRotation: {x: 0.23911765, y: -0.3696438, z: 0.09904577, w: 0.89239913}
+  m_LocalPosition: {x: 1.39, y: 2.3, z: -3.46}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 540568514}
-  m_LocalEulerAnglesHint: {x: 30, y: -20, z: -5}
+  m_LocalEulerAnglesHint: {x: 30, y: -45, z: 0}
 --- !u!114 &1603672535
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4313,13 +4219,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1625648083}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.8876263, y: 0.13529906, z: 0.13529909, w: 0.41893673}
-  m_LocalPosition: {x: 1.7, y: 4, z: 4}
+  m_LocalRotation: {x: -0.115075044, y: 0.88111967, z: -0.2778159, w: -0.3649715}
+  m_LocalPosition: {x: 6.5, y: 2.3, z: 1.76}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 2126993823}
-  m_LocalEulerAnglesHint: {x: 45, y: 150, z: 150}
+  m_LocalEulerAnglesHint: {x: 35, y: 225, z: 0}
 --- !u!114 &1625648085
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4483,7 +4389,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1716548753}
   - component: {fileID: 1716548755}
-  - component: {fileID: 1716548754}
   m_Layer: 0
   m_Name: MainCamera
   m_TagString: Untagged
@@ -4506,14 +4411,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 828247091}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!81 &1716548754
-AudioListener:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1716548752}
-  m_Enabled: 1
 --- !u!20 &1716548755
 Camera:
   m_ObjectHideFlags: 0
@@ -4623,10 +4520,10 @@ MonoBehaviour:
   - {fileID: 963603337}
   - {fileID: 1503849965}
   studyNodes:
-  - {fileID: 1468842639}
-  - {fileID: 2047168888}
-  - {fileID: 1105949217}
-  - {fileID: 936555553}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
   mode: 0
   exp1_samplesPerBehavior: 1
   exp3a_repeatCount: 30
@@ -4894,13 +4791,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1798282030}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.2619608, y: 0.15645358, z: -0.003407672, w: 0.9523063}
-  m_LocalPosition: {x: -3.26, y: 1.61, z: -0.12}
+  m_LocalRotation: {x: 0.23911765, y: 0.3696438, z: -0.09904577, w: 0.89239913}
+  m_LocalPosition: {x: -1.99, y: 2.3, z: -3.26}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 540568514}
-  m_LocalEulerAnglesHint: {x: 30, y: 20, z: 5}
+  m_LocalEulerAnglesHint: {x: 30, y: 45, z: 0}
 --- !u!114 &1798282032
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5075,13 +4972,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1871381806}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.37516028, y: -0.21699217, z: 0.076920345, w: 0.89791566}
-  m_LocalPosition: {x: 5, y: 4, z: 2}
+  m_LocalRotation: {x: 0.27781588, y: -0.36497167, z: 0.1150751, w: 0.8811196}
+  m_LocalPosition: {x: 6.22, y: 2.3, z: -4.79}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 2126993823}
-  m_LocalEulerAnglesHint: {x: 45, y: -28, z: -2}
+  m_LocalEulerAnglesHint: {x: 35, y: -45, z: 0}
 --- !u!114 &1871381808
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5130,41 +5027,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 989247574}
   m_LocalEulerAnglesHint: {x: 0, y: 90, z: 0}
---- !u!1 &1969022511
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1969022512}
-  m_Layer: 0
-  m_Name: Mom's room
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1969022512
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1969022511}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 1468842638}
-  - {fileID: 2047168887}
-  - {fileID: 1105949216}
-  - {fileID: 936555552}
-  m_Father: {fileID: 828247091}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1982473816
 GameObject:
   m_ObjectHideFlags: 0
@@ -5291,55 +5153,6 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 0
   m_Constraints: 0
---- !u!1 &2047168886
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2047168887}
-  - component: {fileID: 2047168888}
-  m_Layer: 0
-  m_Name: Mom'sRoom_Cam2
-  m_TagString: MockCamera
-  m_Icon: {fileID: -964228994112308473, guid: 0000000000000000d000000000000000, type: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &2047168887
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2047168886}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0.2619608, y: -0.15645367, z: 0.0034076944, w: 0.9523063}
-  m_LocalPosition: {x: -4.32, y: 0.54, z: 9.51}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1969022512}
-  m_LocalEulerAnglesHint: {x: 30, y: -20, z: -5}
---- !u!114 &2047168888
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2047168886}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1c2dc602bd0c9a939963392bef162fe5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  nodeName: Mom'sRoom_Cam2
-  roomName: BedRoom(mom)
-  fieldOfView: 70
-  scoreMultiplier: 1
-  lastScore: 0
 --- !u!1 &2068827027
 GameObject:
   m_ObjectHideFlags: 0
@@ -5350,7 +5163,6 @@ GameObject:
   m_Component:
   - component: {fileID: 2068827028}
   - component: {fileID: 2068827030}
-  - component: {fileID: 2068827029}
   m_Layer: 0
   m_Name: SnapshotCamera
   m_TagString: Untagged
@@ -5373,14 +5185,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1772138798}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!81 &2068827029
-AudioListener:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2068827027}
-  m_Enabled: 1
 --- !u!20 &2068827030
 Camera:
   m_ObjectHideFlags: 0
@@ -5457,13 +5261,14 @@ Transform:
   m_GameObject: {fileID: 2126993822}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1.33, y: 0, z: -5.18}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 55496495}
   - {fileID: 1871381807}
   - {fileID: 1625648084}
+  - {fileID: 1183909641}
   m_Father: {fileID: 828247091}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
