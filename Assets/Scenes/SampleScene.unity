@@ -1446,7 +1446,7 @@ MonoBehaviour:
   backendUrl: http://localhost:5000
   positionInterval: 0.5
   objectSyncInterval: 5
-  positionChangeTolerance: 0.02
+  moveTolerance: 0.02
   verboseLog: 0
 --- !u!1 &828247090
 GameObject:
@@ -4518,7 +4518,7 @@ MonoBehaviour:
   - {fileID: 1603672535}
   - {fileID: 267607256}
   - {fileID: 1074887085}
-  mode: 2
+  mode: 1
   exp1_samplesPerBehavior: 1
   exp3a_repeatCount: 30
   exp4_totalObservations: 120

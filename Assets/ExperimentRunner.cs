@@ -49,8 +49,8 @@ public class ExperimentRunner : MonoBehaviour
         Exp5_EndToEnd
     }
 
-    static readonly string[] MomBehaviors = { "drink", "sit", "reading" };
-    static readonly string[] DadBehaviors = { "drink", "sit", "typing" };
+    static readonly string[] MomBehaviors = { "Drink", "SittingIdle", "Reading" };
+    static readonly string[] DadBehaviors = { "Drink", "SittingIdle", "Typing" };
 
     struct TimeSlot
     {
@@ -64,23 +64,23 @@ public class ExperimentRunner : MonoBehaviour
     {
         new TimeSlot {
             name="Morning", virtualHour=7f,
-            momWeights = new Dictionary<string,int>{{"drink",3},{"sit",1},{"reading",1}},
-            dadWeights = new Dictionary<string,int>{{"drink",2},{"sit",1},{"typing",3}}
+            momWeights = new Dictionary<string,int>{{"Drink",3},{"SittingIdle",1},{"Reading",1}},
+            dadWeights = new Dictionary<string,int>{{"Drink",2},{"SittingIdle",1},{"Typing",3}}
         },
         new TimeSlot {
             name="Noon", virtualHour=12f,
-            momWeights = new Dictionary<string,int>{{"drink",2},{"sit",3},{"reading",2}},
-            dadWeights = new Dictionary<string,int>{{"drink",2},{"sit",2},{"typing",2}}
+            momWeights = new Dictionary<string,int>{{"Drink",2},{"SittingIdle",3},{"Reading",2}},
+            dadWeights = new Dictionary<string,int>{{"Drink",2},{"SittingIdle",2},{"Typing",2}}
         },
         new TimeSlot {
             name="Afternoon", virtualHour=15f,
-            momWeights = new Dictionary<string,int>{{"drink",1},{"sit",2},{"reading",3}},
-            dadWeights = new Dictionary<string,int>{{"drink",1},{"sit",1},{"typing",4}}
+            momWeights = new Dictionary<string,int>{{"Drink",1},{"SittingIdle",2},{"Reading",3}},
+            dadWeights = new Dictionary<string,int>{{"Drink",1},{"SittingIdle",1},{"Typing",4}}
         },
         new TimeSlot {
             name="Evening", virtualHour=20f,
-            momWeights = new Dictionary<string,int>{{"drink",2},{"sit",4},{"reading",3}},
-            dadWeights = new Dictionary<string,int>{{"drink",2},{"sit",4},{"typing",1}}
+            momWeights = new Dictionary<string,int>{{"Drink",2},{"SittingIdle",4},{"Reading",3}},
+            dadWeights = new Dictionary<string,int>{{"Drink",2},{"SittingIdle",4},{"Typing",1}}
         },
     };
 
@@ -294,7 +294,17 @@ public class ExperimentRunner : MonoBehaviour
         if (virtualCameraBrain != null && virtualHour >= 0f)
             virtualCameraBrain.SetVirtualHour(virtualHour);
 
+        // ── 先讓角色到達行為位置 ──
         yield return StartCoroutine(user.SwitchActivity(behavior));
+
+        // ── 加 jitter：在原位置附近隨機偏移，製造真實位置 variance ──
+        float jitterX = Random.Range(-0.4f, 0.4f);
+        float jitterZ = Random.Range(-0.4f, 0.4f);
+        Vector3 jittered = user.transform.position + new Vector3(jitterX, 0f, jitterZ);
+        user.transform.position = jittered;
+
+        // 讓角色稍微穩定一下再截圖
+        yield return new WaitForSeconds(0.3f);
 
         yield return new WaitForSeconds(waitAfterCapture);
 
