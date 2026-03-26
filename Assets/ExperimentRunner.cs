@@ -4,18 +4,28 @@ using UnityEngine;
 using UnityEngine.Networking;
 
 /// <summary>
-/// ExperimentRunner — 控制四個實驗的執行流程。
+/// ExperimentRunner — 控制 Unity 端三個實驗的執行流程。
 ///
-/// 實驗對應關係（論文編號 vs 原始 code 命名）：
-///   Experiment1 (原 Exp1)   → VLM Action Recognition Accuracy
-///   Experiment2 (原 Exp3A)  → Habit Memory Accumulation (FAISS convergence)
-///   Experiment3 (原 Exp4)   → Behavioral Manifold Learning (UMAP + HDBSCAN)
-///   Experiment4 (原 Exp5)   → End-to-End Proactive Service (distribution-based)
+/// 五個論文實驗與 Unity 的關係：
+///   Experiment1 → Unity 跑  → analyze_exp1.py
+///   Experiment2 → Python-only（Exp1 資料即可）→ analyze_exp2.py
+///   Experiment3 → Unity 跑  → analyze_exp3.py
+///   Experiment4 → Unity 跑  → analyze_exp4.py
+///   Experiment5 → Python-only（app.py 跑著即可）→ analyze_exp5.py
+///
+/// Experiment2（Behavioral Scene Graph）說明：
+///   Exp1 跑完後，semantic_memories / scene_snapshots / dynamic_objects
+///   已有足夠資料。直接執行 analyze_exp2.py 即可，不需要 Unity。
+///
+/// Experiment5（模糊需求查詢）說明：
+///   12 個固定自然語言查詢發送到 /interact，記錄回答準確率。
+///   app.py 跑著即可，直接執行 analyze_exp5.py。
 ///
 /// Experiment4 評估設計說明：
 ///   系統採用 fire-and-forget POST /predict，VLM 推理時間 2–30 秒，
 ///   proposals 對應的是累積行為模式而非當前 episode。
 ///   因此不呼叫 /service_response，改用 analyze_exp4.py 的分布比對評估。
+///   指標：Trigger Rate | Distribution Overlap | Top-Intent Match
 /// </summary>
 public class ExperimentRunner : MonoBehaviour
 {
@@ -37,7 +47,6 @@ public class ExperimentRunner : MonoBehaviour
 
     [Header("Experiment Counts")]
     public int exp1_samplesPerBehavior = 20;   // 6 behaviors × 20 = 120 episodes
-    public int exp2_repeatCount        = 30;   // User_Mom Drink × 30
     public int exp3_totalObservations  = 120;  // 4 slots × 30 episodes
     public int exp4_episodes           = 30;   // shuffled, seed=42
 
@@ -53,13 +62,14 @@ public class ExperimentRunner : MonoBehaviour
     public bool useVirtualHour = true;
     public bool runOnStart     = false;
 
-    // ── Experiment enum (論文命名) ─────────────────────────────────────────
+    // ── Experiment enum ────────────────────────────────────────────────────
     public enum ExperimentMode
     {
         Experiment1,   // VLM Action Recognition Accuracy
-        Experiment2,   // Habit Memory Accumulation
         Experiment3,   // Behavioral Manifold Learning
-        Experiment4    // End-to-End Proactive Service (distribution-based)
+        Experiment4    // End-to-End Proactive Service
+        // Experiment2 → analyze_exp2.py（Python-only）
+        // Experiment5 → analyze_exp5.py（Python-only）
     }
 
     // ── Behavior sets ──────────────────────────────────────────────────────
@@ -100,15 +110,14 @@ public class ExperimentRunner : MonoBehaviour
     };
 
     // ── Runtime state ──────────────────────────────────────────────────────
-    int   totalRuns        = 0;
-    int   successRuns      = 0;
+    int   totalRuns          = 0;
+    int   successRuns        = 0;
     float currentVirtualHour = 7f;
-    bool  isRunning        = false;
+    bool  isRunning          = false;
 
     // ── Unity lifecycle ────────────────────────────────────────────────────
     void Start()
     {
-        // Camera manager setup
         if (cameraManager == null)
             cameraManager = StaticCameraManager.Instance
                          ?? FindObjectOfType<StaticCameraManager>();
@@ -156,7 +165,6 @@ public class ExperimentRunner : MonoBehaviour
         switch (mode)
         {
             case ExperimentMode.Experiment1: yield return StartCoroutine(RunExperiment1()); break;
-            case ExperimentMode.Experiment2: yield return StartCoroutine(RunExperiment2()); break;
             case ExperimentMode.Experiment3: yield return StartCoroutine(RunExperiment3()); break;
             case ExperimentMode.Experiment4: yield return StartCoroutine(RunExperiment4()); break;
         }
@@ -167,15 +175,27 @@ public class ExperimentRunner : MonoBehaviour
 
     // ════════════════════════════════════════════════════════════════════════
     // EXPERIMENT 1: VLM Action Recognition Accuracy
-    // 6 behaviors × exp1_samplesPerBehavior(20) = 120 episodes
-    // ground_truth 透過 POST /predict payload 的 "activity" 欄位傳給後端
-    // 後端寫入 eval_logs → analyze_exp1.py 計算 F1
+    //
+    // Unity 做什麼：
+    //   6 種行為 × 20 次 = 120 episodes
+    //   每次 SwitchActivity → 拍照 → fire-and-forget POST /predict
+    //   /predict payload 的 "activity" 欄位 = ground_truth
+    //   後端 log_eval() 寫入 eval_logs
+    //
+    // ※ Experiment2 和 Experiment5 共用這份資料，不需要額外跑 Unity
+    //
+    // Exp1 完成後執行：
+    //   python3 analyze_exp/analyze_exp1.py --out ./results/
+    //   python3 analyze_exp/analyze_exp2.py --out ./results/
+    //   python3 analyze_exp/analyze_exp5.py --out ./results/
     // ════════════════════════════════════════════════════════════════════════
     IEnumerator RunExperiment1()
     {
         Debug.Log("[Exp1] VLM Action Recognition Accuracy");
-        Debug.Log($"[Exp1] Plan: {MomBehaviors.Length + DadBehaviors.Length} behaviors × {exp1_samplesPerBehavior} = " +
-                  $"{(MomBehaviors.Length + DadBehaviors.Length) * exp1_samplesPerBehavior} episodes");
+        Debug.Log($"[Exp1] Plan: {MomBehaviors.Length + DadBehaviors.Length} behaviors "
+                + $"× {exp1_samplesPerBehavior} = "
+                + $"{(MomBehaviors.Length + DadBehaviors.Length) * exp1_samplesPerBehavior} episodes");
+        Debug.Log("[Exp1] NOTE: Exp2 (Scene Graph) and Exp5 (Fuzzy Query) share this data.");
 
         foreach (string behavior in MomBehaviors)
         {
@@ -198,50 +218,38 @@ public class ExperimentRunner : MonoBehaviour
                 Debug.Log($"[Exp1] {totalRuns}/{GetTargetTotal()} Dad:{behavior} ep{i+1}");
             }
         }
-    }
 
-    // ════════════════════════════════════════════════════════════════════════
-    // EXPERIMENT 2: Habit Memory Accumulation
-    // User_Mom Drink × exp2_repeatCount(30)
-    // 每次 episode 結束後呼叫 /exp_checkpoint 記錄 FAISS similarity
-    // → analyze_exp2.py 畫收斂曲線
-    // ════════════════════════════════════════════════════════════════════════
-    IEnumerator RunExperiment2()
-    {
-        Debug.Log($"[Exp2] Habit Memory Accumulation — User_Mom Drink × {exp2_repeatCount}");
-
-        for (int i = 0; i < exp2_repeatCount; i++)
-        {
-            yield return StartCoroutine(RunSingleEpisode(userMom, "Drink", -1f));
-            totalRuns++;
-
-            // 每次 episode 後立即查詢 FAISS similarity，記錄收斂過程
-            yield return StartCoroutine(
-                PostExpCheckpoint(episodeIndex: i + 1, userId: "User_Mom", action: "Drink")
-            );
-
-            Debug.Log($"[Exp2] Episode {i+1}/{exp2_repeatCount} done");
-        }
+        Debug.Log("[Exp1] ✓ Done. Wait 60s for VLM to finish, then run:");
+        Debug.Log("[Exp1]   python3 analyze_exp/analyze_exp1.py --out ./results/");
+        Debug.Log("[Exp1]   python3 analyze_exp/analyze_exp2.py --out ./results/");
+        Debug.Log("[Exp1]   python3 analyze_exp/analyze_exp5.py --out ./results/");
     }
 
     // ════════════════════════════════════════════════════════════════════════
     // EXPERIMENT 3: Behavioral Manifold Learning
-    // 4 time slots × 30 episodes = 120 observations
-    // Mom + Dad interleaved per slot，依 TimeSlots 權重建 queue
-    // 跑完後執行 python3 generate_umap.py 產出 UMAP scatter + Silhouette Score
+    //
+    // Unity 做什麼：
+    //   4 time slots × 30 episodes = 120 observations
+    //   Mom + Dad 在每個時段按時段權重交替跑行為
+    //   每次 POST /predict 帶 virtual_hour → ManifoldEngine 記錄時段特徵
+    //   後端每 50 筆自動 refit UMAP + HDBSCAN
+    //
+    // 完成後執行：
+    //   python3 analyze_exp/analyze_exp3.py --out ./results/
     // ════════════════════════════════════════════════════════════════════════
     IEnumerator RunExperiment3()
     {
-        int perSlot       = exp3_totalObservations / TimeSlots.Length;   // 30
-        int perPersonSlot = perSlot / 2;                                  // 15 per person
+        int perSlot       = exp3_totalObservations / TimeSlots.Length;  // 30
+        int perPersonSlot = perSlot / 2;                                 // 15 per person
 
-        Debug.Log($"[Exp3] Behavioral Manifold Learning");
-        Debug.Log($"[Exp3] Plan: {TimeSlots.Length} slots × {perSlot} obs = {exp3_totalObservations} total");
+        Debug.Log("[Exp3] Behavioral Manifold Learning");
+        Debug.Log($"[Exp3] Plan: {TimeSlots.Length} slots × {perSlot} obs "
+                + $"= {exp3_totalObservations} total");
 
         foreach (var slot in TimeSlots)
         {
             currentVirtualHour = slot.virtualHour;
-            Debug.Log($"[Exp3] ── Slot: {slot.name} (hour={slot.virtualHour}) ──");
+            Debug.Log($"[Exp3] ── Slot: {slot.name} ({slot.virtualHour:F0}:00) ──");
 
             var momQueue = BuildWeightedQueue(MomBehaviors, slot.momWeights, perPersonSlot);
             var dadQueue = BuildWeightedQueue(DadBehaviors, slot.dadWeights, perPersonSlot);
@@ -253,8 +261,7 @@ public class ExperimentRunner : MonoBehaviour
                 {
                     if (useVirtualHour) PostVirtualHourFireAndForget(slot.virtualHour);
                     yield return StartCoroutine(
-                        RunSingleEpisode(userMom, momQueue[i], slot.virtualHour)
-                    );
+                        RunSingleEpisode(userMom, momQueue[i], slot.virtualHour));
                     yield return new WaitForSeconds(minIntervalInSlot);
                     totalRuns++;
                 }
@@ -263,8 +270,7 @@ public class ExperimentRunner : MonoBehaviour
                 {
                     if (useVirtualHour) PostVirtualHourFireAndForget(slot.virtualHour);
                     yield return StartCoroutine(
-                        RunSingleEpisode(userDad, dadQueue[i], slot.virtualHour)
-                    );
+                        RunSingleEpisode(userDad, dadQueue[i], slot.virtualHour));
                     yield return new WaitForSeconds(minIntervalInSlot);
                     totalRuns++;
                 }
@@ -273,27 +279,37 @@ public class ExperimentRunner : MonoBehaviour
             }
         }
 
-        Debug.Log("[Exp3] ✓ Done. Run: python3 generate_umap.py to produce Figure.");
+        Debug.Log("[Exp3] ✓ Done.");
+        Debug.Log("[Exp3] Run: python3 analyze_exp/analyze_exp3.py --out ./results/");
     }
 
     // ════════════════════════════════════════════════════════════════════════
     // EXPERIMENT 4: End-to-End Proactive Service
-    // 30 shuffled episodes (seed=42)，在 Exp3 的流形基礎上執行。
     //
-    // 評估設計：
-    //   系統採用 fire-and-forget POST /predict，VLM 推理 2–30 秒，
-    //   proposals 對應累積行為模式而非當前 episode。
-    //   因此不呼叫 /service_response，改用分布比對評估：
-    //     Trigger Rate + Distribution Overlap + Top-Intent Match
-    //   詳見 analyze_exp4.py
+    // Unity 做什麼：
+    //   在 Experiment3 的流形基礎上（不清空 MongoDB），
+    //   跑 30 個打亂順序的行為（seed=42）。
+    //   每次 POST /predict → ManifoldEngine 投影 → 若 C ≥ 0.60 自動發提案
+    //   提案累積在 service_proposals collection
+    //
+    // 評估設計（為什麼不用 per-episode 對應）：
+    //   fire-and-forget 架構 → VLM 推理 2–30 秒 → Unity 已在跑後面的 episode
+    //   proposals 對應累積模式，不是當前 episode
+    //   改用整體分布比對：
+    //     Trigger Rate         = 觸發提案數 / 30
+    //     Distribution Overlap = Bhattacharyya(intent 分布, GT 行為分布)
+    //     Top-Intent Match     = 最常觸發 intent == 最常出現 GT 行為 (✓/✗)
+    //   不呼叫 /service_response
+    //
+    // 完成後執行：
+    //   python3 analyze_exp/analyze_exp4.py --episodes 30 --out ./results/
     // ════════════════════════════════════════════════════════════════════════
     IEnumerator RunExperiment4()
     {
         Debug.Log($"[Exp4] End-to-End Proactive Service — {exp4_episodes} episodes (seed=42)");
-        Debug.Log("[Exp4] NOTE: No /service_response calls. Evaluation via analyze_exp4.py (distribution-based).");
-        Debug.Log("[Exp4] NOTE: Prerequisite — run Experiment3 first to populate manifold.");
+        Debug.Log("[Exp4] Prerequisite: run Experiment3 first (manifold must exist).");
+        Debug.Log("[Exp4] No /service_response — distribution-based evaluation.");
 
-        // Build cross-slot pool with fixed seed=42 for reproducibility
         var pool = new List<(UserEntity user, string behavior, float hour)>();
         var rng  = new System.Random(42);
 
@@ -306,7 +322,7 @@ public class ExperimentRunner : MonoBehaviour
             foreach (var b in dq) pool.Add((userDad, b, slot.virtualHour));
         }
 
-        // Fisher-Yates shuffle with fixed seed
+        // Fisher-Yates shuffle, seed=42
         for (int i = pool.Count - 1; i > 0; i--)
         {
             int j = rng.Next(i + 1);
@@ -314,7 +330,7 @@ public class ExperimentRunner : MonoBehaviour
         }
 
         int limit = Mathf.Min(exp4_episodes, pool.Count);
-        Debug.Log($"[Exp4] Pool size: {pool.Count}, running: {limit}");
+        Debug.Log($"[Exp4] Pool: {pool.Count}, running: {limit}");
 
         for (int ep = 0; ep < limit; ep++)
         {
@@ -322,51 +338,38 @@ public class ExperimentRunner : MonoBehaviour
             currentVirtualHour = hour;
 
             if (useVirtualHour) PostVirtualHourFireAndForget(hour);
-
             yield return StartCoroutine(RunSingleEpisode(user, behavior, hour));
-
             totalRuns++;
 
-            string slotName = GetSlotName(hour);
-            Debug.Log($"[Exp4] ep{ep+1}/{limit} {user.name}:{behavior} slot={slotName}");
-
-            // 不呼叫 /service_response
-            // ManifoldEngine 會在後台收到 /predict 結果後自動觸發提案
-            // proposals 累積在 MongoDB service_proposals collection
-            // 實驗結束後執行 analyze_exp4.py 進行分布比對評估
+            Debug.Log($"[Exp4] ep{ep+1}/{limit} "
+                    + $"{user.name}:{behavior} slot={GetSlotName(hour)}");
         }
 
         Debug.Log("[Exp4] ✓ Done.");
-        Debug.Log("[Exp4] Run: python3 analyze_exp4.py --episodes 30 --out ./results/");
+        Debug.Log("[Exp4] Run: python3 analyze_exp/analyze_exp4.py --episodes 30 --out ./results/");
         Debug.Log("[Exp4] Metrics: Trigger Rate | Distribution Overlap | Top-Intent Match");
     }
 
     // ════════════════════════════════════════════════════════════════════════
     // CORE: RunSingleEpisode
-    // 1. SwitchActivity → 角色移動到目標位置
-    // 2. 位置 jitter ± 0.4m（模擬真實位置 variance）
-    // 3. 穩定 0.3s
-    // 4. waitAfterCapture（讓 StaticCameraManager 偵測到行為並觸發截圖）
-    // 5. ReturnToIdle + waitBetweenEpisodes
+    //   1. SwitchActivity  → 角色移動到目標位置 + 播動畫
+    //   2. Position jitter ± 0.4m（模擬真實位置 variance）
+    //   3. Wait 0.3s（動畫穩定）
+    //   4. waitAfterCapture（StaticCameraManager 截圖 → POST /predict，fire-and-forget）
+    //   5. ReturnToIdle + waitBetweenEpisodes
     // ════════════════════════════════════════════════════════════════════════
     IEnumerator RunSingleEpisode(UserEntity user, string behavior, float virtualHour)
     {
         if (virtualCameraBrain != null && virtualHour >= 0f)
             virtualCameraBrain.SetVirtualHour(virtualHour);
 
-        // 移動到行為位置
         yield return StartCoroutine(user.SwitchActivity(behavior));
 
-        // 位置 jitter：模擬真實位置 variance
         float jitterX = Random.Range(-0.4f, 0.4f);
         float jitterZ = Random.Range(-0.4f, 0.4f);
         user.transform.position += new Vector3(jitterX, 0f, jitterZ);
 
-        // 穩定幾幀再截圖
         yield return new WaitForSeconds(0.3f);
-
-        // 等待 StaticCameraManager 觸發截圖並 POST /predict（fire-and-forget）
-        // VLM 推理在後台非同步進行，Unity 繼續執行
         yield return new WaitForSeconds(waitAfterCapture);
 
         successRuns++;
@@ -375,42 +378,16 @@ public class ExperimentRunner : MonoBehaviour
         yield return new WaitForSeconds(waitBetweenEpisodes);
     }
 
-    // ════════════════════════════════════════════════════════════════════════
-    // /exp_checkpoint: Exp2 用，記錄每個 episode 的 FAISS similarity
-    // 後端需要實作：查詢 User_Mom Drink 的最新 FAISS similarity 並回傳
-    // 寫入 exp_checkpoint_logs: {user_id, action, episode, similarity, timestamp}
-    // ════════════════════════════════════════════════════════════════════════
-    IEnumerator PostExpCheckpoint(int episodeIndex, string userId, string action)
-    {
-        string json = $"{{\"episode\":{episodeIndex},\"user_id\":\"{userId}\",\"action\":\"{action}\"}}";
-        var req = new UnityWebRequest($"{backendUrl}/exp_checkpoint", "POST");
-        req.uploadHandler   = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(json));
-        req.downloadHandler = new DownloadHandlerBuffer();
-        req.SetRequestHeader("Content-Type", "application/json");
-        req.timeout = 10;
-        yield return req.SendWebRequest();
-
-        if (req.result == UnityWebRequest.Result.Success)
-        {
-            Debug.Log($"[Exp2] Checkpoint ep{episodeIndex}: {req.downloadHandler.text}");
-        }
-        else
-        {
-            Debug.LogWarning($"[Exp2] Checkpoint failed ep{episodeIndex}: {req.error}");
-        }
-    }
-
     // ── /set_virtual_hour (fire-and-forget) ───────────────────────────────
-    void PostVirtualHourFireAndForget(float hour)
-    {
+    void PostVirtualHourFireAndForget(float hour) =>
         StartCoroutine(PostVirtualHourRoutine(hour));
-    }
 
     IEnumerator PostVirtualHourRoutine(float hour)
     {
         string json = $"{{\"virtual_hour\":{hour:F1}}}";
         var req = new UnityWebRequest($"{backendUrl}/set_virtual_hour", "POST");
-        req.uploadHandler   = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(json));
+        req.uploadHandler   = new UploadHandlerRaw(
+                                System.Text.Encoding.UTF8.GetBytes(json));
         req.downloadHandler = new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
         req.timeout = 3;
@@ -421,10 +398,6 @@ public class ExperimentRunner : MonoBehaviour
     }
 
     // ── BuildWeightedQueue ─────────────────────────────────────────────────
-    /// <summary>
-    /// 按比例分配 behavior 到 totalCount 個 episode，最後一個 behavior 用餘數修正。
-    /// 使用 non-seeded random shuffle（每個 slot 不同但不影響可重現性）。
-    /// </summary>
     List<string> BuildWeightedQueue(
         string[] behaviors,
         Dictionary<string, int> weights,
@@ -449,7 +422,6 @@ public class ExperimentRunner : MonoBehaviour
             allocated += count;
         }
 
-        // Non-seeded shuffle per slot
         var rng = new System.Random();
         for (int i = result.Count - 1; i > 0; i--)
         {
@@ -469,7 +441,6 @@ public class ExperimentRunner : MonoBehaviour
     {
         ExperimentMode.Experiment1 =>
             (MomBehaviors.Length + DadBehaviors.Length) * exp1_samplesPerBehavior,
-        ExperimentMode.Experiment2 => exp2_repeatCount,
         ExperimentMode.Experiment3 => exp3_totalObservations,
         ExperimentMode.Experiment4 => exp4_episodes,
         _ => 0
@@ -480,10 +451,10 @@ public class ExperimentRunner : MonoBehaviour
     {
         if (!isRunning) return;
         GUI.Label(
-            new Rect(10, 10, 600, 22),
-            $"[{mode}]  {GetSlotName(currentVirtualHour)} {currentVirtualHour:F0}:00  " +
-            $"Progress: {totalRuns} / {GetTargetTotal()}  " +
-            $"Success: {successRuns}  [Esc] Stop"
+            new Rect(10, 10, 640, 22),
+            $"[{mode}]  {GetSlotName(currentVirtualHour)} {currentVirtualHour:F0}:00  "
+          + $"Progress: {totalRuns}/{GetTargetTotal()}  "
+          + $"Success: {successRuns}  [Esc] Stop"
         );
     }
 }
