@@ -5716,7 +5716,7 @@ MonoBehaviour:
   - {fileID: 1603672535}
   - {fileID: 267607256}
   - {fileID: 1074887085}
-  mode: 1
+  mode: 0
   exp1_samplesPerBehavior: 1
   exp3_totalObservations: 120
   exp4_episodes: 30

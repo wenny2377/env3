@@ -18,8 +18,8 @@ public class ExperimentRunner : MonoBehaviour
     public List<CameraNode> livingRoomNodes;
     public List<CameraNode> dadRoomNodes;
 
-    [Header("Experiment Mode")]
-    public ExperimentMode mode = ExperimentMode.Experiment1;
+    [Header("Run Mode")]
+    public RunMode mode = RunMode.Demo;
 
     [Header("Experiment Counts")]
     public int exp1_samplesPerBehavior = 20;
@@ -38,11 +38,12 @@ public class ExperimentRunner : MonoBehaviour
     public bool useVirtualHour = true;
     public bool runOnStart     = false;
 
-    public enum ExperimentMode
+    public enum RunMode
     {
+        Demo,
         Experiment1,
         Experiment3,
-        Experiment4
+        Experiment4,
     }
 
     static readonly string[] MomBehaviors = { "Drink", "SittingIdle", "Reading" };
@@ -87,6 +88,14 @@ public class ExperimentRunner : MonoBehaviour
 
     void Start()
     {
+        if (mode == RunMode.Demo)
+        {
+            if (userMom != null) userMom.gameObject.SetActive(true);
+            if (userDad != null) userDad.gameObject.SetActive(true);
+            Debug.Log("[ExperimentRunner] Demo mode — NavBrain and Highlight active. No experiment running.");
+            return;
+        }
+
         if (cameraManager == null)
             cameraManager = StaticCameraManager.Instance ?? FindObjectOfType<StaticCameraManager>();
 
@@ -98,7 +107,6 @@ public class ExperimentRunner : MonoBehaviour
             if (virtualCameraBrain != null) cameraManager.virtualCameraBrain = virtualCameraBrain;
         }
 
-        // 初始化：確保兩個人一開始都在
         if (userMom != null) userMom.gameObject.SetActive(true);
         if (userDad != null) userDad.gameObject.SetActive(true);
 
@@ -107,6 +115,7 @@ public class ExperimentRunner : MonoBehaviour
 
     void Update()
     {
+        if (mode == RunMode.Demo) return;
         if (Input.GetKeyDown(KeyCode.Space) && !isRunning) StartExperiment();
         if (Input.GetKeyDown(KeyCode.Escape) && isRunning)
         {
@@ -117,6 +126,11 @@ public class ExperimentRunner : MonoBehaviour
 
     public void StartExperiment()
     {
+        if (mode == RunMode.Demo)
+        {
+            Debug.LogWarning("[ExperimentRunner] Cannot start experiment in Demo mode.");
+            return;
+        }
         if (isRunning) return;
         totalRuns = successRuns = 0;
         StartCoroutine(RunExperiment());
@@ -127,36 +141,34 @@ public class ExperimentRunner : MonoBehaviour
         isRunning = true;
         switch (mode)
         {
-            case ExperimentMode.Experiment1: yield return StartCoroutine(RunExperiment1()); break;
-            case ExperimentMode.Experiment3: yield return StartCoroutine(RunExperiment3()); break;
-            case ExperimentMode.Experiment4: yield return StartCoroutine(RunExperiment4()); break;
+            case RunMode.Experiment1: yield return StartCoroutine(RunExperiment1()); break;
+            case RunMode.Experiment3: yield return StartCoroutine(RunExperiment3()); break;
+            case RunMode.Experiment4: yield return StartCoroutine(RunExperiment4()); break;
         }
         isRunning = false;
+        Debug.Log($"[ExperimentRunner] Done. {successRuns}/{totalRuns} successful.");
     }
 
     IEnumerator RunExperiment1()
     {
         foreach (string behavior in MomBehaviors)
-        {
             for (int i = 0; i < exp1_samplesPerBehavior; i++)
             {
                 yield return StartCoroutine(RunSingleEpisode(userMom, behavior, -1f));
                 totalRuns++;
             }
-        }
+
         foreach (string behavior in DadBehaviors)
-        {
             for (int i = 0; i < exp1_samplesPerBehavior; i++)
             {
                 yield return StartCoroutine(RunSingleEpisode(userDad, behavior, -1f));
                 totalRuns++;
             }
-        }
     }
 
     IEnumerator RunExperiment3()
     {
-        int perSlot = exp3_totalObservations / TimeSlots.Length;
+        int perSlot       = exp3_totalObservations / TimeSlots.Length;
         int perPersonSlot = perSlot / 2;
 
         foreach (var slot in TimeSlots)
@@ -164,7 +176,7 @@ public class ExperimentRunner : MonoBehaviour
             currentVirtualHour = slot.virtualHour;
             var momQueue = BuildWeightedQueue(MomBehaviors, slot.momWeights, perPersonSlot);
             var dadQueue = BuildWeightedQueue(DadBehaviors, slot.dadWeights, perPersonSlot);
-            int maxLen = Mathf.Max(momQueue.Count, dadQueue.Count);
+            int maxLen   = Mathf.Max(momQueue.Count, dadQueue.Count);
 
             for (int i = 0; i < maxLen; i++)
             {
@@ -217,45 +229,41 @@ public class ExperimentRunner : MonoBehaviour
         }
     }
 
-    // ── 關鍵修改：確保空間中只有目標 User ─────────────────────────────
     IEnumerator RunSingleEpisode(UserEntity targetUser, string behavior, float virtualHour)
     {
-        // 1. 執行隔離：讓另一人消失
         UserEntity otherUser = (targetUser == userMom) ? userDad : userMom;
-        
-        if (otherUser != null) otherUser.gameObject.SetActive(false);
+        if (otherUser  != null) otherUser.gameObject.SetActive(false);
         if (targetUser != null) targetUser.gameObject.SetActive(true);
 
-        // 2. 設定虛擬時間與位置
         if (virtualCameraBrain != null && virtualHour >= 0f)
             virtualCameraBrain.SetVirtualHour(virtualHour);
 
-        // 3. 執行動作 (走路 + 動畫)
         yield return StartCoroutine(targetUser.SwitchActivity(behavior));
 
-        // 4. 加入隨機抖動 (模擬多變性)
         float jitterX = Random.Range(-0.4f, 0.4f);
         float jitterZ = Random.Range(-0.4f, 0.4f);
         targetUser.transform.position += new Vector3(jitterX, 0f, jitterZ);
 
-        // 5. 拍照採樣 (此時畫面上只會有 targetUser)
         yield return new WaitForSeconds(0.3f);
         yield return new WaitForSeconds(waitAfterCapture);
 
         successRuns++;
 
-        // 6. 回到 Idle
         yield return StartCoroutine(targetUser.ReturnToIdle());
+
+        if (otherUser != null) otherUser.gameObject.SetActive(true);
+
         yield return new WaitForSeconds(waitBetweenEpisodes);
     }
 
-    void PostVirtualHourFireAndForget(float hour) => StartCoroutine(PostVirtualHourRoutine(hour));
+    void PostVirtualHourFireAndForget(float hour) =>
+        StartCoroutine(PostVirtualHourRoutine(hour));
 
     IEnumerator PostVirtualHourRoutine(float hour)
     {
         string json = $"{{\"virtual_hour\":{hour:F1}}}";
         var req = new UnityWebRequest($"{backendUrl}/set_virtual_hour", "POST");
-        req.uploadHandler = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(json));
+        req.uploadHandler   = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(json));
         req.downloadHandler = new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
         req.timeout = 3;
@@ -268,13 +276,13 @@ public class ExperimentRunner : MonoBehaviour
         foreach (var b in behaviors)
             totalWeight += weights.TryGetValue(b, out int w) ? w : 1;
 
-        var result = new List<string>();
+        var result    = new List<string>();
         int allocated = 0;
 
         for (int i = 0; i < behaviors.Length; i++)
         {
-            var b = behaviors[i];
-            int w = weights.TryGetValue(b, out int ww) ? ww : 1;
+            var b     = behaviors[i];
+            int w     = weights.TryGetValue(b, out int ww) ? ww : 1;
             int count = (i == behaviors.Length - 1)
                 ? Mathf.Max(0, totalCount - allocated)
                 : Mathf.Max(0, Mathf.RoundToInt((float)w / totalWeight * totalCount));
@@ -299,15 +307,24 @@ public class ExperimentRunner : MonoBehaviour
 
     int GetTargetTotal() => mode switch
     {
-        ExperimentMode.Experiment1 => (MomBehaviors.Length + DadBehaviors.Length) * exp1_samplesPerBehavior,
-        ExperimentMode.Experiment3 => exp3_totalObservations,
-        ExperimentMode.Experiment4 => exp4_episodes,
-        _ => 0
+        RunMode.Experiment1 => (MomBehaviors.Length + DadBehaviors.Length) * exp1_samplesPerBehavior,
+        RunMode.Experiment3 => exp3_totalObservations,
+        RunMode.Experiment4 => exp4_episodes,
+        _                   => 0,
     };
 
     void OnGUI()
     {
+        if (mode == RunMode.Demo)
+        {
+            GUI.Label(new Rect(10, 10, 400, 22), "[Demo Mode] NavBrain active. Press nothing.");
+            return;
+        }
         if (!isRunning) return;
-        GUI.Label(new Rect(10, 10, 640, 22), $"[{mode}] {GetSlotName(currentVirtualHour)} {currentVirtualHour:F0}:00 Progress: {totalRuns}/{GetTargetTotal()} Success: {successRuns} [Esc] Stop");
+        GUI.Label(
+            new Rect(10, 10, 640, 22),
+            $"[{mode}] {GetSlotName(currentVirtualHour)} {currentVirtualHour:F0}:00  " +
+            $"Progress: {totalRuns}/{GetTargetTotal()}  Success: {successRuns}  [Esc] Stop"
+        );
     }
 }
