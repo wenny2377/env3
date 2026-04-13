@@ -16,22 +16,13 @@ public class RobotBubble : MonoBehaviour
     [Header("Settings")]
     public float displayDuration = 6f;
 
-    Camera _cam;
     string _lastAnswer = "";
 
     void Start()
     {
-        _cam = Camera.main;
         if (bubbleRoot != null)
             bubbleRoot.SetActive(false);
         StartCoroutine(PollLoop());
-    }
-
-    void LateUpdate()
-    {
-        if (_cam == null) return;
-        transform.LookAt(transform.position + _cam.transform.rotation * Vector3.forward,
-                         _cam.transform.rotation * Vector3.up);
     }
 
     IEnumerator PollLoop()
@@ -69,7 +60,8 @@ public class RobotBubble : MonoBehaviour
         if (bubbleRoot != null)
             bubbleRoot.SetActive(true);
 
-        StopCoroutine("HideAfter");
+        StopAllCoroutines();
+        StartCoroutine(PollLoop());
         StartCoroutine(HideAfter(displayDuration));
     }
 
