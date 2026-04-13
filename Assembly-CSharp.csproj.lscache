@@ -55,7 +55,7 @@ TemporaryDependencyNodeTargetIdentifier=netstandard2.1
 [sourceFiles]
 Assets/
  CameraNode.cs
- DemoRunner.cs
+ DemoController.cs
  DynamicSyncManager.cs
  ExperimentRunner.cs
  Kevin Iglesias/Human Animations/Scripts/SpineProxy.cs
@@ -66,10 +66,12 @@ Assets/
  StaticCameraManager.cs
  TutorialInfo/Scripts/Readme.cs
  ui and nav/
-  DialogueUI.cs
+  DialogueInput.cs
   HighlightManager.cs
   NavBrain.cs
   PickupController.cs
+  RobotBubble.cs
+  UserBubble.cs
  UserEntity.cs
  VirtualCameraBrain.cs
 Temp/obj/Debug/Assembly-CSharp/.NETStandard,Version=v2.1.AssemblyAttributes.cs

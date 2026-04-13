@@ -3,58 +3,55 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
 
-/// <summary>
-/// DynamicSyncManager — 角色位置 + 道具位置串流
-///
-/// 兩條資料流，全部送到 Flask /dynamic_sync：
-///   A. 角色位置（每 0.5 秒）→ source = "unity_user"
-///   B. 道具位置（每 5 秒，有移動才送）→ source = "unity"
-///
-/// Flask /dynamic_sync 期望格式：
-///   { "objects": [
-///       { "label": "user_mom", "room": "", "position": [x, z], "source": "unity_user" },
-///       { "label": "banana",   "room": "LivingRoom", "position": [x, z], "source": "unity" }
-///   ]}
-/// </summary>
 public class DynamicSyncManager : MonoBehaviour
 {
-    [Header("使用者（必填）")]
+    [Header("Users")]
     public UserEntity userMom;
     public UserEntity userDad;
 
-    [Header("動態道具（可動物件，例如 Cup / Banana）")]
+    [Header("Experiment Objects (synced during Exp modes)")]
     public List<GameObject> dynamicObjects = new List<GameObject>();
 
-    [Header("後端 URL")]
+    [Header("Demo Objects (synced during Demo mode only)")]
+    public List<GameObject> demoObjects = new List<GameObject>();
+
+    [Header("Backend")]
     public string backendUrl = "http://localhost:5000";
 
-    [Header("串流頻率（秒）")]
-    public float positionInterval  = 0.5f;
+    [Header("Intervals (seconds)")]
+    public float positionInterval   = 0.5f;
     public float objectSyncInterval = 5.0f;
 
-    [Header("最小移動距離（低於此值不 POST）")]
+    [Header("Movement Threshold")]
     public float moveTolerance = 0.02f;
 
-    [Header("除錯")]
+    [Header("Debug")]
     public bool verboseLog = false;
 
-    // ── 私有 ──────────────────────────────────────────────
     Dictionary<string, Vector3> lastPos    = new Dictionary<string, Vector3>();
     Dictionary<string, Vector3> lastObjPos = new Dictionary<string, Vector3>();
 
     static readonly System.Globalization.CultureInfo Inv =
         System.Globalization.CultureInfo.InvariantCulture;
 
-    // ══════════════════════════════════════════════════════
+    ExperimentRunner _runner;
+
     void Start()
     {
+        _runner = FindObjectOfType<ExperimentRunner>();
         StartCoroutine(PositionLoop());
         StartCoroutine(ObjectLoop());
     }
 
-    // ══════════════════════════════════════════════════════
-    // A. 角色位置
-    // ══════════════════════════════════════════════════════
+    bool IsDemo()
+    {
+        return _runner != null && _runner.mode == ExperimentRunner.RunMode.Demo;
+    }
+
+    List<GameObject> ActiveObjects()
+    {
+        return IsDemo() ? demoObjects : dynamicObjects;
+    }
 
     IEnumerator PositionLoop()
     {
@@ -75,21 +72,19 @@ public class DynamicSyncManager : MonoBehaviour
 
             Vector3 pos = user.transform.position;
 
-            // 沒有移動就跳過
             if (lastPos.ContainsKey(user.userID) &&
                 Vector3.Distance(pos, lastPos[user.userID]) < moveTolerance)
                 continue;
 
             lastPos[user.userID] = pos;
 
-            // 手動建 JSON object string，避免匿名型別的序列化問題
             string entry = BuildObjectJson(
-                label:    user.userID.ToLower(),
-                room:     "",
-                x:        pos.x,
-                z:        pos.z,
-                source:   "unity_user",
-                extra:    "\"activity\":\"" + EscStr(user.currentActivity) + "\""
+                label:  user.userID.ToLower(),
+                room:   "",
+                x:      pos.x,
+                z:      pos.z,
+                source: "unity_user",
+                extra:  "\"activity\":\"" + EscStr(user.currentActivity) + "\""
             );
             entries.Add(entry);
         }
@@ -99,10 +94,6 @@ public class DynamicSyncManager : MonoBehaviour
         string json = "{\"objects\":[" + string.Join(",", entries) + "]}";
         yield return StartCoroutine(PostJson(backendUrl + "/dynamic_sync", json, "position"));
     }
-
-    // ══════════════════════════════════════════════════════
-    // B. 道具位置
-    // ══════════════════════════════════════════════════════
 
     IEnumerator ObjectLoop()
     {
@@ -115,12 +106,13 @@ public class DynamicSyncManager : MonoBehaviour
 
     IEnumerator SendObjects()
     {
-        if (dynamicObjects.Count == 0) yield break;
+        var objects = ActiveObjects();
+        if (objects == null || objects.Count == 0) yield break;
 
-        var entries    = new List<string>();
-        bool anyMoved  = false;
+        var  entries  = new List<string>();
+        bool anyMoved = false;
 
-        foreach (var obj in dynamicObjects)
+        foreach (var obj in objects)
         {
             if (obj == null) continue;
 
@@ -133,7 +125,7 @@ public class DynamicSyncManager : MonoBehaviour
             if (moved)
             {
                 lastObjPos[key] = pos;
-                anyMoved = true;
+                anyMoved        = true;
             }
 
             string room  = DetectRoom(obj.transform.position);
@@ -154,14 +146,10 @@ public class DynamicSyncManager : MonoBehaviour
         yield return StartCoroutine(PostJson(backendUrl + "/dynamic_sync", json, "objects"));
     }
 
-    // ══════════════════════════════════════════════════════
-    // HTTP POST
-    // ══════════════════════════════════════════════════════
-
     IEnumerator PostJson(string url, string json, string label)
     {
         if (verboseLog)
-            Debug.Log("[DynamicSync] POST /" + label + " → " + json);
+            Debug.Log($"[DynamicSync] POST /{label} -> {json}");
 
         byte[] body = System.Text.Encoding.UTF8.GetBytes(json);
 
@@ -174,23 +162,18 @@ public class DynamicSyncManager : MonoBehaviour
         yield return req.SendWebRequest();
 
         if (req.result != UnityWebRequest.Result.Success)
-            Debug.LogWarning("[DynamicSync] /" + label + " POST failed: " + req.error);
+            Debug.LogWarning($"[DynamicSync] /{label} POST failed: {req.error}");
     }
-
-    // ══════════════════════════════════════════════════════
-    // 輔助：手動建 JSON object string
-    // ══════════════════════════════════════════════════════
 
     string BuildObjectJson(string label, string room, float x, float z,
                            string source, string extra)
     {
-        string xs = x.ToString("F3", Inv);
-        string zs = z.ToString("F3", Inv);
-
-        string json = "{\"label\":\"" + EscStr(label) + "\","
-                    + "\"room\":\""   + EscStr(room)   + "\","
-                    + "\"position\":[" + xs + "," + zs + "],"
-                    + "\"source\":\"" + EscStr(source) + "\"";
+        string xs   = x.ToString("F3", Inv);
+        string zs   = z.ToString("F3", Inv);
+        string json = "{\"label\":\""    + EscStr(label)  + "\","
+                    + "\"room\":\""      + EscStr(room)   + "\","
+                    + "\"position\":["   + xs + "," + zs  + "],"
+                    + "\"source\":\""    + EscStr(source) + "\"";
 
         if (!string.IsNullOrEmpty(extra))
             json += "," + extra;
@@ -199,7 +182,6 @@ public class DynamicSyncManager : MonoBehaviour
         return json;
     }
 
-    // JSON 字串跳脫（只處理最基本的幾個字元）
     string EscStr(string s)
     {
         if (string.IsNullOrEmpty(s)) return "";
@@ -209,13 +191,8 @@ public class DynamicSyncManager : MonoBehaviour
                 .Replace("\r", "\\r");
     }
 
-    // ══════════════════════════════════════════════════════
-    // 輔助：偵測物件所在房間
-    // ══════════════════════════════════════════════════════
-
     string DetectRoom(Vector3 pos)
     {
-        // 用 OverlapSphere 找 RoomArea trigger
         Collider[] hits = Physics.OverlapSphere(pos, 0.5f,
             Physics.AllLayers, QueryTriggerInteraction.Collide);
 
@@ -224,14 +201,8 @@ public class DynamicSyncManager : MonoBehaviour
             RoomArea ra = hit.GetComponent<RoomArea>();
             if (ra != null) return ra.roomName;
         }
-
-        // Fallback：名稱推算（不依賴物理層設定）
         return "";
     }
-
-    // ══════════════════════════════════════════════════════
-    // 對外 API
-    // ══════════════════════════════════════════════════════
 
     public void ForcePositionSync() => StartCoroutine(SendPositions());
     public void ForceObjectSync()   => StartCoroutine(SendObjects());
