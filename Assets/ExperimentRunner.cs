@@ -92,7 +92,8 @@ public class ExperimentRunner : MonoBehaviour
         {
             if (userMom != null) userMom.gameObject.SetActive(true);
             if (userDad != null) userDad.gameObject.SetActive(true);
-            Debug.Log("[ExperimentRunner] Demo mode — NavBrain and Highlight active. No experiment running.");
+            InitCameraForDemo();
+            Debug.Log("[ExperimentRunner] Demo mode — camera observation active.");
             return;
         }
 
@@ -111,6 +112,25 @@ public class ExperimentRunner : MonoBehaviour
         if (userDad != null) userDad.gameObject.SetActive(true);
 
         if (runOnStart) StartExperiment();
+    }
+
+    void InitCameraForDemo()
+    {
+        if (cameraManager == null)
+            cameraManager = StaticCameraManager.Instance ?? FindObjectOfType<StaticCameraManager>();
+
+        if (cameraManager == null)
+        {
+            Debug.LogWarning("[ExperimentRunner] StaticCameraManager not found for Demo mode.");
+            return;
+        }
+
+        if (kitchenNodes?.Count    > 0) cameraManager.RegisterRoomCameras("Kitchen",    kitchenNodes);
+        if (livingRoomNodes?.Count > 0) cameraManager.RegisterRoomCameras("LivingRoom", livingRoomNodes);
+        if (dadRoomNodes?.Count    > 0) cameraManager.RegisterRoomCameras("DadRoom",    dadRoomNodes);
+        if (virtualCameraBrain != null) cameraManager.virtualCameraBrain = virtualCameraBrain;
+
+        Debug.Log("[ExperimentRunner] Demo camera initialized.");
     }
 
     void Update()
@@ -317,7 +337,8 @@ public class ExperimentRunner : MonoBehaviour
     {
         if (mode == RunMode.Demo)
         {
-            GUI.Label(new Rect(10, 10, 400, 22), "[Demo Mode] NavBrain active. Press nothing.");
+            GUI.Label(new Rect(10, 100, 500, 22),
+                "[Demo Mode] Camera observation active.");
             return;
         }
         if (!isRunning) return;

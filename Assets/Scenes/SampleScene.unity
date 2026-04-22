@@ -699,7 +699,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 5f42958e8eee66deb9495ec62d1b0364, type: 3}
       propertyPath: m_Name
-      value: sodacan
+      value: cola
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -1325,6 +1325,7 @@ MonoBehaviour:
   behaviorItems:
   - activity: Drink
     item: {fileID: 651223593}
+    sceneCounterpart: {fileID: 0}
   stateIdle: Idle
   stateWalk: Walk
   stateDrink: Drink
@@ -1624,7 +1625,7 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: 561e07c684e8fe91a952c558b7a5255c, type: 2}
     - target: {fileID: 919132149155446097, guid: 04641a9be2dfff41b89b0e874cdc1ba3, type: 3}
       propertyPath: m_Name
-      value: orange juice
+      value: juice
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -1809,7 +1810,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &684579919
 Transform:
   m_ObjectHideFlags: 0
@@ -1838,20 +1839,22 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   userMom: {fileID: 1464156698}
+  userDad: {fileID: 426001001}
   robotStartPosition: {fileID: 0}
   navBrain: {fileID: 0}
-  demoDrinkObjects: []
-  heldItemsToHide: []
   userBubble: {fileID: 134478560}
-  robotBubble: {fileID: 0}
+  robotBubble: {fileID: 1317176757}
   typewriterSpeed: 0.04
   afterUserBubble: 1.5
   afterChatResponse: 18
   afterArrival: 2.5
   navPollInterval: 0.5
   navTimeout: 20
+  observeWaitPerAction: 2.5
+  observeActionsCount: 5
+  afterObserveWait: 10
+  betweenPhasePause: 3
   backendUrl: http://localhost:5000
-  userID: User_Mom
 --- !u!1 &710862667
 GameObject:
   m_ObjectHideFlags: 0
@@ -2422,7 +2425,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
+  - {fileID: 2100000, guid: 59bc3d6bd9f6ac5beba94d646d28bd36, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -4567,7 +4570,7 @@ GameObject:
   - component: {fileID: 1317176754}
   - component: {fileID: 1317176757}
   m_Layer: 0
-  m_Name: Canvas
+  m_Name: RobotBubble_Canvas
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -5417,8 +5420,10 @@ MonoBehaviour:
   behaviorItems:
   - activity: Drink
     item: {fileID: 1983104184}
+    sceneCounterpart: {fileID: 0}
   - activity: Reading
     item: {fileID: 787347649}
+    sceneCounterpart: {fileID: 0}
   stateIdle: Idle
   stateWalk: Walk
   stateDrink: Drink
@@ -6437,7 +6442,7 @@ MonoBehaviour:
   - {fileID: 1603672535}
   - {fileID: 267607256}
   - {fileID: 1074887085}
-  mode: 0
+  mode: 2
   exp1_samplesPerBehavior: 1
   exp3_totalObservations: 120
   exp4_episodes: 30

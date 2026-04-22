@@ -114,7 +114,7 @@ public class DynamicSyncManager : MonoBehaviour
 
         foreach (var obj in objects)
         {
-            if (obj == null) continue;
+            if (obj == null || !obj.activeInHierarchy) continue;
 
             Vector3 pos = obj.transform.position;
             string  key = obj.name;

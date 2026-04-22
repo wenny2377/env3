@@ -4,11 +4,9 @@ using UnityEngine;
 [System.Serializable]
 public class BehaviorItem
 {
-    [Tooltip("activity name, case-insensitive. e.g. Drink / Reading / Typing")]
     public string activity = "Drink";
-
-    [Tooltip("GameObject already placed inside bone hierarchy")]
     public GameObject item;
+    public GameObject sceneCounterpart;
 }
 
 [RequireComponent(typeof(Animator))]
@@ -17,12 +15,12 @@ public class UserEntity : MonoBehaviour
     [Header("User ID")]
     public string userID = "User_Mom";
 
-    [Header("Spots (Z-axis faces furniture front)")]
+    [Header("Spots")]
     public Transform drinkSpot;
     public Transform sittingSpot;
     public Transform idleSpot;
 
-    [Header("Waypoints (optional, fill if wall blocks path, Y=0)")]
+    [Header("Waypoints")]
     public Transform[] drinkWaypoints;
     public Transform[] sittingWaypoints;
     public Transform[] idleWaypoints;
@@ -35,11 +33,10 @@ public class UserEntity : MonoBehaviour
     [Header("Nodding duration (s)")]
     public float noddingDuration = 1.5f;
 
-    [Header("Held items (one entry per behavior)")]
-    [Tooltip("Items must already be placed inside bone nodes. Walking/Idle auto-hides all.")]
+    [Header("Held items")]
     public BehaviorItem[] behaviorItems;
 
-    [Header("Animator state names (must match Controller exactly)")]
+    [Header("Animator state names")]
     public string stateIdle        = "Idle";
     public string stateWalk        = "Walk";
     public string stateDrink       = "Drink";
@@ -60,8 +57,12 @@ public class UserEntity : MonoBehaviour
         anim = GetComponent<Animator>();
         if (behaviorItems != null)
             foreach (var bi in behaviorItems)
+            {
                 if (bi.item != null)
                     bi.item.SetActive(false);
+                if (bi.sceneCounterpart != null)
+                    bi.sceneCounterpart.SetActive(true);
+            }
         PlayAnim(stateIdle);
     }
 
@@ -75,7 +76,7 @@ public class UserEntity : MonoBehaviour
             case "drink":
                 yield return StartCoroutine(DoDrink());   break;
             case "sit":
-            case "sittingidle":                            // ← both map to DoSit()
+            case "sittingidle":
                 yield return StartCoroutine(DoSit());     break;
             case "reading":
                 yield return StartCoroutine(DoReading()); break;
@@ -237,12 +238,19 @@ public class UserEntity : MonoBehaviour
     {
         currentActivity = a;
         if (behaviorItems == null) return;
+
         foreach (var bi in behaviorItems)
         {
             if (bi.item == null) continue;
-            bi.item.SetActive(
-                string.Equals(bi.activity, a, System.StringComparison.OrdinalIgnoreCase)
-            );
+
+            bool active = string.Equals(
+                bi.activity, a,
+                System.StringComparison.OrdinalIgnoreCase);
+
+            bi.item.SetActive(active);
+
+            if (bi.sceneCounterpart != null)
+                bi.sceneCounterpart.SetActive(!active);
         }
     }
 

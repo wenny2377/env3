@@ -62,7 +62,9 @@ public class VirtualCameraBrain : MonoBehaviour
         UserEntity       user,
         List<CameraNode> sortedNodes,
         string           activity)
+        
     {
+        Debug.Log($"[VCB] ExecuteMultiCapture called | user={user.userID} | activity={activity} | nodes={sortedNodes.Count}");
         if (mainCamera == null)
         {
             Debug.LogError("[VirtualCameraBrain] mainCamera is null, cannot capture");
@@ -127,6 +129,7 @@ public class VirtualCameraBrain : MonoBehaviour
     {
         yield return StartCoroutine(
             ExecuteMultiCapture(user, new List<CameraNode> { camNode }, activity));
+            
     }
 
     IEnumerator PostMultiImage(
