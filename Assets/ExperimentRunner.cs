@@ -38,13 +38,15 @@ public class ExperimentRunner : MonoBehaviour
     public bool useVirtualHour = true;
     public bool runOnStart     = false;
 
-    public enum RunMode
-    {
-        Demo,
-        Experiment1,
-        Experiment3,
-        Experiment4,
-    }
+    [Header("Virtual Day Settings")]
+    [Tooltip("Episodes per virtual day. Default=10 → 120 episodes = 12 virtual days")]
+    public int episodesPerVirtualDay = 10;
+
+    public enum RunMode { Demo, Experiment1, Experiment3, Experiment4 }
+
+    // VirtualCameraBrain reads these static vars to include in /predict payload
+    public static int  CurrentVirtualDay = 1;
+    public static bool UseVirtualDay     = false;
 
     static readonly string[] MomBehaviors = { "Drink", "SittingIdle", "Reading" };
     static readonly string[] DadBehaviors = { "Drink", "SittingIdle", "Typing"  };
@@ -171,6 +173,8 @@ public class ExperimentRunner : MonoBehaviour
 
     IEnumerator RunExperiment1()
     {
+        UseVirtualDay = false;
+
         foreach (string behavior in MomBehaviors)
             for (int i = 0; i < exp1_samplesPerBehavior; i++)
             {
@@ -188,6 +192,12 @@ public class ExperimentRunner : MonoBehaviour
 
     IEnumerator RunExperiment3()
     {
+        // Enable virtual day: every episodesPerVirtualDay episodes = 1 day
+        // 120 episodes / 10 = 12 virtual days
+        UseVirtualDay     = true;
+        CurrentVirtualDay = 1;
+        int episodeCount  = 0;
+
         int perSlot       = exp3_totalObservations / TimeSlots.Length;
         int perPersonSlot = perSlot / 2;
 
@@ -202,24 +212,37 @@ public class ExperimentRunner : MonoBehaviour
             {
                 if (i < momQueue.Count)
                 {
+                    CurrentVirtualDay = (episodeCount / episodesPerVirtualDay) + 1;
+
                     if (useVirtualHour) PostVirtualHourFireAndForget(slot.virtualHour);
-                    yield return StartCoroutine(RunSingleEpisode(userMom, momQueue[i], slot.virtualHour));
+                    yield return StartCoroutine(
+                        RunSingleEpisode(userMom, momQueue[i], slot.virtualHour));
                     yield return new WaitForSeconds(minIntervalInSlot);
                     totalRuns++;
+                    episodeCount++;
                 }
                 if (i < dadQueue.Count)
                 {
+                    CurrentVirtualDay = (episodeCount / episodesPerVirtualDay) + 1;
+
                     if (useVirtualHour) PostVirtualHourFireAndForget(slot.virtualHour);
-                    yield return StartCoroutine(RunSingleEpisode(userDad, dadQueue[i], slot.virtualHour));
+                    yield return StartCoroutine(
+                        RunSingleEpisode(userDad, dadQueue[i], slot.virtualHour));
                     yield return new WaitForSeconds(minIntervalInSlot);
                     totalRuns++;
+                    episodeCount++;
                 }
             }
         }
+
+        Debug.Log($"[ExperimentRunner] Experiment3 complete. " +
+                  $"Episodes={episodeCount}, VirtualDays={CurrentVirtualDay}");
     }
 
     IEnumerator RunExperiment4()
     {
+        UseVirtualDay = false;
+
         var pool = new List<(UserEntity user, string behavior, float hour)>();
         var rng  = new System.Random(42);
         int perSlot = exp4_episodes / TimeSlots.Length;
@@ -290,7 +313,8 @@ public class ExperimentRunner : MonoBehaviour
         yield return req.SendWebRequest();
     }
 
-    List<string> BuildWeightedQueue(string[] behaviors, Dictionary<string, int> weights, int totalCount)
+    List<string> BuildWeightedQueue(string[] behaviors,
+        Dictionary<string, int> weights, int totalCount)
     {
         int totalWeight = 0;
         foreach (var b in behaviors)
@@ -342,10 +366,17 @@ public class ExperimentRunner : MonoBehaviour
             return;
         }
         if (!isRunning) return;
+
+        string dayInfo = UseVirtualDay
+            ? $"  Day={CurrentVirtualDay}"
+            : "";
+
         GUI.Label(
-            new Rect(10, 10, 640, 22),
-            $"[{mode}] {GetSlotName(currentVirtualHour)} {currentVirtualHour:F0}:00  " +
-            $"Progress: {totalRuns}/{GetTargetTotal()}  Success: {successRuns}  [Esc] Stop"
+            new Rect(10, 10, 720, 22),
+            $"[{mode}] {GetSlotName(currentVirtualHour)} " +
+            $"{currentVirtualHour:F0}:00{dayInfo}  " +
+            $"Progress: {totalRuns}/{GetTargetTotal()}  " +
+            $"Success: {successRuns}  [Esc] Stop"
         );
     }
 }
