@@ -6,23 +6,24 @@ using TMPro;
 public class ProactiveServiceManager : MonoBehaviour
 {
     [Header("Backend Settings")]
-    public string backendURL = "http://localhost:5000";
-    public float pollInterval = 3f;
+    public string backendURL    = "http://localhost:5000";
+    public float  pollInterval  = 3f;
 
     [Header("User")]
     public string userID = "User_Mom";
 
     [Header("UI Elements")]
     public GameObject proposalPanel;
-    public TMP_Text questionText;
-    public TMP_Text confidenceText;
+    public TMP_Text   questionText;
+    public TMP_Text   confidenceText;
 
     [Header("Character (Nod Animation)")]
     public UserEntity userEntity;
 
-    private bool isPolling = false;
-    private bool hasPending = false;
-    private string pendingAction;
+    bool      _hasPending       = false;
+    string    _pendingProposalId = "";
+    string    _pendingAction     = "";
+    Coroutine _autoIgnoreCoroutine;
 
     void Start()
     {
@@ -34,74 +35,79 @@ public class ProactiveServiceManager : MonoBehaviour
 
     IEnumerator PollLoop()
     {
-        isPolling = true;
-        while (isPolling)
+        while (true)
         {
             yield return new WaitForSeconds(pollInterval);
-
-            if (!hasPending)
+            if (!_hasPending)
                 yield return StartCoroutine(FetchProposal());
         }
     }
 
     IEnumerator FetchProposal()
     {
-        string url = $"{backendURL}/service_proposal?userID={userID}";
-        using var req = UnityWebRequest.Get(url);
+        using var req = UnityWebRequest.Get($"{backendURL}/service_proposal");
         yield return req.SendWebRequest();
 
         if (req.result != UnityWebRequest.Result.Success)
-        {
-            yield break;
-        }
-
-        var json = req.downloadHandler.text;
-        var data = JsonUtility.FromJson<ProposalResponse>(json);
-
-        if (data?.proposal == null || string.IsNullOrEmpty(data.proposal.question))
             yield break;
 
-        ShowProposal(data.proposal);
+        var data = JsonUtility.FromJson<ProposalResponse>(
+            req.downloadHandler.text);
+
+        if (data == null || string.IsNullOrEmpty(data.proposal_id))
+            yield break;
+
+        if (string.IsNullOrEmpty(data.message))
+            yield break;
+
+        ShowProposal(data);
     }
 
-    void ShowProposal(ProposalData p)
+    void ShowProposal(ProposalResponse p)
     {
-        hasPending = true;
-        pendingAction = p.predicted_action;
+        _hasPending        = true;
+        _pendingProposalId = p.proposal_id;
+        _pendingAction     = p.intent;
 
-        if (questionText != null) questionText.text = p.question;
-        if (confidenceText != null) confidenceText.text = $"Confidence: {p.confidence:P0}";
-        if (proposalPanel != null) proposalPanel.SetActive(true);
+        if (questionText   != null) questionText.text   = p.message;
+        if (confidenceText != null)
+            confidenceText.text = $"Confidence: {p.confidence:P0}";
+        if (proposalPanel  != null) proposalPanel.SetActive(true);
 
-        StartCoroutine(AutoIgnore(30f));
+        if (_autoIgnoreCoroutine != null)
+            StopCoroutine(_autoIgnoreCoroutine);
+        _autoIgnoreCoroutine = StartCoroutine(AutoIgnore(30f));
 
-        Debug.Log($"[Proposal] Received: {p.question} ({p.predicted_action}, conf={p.confidence:F2})");
+        Debug.Log($"[Proposal] {p.message} " +
+                  $"(intent={p.intent}, conf={p.confidence:F2})");
     }
 
     public void OnAccept()
     {
-        StopAllCoroutines();
+        if (_autoIgnoreCoroutine != null)
+            StopCoroutine(_autoIgnoreCoroutine);
+
         HidePanel();
 
         if (userEntity != null)
             StartCoroutine(userEntity.Nod());
 
         StartCoroutine(PostResponse("accepted"));
-        StartCoroutine(PollLoop());
     }
 
     public void OnReject()
     {
-        StopAllCoroutines();
+        if (_autoIgnoreCoroutine != null)
+            StopCoroutine(_autoIgnoreCoroutine);
+
         HidePanel();
         StartCoroutine(PostResponse("rejected"));
-        StartCoroutine(PollLoop());
     }
 
     IEnumerator AutoIgnore(float timeout)
     {
         yield return new WaitForSeconds(timeout);
-        if (hasPending)
+        if (_hasPending)
         {
             HidePanel();
             StartCoroutine(PostResponse("ignored"));
@@ -110,33 +116,41 @@ public class ProactiveServiceManager : MonoBehaviour
 
     IEnumerator PostResponse(string result)
     {
-        string url = $"{backendURL}/service_response";
-        string body = $"{{\"userID\":\"{userID}\",\"result\":\"{result}\"}}";
+        string body =
+            $"{{" +
+            $"\"user_id\":\"{userID}\"," +
+            $"\"proposal_id\":\"{_pendingProposalId}\"," +
+            $"\"result\":\"{result}\"" +
+            $"}}";
 
-        using var req = new UnityWebRequest(url, "POST");
-        req.uploadHandler = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(body));
+        using var req = new UnityWebRequest(
+            $"{backendURL}/service_response", "POST");
+        req.uploadHandler = new UploadHandlerRaw(
+            System.Text.Encoding.UTF8.GetBytes(body));
         req.downloadHandler = new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
+        req.timeout = 5;
         yield return req.SendWebRequest();
 
-        Debug.Log($"[Proposal] Response sent: {result}");
+        Debug.Log($"[Proposal] Response sent: {result} " +
+                  $"(proposal_id={_pendingProposalId})");
     }
 
     void HidePanel()
     {
-        hasPending = false;
+        _hasPending = false;
         if (proposalPanel != null)
             proposalPanel.SetActive(false);
     }
 
-    [System.Serializable] class ProposalResponse { public ProposalData proposal; }
-
     [System.Serializable]
-    class ProposalData
+    class ProposalResponse
     {
+        public string proposal_id;
         public string user_id;
-        public string predicted_action;
-        public float confidence;
-        public string question;
+        public string intent;
+        public float  confidence;
+        public string message;
+        public string nav_label;
     }
 }
