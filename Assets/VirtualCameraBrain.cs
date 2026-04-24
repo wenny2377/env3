@@ -6,29 +6,24 @@ using UnityEngine.Networking;
 public class VirtualCameraBrain : MonoBehaviour
 {
     [Header("Main Camera (Required)")]
-    [Tooltip("The GameObject with a Camera component in the scene\nCameraNodes are virtual scoring nodes and do not need a Camera component")]
     public Camera mainCamera;
 
     [Header("Flask Endpoint")]
     public string predictUrl = "http://127.0.0.1:5000/predict";
 
     [Header("Multi-Angle Capture Count")]
-    [Tooltip("How many virtual angles to capture per activity\n1 = single shot (legacy / baseline)\n2 = recommended (best + second-best, ~67ms overhead)\n3-4 = more complete but requires more frame time")]
     [Range(1, 4)]
     public int topN = 2;
 
     [Header("Frames to Wait Before Each Capture")]
-    [Tooltip("Frames needed for the render pipeline to refresh after teleporting the camera\nRecommended: 1-2 frames (~16ms each at 60fps)\nToo few: captures before the new position is rendered\nToo many: slows down the capture sequence")]
     [Range(1, 4)]
     public int captureWaitFrames = 2;
 
     [Header("Capture Resolution (Square)")]
-    [Tooltip("Recommended 512x512 — sufficient for VLM, ~200-400KB Base64 per image")]
     public int renderWidth  = 512;
     public int renderHeight = 512;
 
     [Header("Restore Camera After Capture")]
-    [Tooltip("Enabled: move camera back to its Play-start position after all captures\nDisabled: camera stays at the last node position")]
     public bool restoreCamera = true;
 
     float      virtualHour   = -1f;
@@ -43,8 +38,7 @@ public class VirtualCameraBrain : MonoBehaviour
 
         if (mainCamera == null)
         {
-            Debug.LogError("[VirtualCameraBrain] mainCamera not found — " +
-                           "drag the scene's Camera GameObject into the Inspector");
+            Debug.LogError("[VirtualCameraBrain] mainCamera not found.");
             return;
         }
 
@@ -53,7 +47,8 @@ public class VirtualCameraBrain : MonoBehaviour
         originalSaved = true;
 
         Debug.Log($"[VirtualCameraBrain] Initialized | topN={topN} | " +
-                  $"captureWaitFrames={captureWaitFrames} | resolution={renderWidth}x{renderHeight}");
+                  $"captureWaitFrames={captureWaitFrames} | " +
+                  $"resolution={renderWidth}x{renderHeight}");
     }
 
     public void SetVirtualHour(float hour) => virtualHour = hour;
@@ -62,18 +57,19 @@ public class VirtualCameraBrain : MonoBehaviour
         UserEntity       user,
         List<CameraNode> sortedNodes,
         string           activity)
-        
     {
-        Debug.Log($"[VCB] ExecuteMultiCapture called | user={user.userID} | activity={activity} | nodes={sortedNodes.Count}");
+        Debug.Log($"[VCB] ExecuteMultiCapture | user={user.userID} | " +
+                  $"activity={activity} | nodes={sortedNodes.Count}");
+
         if (mainCamera == null)
         {
-            Debug.LogError("[VirtualCameraBrain] mainCamera is null, cannot capture");
+            Debug.LogError("[VirtualCameraBrain] mainCamera is null");
             yield break;
         }
 
         if (sortedNodes == null || sortedNodes.Count == 0)
         {
-            Debug.LogWarning("[VirtualCameraBrain] sortedNodes is empty, skipping");
+            Debug.LogWarning("[VirtualCameraBrain] sortedNodes is empty");
             yield break;
         }
 
@@ -129,7 +125,6 @@ public class VirtualCameraBrain : MonoBehaviour
     {
         yield return StartCoroutine(
             ExecuteMultiCapture(user, new List<CameraNode> { camNode }, activity));
-            
     }
 
     IEnumerator PostMultiImage(
@@ -147,7 +142,17 @@ public class VirtualCameraBrain : MonoBehaviour
         if (nodeNames.Count > 0)
         {
             int camIdx = nodeNames[0].LastIndexOf("_Cam");
-            roomName = camIdx > 0 ? nodeNames[0].Substring(0, camIdx) : nodeNames[0];
+            roomName = camIdx > 0
+                ? nodeNames[0].Substring(0, camIdx)
+                : nodeNames[0];
+        }
+
+        // Read virtual day from ExperimentRunner static vars
+        string virtualDayField = "";
+        if (ExperimentRunner.UseVirtualDay)
+        {
+            virtualDayField =
+                $"\"virtual_day\":{ExperimentRunner.CurrentVirtualDay},";
         }
 
         string json = "{"
@@ -155,6 +160,7 @@ public class VirtualCameraBrain : MonoBehaviour
             + $"\"activity\":\"{Esc(activity)}\","
             + $"\"room_name\":\"{Esc(roomName)}\","
             + $"\"virtual_hour\":{hour.ToString("F1", InvCulture)},"
+            + virtualDayField
             + $"\"image_count\":{imageList.Count},"
             + $"\"image_list\":{StrArrayJson(imageList)},"
             + $"\"source_nodes\":{StrArrayJson(nodeNames)},"
@@ -171,11 +177,18 @@ public class VirtualCameraBrain : MonoBehaviour
         yield return req.SendWebRequest();
 
         if (req.result == UnityWebRequest.Result.Success)
-            Debug.Log($"[VirtualCameraBrain] POST succeeded | {user.userID} | " +
-                      $"{activity} | {imageList.Count} image(s) | hour={hour}");
+        {
+            string dayLog = ExperimentRunner.UseVirtualDay
+                ? $" day={ExperimentRunner.CurrentVirtualDay}"
+                : "";
+            Debug.Log($"[VirtualCameraBrain] POST ok | {user.userID} | " +
+                      $"{activity} | {imageList.Count} img | " +
+                      $"hour={hour}{dayLog}");
+        }
         else
-            Debug.LogWarning($"[VirtualCameraBrain] POST failed: {req.error}\n" +
-                             $"URL={predictUrl} — is Flask running?");
+        {
+            Debug.LogWarning($"[VirtualCameraBrain] POST failed: {req.error}");
+        }
     }
 
     static readonly System.Globalization.CultureInfo InvCulture =
