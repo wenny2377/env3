@@ -31,6 +31,29 @@ public class VirtualCameraBrain : MonoBehaviour
     Quaternion originalRot;
     bool       originalSaved = false;
 
+    // ── 虛擬天日期換算 ─────────────────────────────────────────────────
+    // 第一次收到 virtual_day=1 時記錄當天真實日期作為基準
+    // 之後 virtual_day=N 換算成 基準日期 + (N-1) 天
+    // 這樣 last_date 格式統一為 "YYYY-MM-DD"，不會和 weight 搞混
+    static System.DateTime? experimentBaseDate = null;
+
+    static string VirtualDayToDateString(int virtualDay)
+    {
+        if (experimentBaseDate == null)
+            experimentBaseDate = System.DateTime.Today;
+        
+        return experimentBaseDate.Value
+            .AddDays(virtualDay - 1)
+            .ToString("yyyy-MM-dd");
+    }
+
+    // 重置基準日期（resetall 時呼叫）
+    public static void ResetBaseDate()
+    {
+        experimentBaseDate = null;
+        Debug.Log("[VirtualDay] Base date reset.");
+    }
+
     void Start()
     {
         if (mainCamera == null)
@@ -94,7 +117,8 @@ public class VirtualCameraBrain : MonoBehaviour
             mainCamera.Render();
 
             RenderTexture.active = rt;
-            var tex = new Texture2D(renderWidth, renderHeight, TextureFormat.RGB24, false);
+            var tex = new Texture2D(renderWidth, renderHeight,
+                                    TextureFormat.RGB24, false);
             tex.ReadPixels(new Rect(0, 0, renderWidth, renderHeight), 0, 0);
             tex.Apply();
             RenderTexture.active = null;
@@ -117,14 +141,16 @@ public class VirtualCameraBrain : MonoBehaviour
             mainCamera.transform.rotation = originalRot;
         }
 
-        StartCoroutine(PostMultiImage(user, activity, imageList, nodeNames, nodeScores));
+        StartCoroutine(PostMultiImage(
+            user, activity, imageList, nodeNames, nodeScores));
     }
 
     public IEnumerator ExecuteCaptureSequence(
         UserEntity user, CameraNode camNode, string activity)
     {
         yield return StartCoroutine(
-            ExecuteMultiCapture(user, new List<CameraNode> { camNode }, activity));
+            ExecuteMultiCapture(
+                user, new List<CameraNode> { camNode }, activity));
     }
 
     IEnumerator PostMultiImage(
@@ -147,12 +173,13 @@ public class VirtualCameraBrain : MonoBehaviour
                 : nodeNames[0];
         }
 
-        // Read virtual day from ExperimentRunner static vars
+
         string virtualDayField = "";
         if (ExperimentRunner.UseVirtualDay)
         {
-            virtualDayField =
-                $"\"virtual_day\":{ExperimentRunner.CurrentVirtualDay},";
+            string dateStr = VirtualDayToDateString(
+                ExperimentRunner.CurrentVirtualDay);
+            virtualDayField = $"\"virtual_day\":\"{dateStr}\",";
         }
 
         string json = "{"
@@ -179,7 +206,7 @@ public class VirtualCameraBrain : MonoBehaviour
         if (req.result == UnityWebRequest.Result.Success)
         {
             string dayLog = ExperimentRunner.UseVirtualDay
-                ? $" day={ExperimentRunner.CurrentVirtualDay}"
+                ? $" day={VirtualDayToDateString(ExperimentRunner.CurrentVirtualDay)}"
                 : "";
             Debug.Log($"[VirtualCameraBrain] POST ok | {user.userID} | " +
                       $"{activity} | {imageList.Count} img | " +
@@ -187,7 +214,8 @@ public class VirtualCameraBrain : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning($"[VirtualCameraBrain] POST failed: {req.error}");
+            Debug.LogWarning(
+                $"[VirtualCameraBrain] POST failed: {req.error}");
         }
     }
 

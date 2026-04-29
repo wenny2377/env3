@@ -805,7 +805,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &134478556
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1845,7 +1845,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 04641a9be2dfff41b89b0e874cdc1ba3, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 2.97
+      value: 3.119
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 04641a9be2dfff41b89b0e874cdc1ba3, type: 3}
       propertyPath: m_LocalPosition.y
@@ -1853,7 +1853,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 04641a9be2dfff41b89b0e874cdc1ba3, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 5.371
+      value: 6.065
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 04641a9be2dfff41b89b0e874cdc1ba3, type: 3}
       propertyPath: m_LocalRotation.w
@@ -2397,7 +2397,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4865064391339405807, guid: a578be30b6015f1429f8e5118b2b9a51, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 1.31
+      value: 2.1
       objectReference: {fileID: 0}
     - target: {fileID: 4865064391339405807, guid: a578be30b6015f1429f8e5118b2b9a51, type: 3}
       propertyPath: m_LocalPosition.y
@@ -2405,7 +2405,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4865064391339405807, guid: a578be30b6015f1429f8e5118b2b9a51, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -1.16
+      value: -1.61
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects:
@@ -6148,7 +6148,7 @@ MonoBehaviour:
     item: {fileID: 1983104184}
     sceneCounterpart: {fileID: 0}
   - activity: Reading
-    item: {fileID: 0}
+    item: {fileID: 1649512588}
     sceneCounterpart: {fileID: 0}
   stateIdle: Idle
   stateWalk: Walk
@@ -7180,7 +7180,7 @@ MonoBehaviour:
   - {fileID: 1074887085}
   mode: 2
   exp1_samplesPerBehavior: 1
-  exp3_totalObservations: 120
+  exp3_totalObservations: 300
   exp4_episodes: 30
   waitAfterCapture: 3
   waitBetweenEpisodes: 2
@@ -7191,6 +7191,7 @@ MonoBehaviour:
   episodesPerVirtualDay: 10
   addNoiseEpisodes: 1
   noiseInterval: 10
+  skipProbability: 0.2
 --- !u!1 &1767132911
 GameObject:
   m_ObjectHideFlags: 0

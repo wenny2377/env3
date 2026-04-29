@@ -23,7 +23,7 @@ public class ExperimentRunner : MonoBehaviour
 
     [Header("Experiment Counts")]
     public int exp1_samplesPerBehavior = 20;
-    public int exp3_totalObservations  = 120;
+    public int exp3_totalObservations  = 300;  
     public int exp4_episodes           = 30;
 
     [Header("Timing Settings")]
@@ -39,7 +39,7 @@ public class ExperimentRunner : MonoBehaviour
     public bool runOnStart     = false;
 
     [Header("Virtual Day Settings")]
-    [Tooltip("Episodes per virtual day. Default=10 → 120 episodes = 12 virtual days")]
+    [Tooltip("Episodes per virtual day. Default=10 → 300 episodes = 30 virtual days")]
     public int episodesPerVirtualDay = 10;
 
     [Header("Noise Episodes Settings")]
@@ -49,13 +49,19 @@ public class ExperimentRunner : MonoBehaviour
     [Tooltip("Insert one noise episode every N regular episodes")]
     public int noiseInterval = 10;
 
+    [Header("Irregular Behavior Settings")]
+    [Tooltip(
+        "Probability (0~1) that a regular episode is skipped " +
+        "to simulate user absence or irregular behavior. " +
+        "Default=0.2 means 20% of episodes are skipped.")]
+    [Range(0f, 1f)]
+    public float skipProbability = 0.2f;  // 新增：隨機缺席機率
+
     public enum RunMode { Demo, Experiment1, Experiment3, Experiment4 }
 
-    // VirtualCameraBrain reads these static vars
     public static int  CurrentVirtualDay = 1;
     public static bool UseVirtualDay     = false;
 
-    // Noise behaviors: low-frequency actions that should be filtered by FAT
     static readonly string[] MomNoiseBehaviors = { "Standing", "Walking" };
     static readonly string[] DadNoiseBehaviors = { "Standing", "Walking" };
 
@@ -96,6 +102,7 @@ public class ExperimentRunner : MonoBehaviour
 
     int   totalRuns          = 0;
     int   successRuns        = 0;
+    int   skippedRuns        = 0;  // 新增：記錄跳過次數
     int   noiseRuns          = 0;
     float currentVirtualHour = 7f;
     bool  isRunning          = false;
@@ -112,7 +119,8 @@ public class ExperimentRunner : MonoBehaviour
         }
 
         if (cameraManager == null)
-            cameraManager = StaticCameraManager.Instance ?? FindObjectOfType<StaticCameraManager>();
+            cameraManager = StaticCameraManager.Instance
+                            ?? FindObjectOfType<StaticCameraManager>();
 
         if (cameraManager != null)
         {
@@ -131,7 +139,8 @@ public class ExperimentRunner : MonoBehaviour
     void InitCameraForDemo()
     {
         if (cameraManager == null)
-            cameraManager = StaticCameraManager.Instance ?? FindObjectOfType<StaticCameraManager>();
+            cameraManager = StaticCameraManager.Instance
+                            ?? FindObjectOfType<StaticCameraManager>();
 
         if (cameraManager == null)
         {
@@ -166,7 +175,7 @@ public class ExperimentRunner : MonoBehaviour
             return;
         }
         if (isRunning) return;
-        totalRuns = successRuns = noiseRuns = 0;
+        totalRuns = successRuns = skippedRuns = noiseRuns = 0;
         StartCoroutine(RunExperiment());
     }
 
@@ -181,8 +190,8 @@ public class ExperimentRunner : MonoBehaviour
         }
         isRunning = false;
         Debug.Log($"[ExperimentRunner] Done. " +
-                  $"Regular={successRuns} Noise={noiseRuns} " +
-                  $"Total={totalRuns}");
+                  $"Regular={successRuns} Skipped={skippedRuns} " +
+                  $"Noise={noiseRuns} Total={totalRuns}");
     }
 
     IEnumerator RunExperiment1()
@@ -192,120 +201,154 @@ public class ExperimentRunner : MonoBehaviour
         foreach (string behavior in MomBehaviors)
             for (int i = 0; i < exp1_samplesPerBehavior; i++)
             {
-                yield return StartCoroutine(
-                    RunSingleEpisode(userMom, behavior, -1f));
+                yield return StartCoroutine(RunSingleEpisode(userMom, behavior, -1f));
                 totalRuns++;
             }
 
         foreach (string behavior in DadBehaviors)
             for (int i = 0; i < exp1_samplesPerBehavior; i++)
             {
-                yield return StartCoroutine(
-                    RunSingleEpisode(userDad, behavior, -1f));
+                yield return StartCoroutine(RunSingleEpisode(userDad, behavior, -1f));
                 totalRuns++;
             }
     }
 
+    // ── Experiment3（核心改動）────────────────────────────────────────
+    // 改前：4 個時間段各自跑完所有 episode（Morning × N → Noon × N → ...）
+    // 改後：以「天」為單位循環，每天都有 Morning → Noon → Afternoon → Evening
+    //       每個 episode 有 skipProbability 的機率跳過（模擬用戶缺席）
+    // ──────────────────────────────────────────────────────────────────
     IEnumerator RunExperiment3()
     {
         UseVirtualDay     = true;
         CurrentVirtualDay = 1;
-        int episodeCount  = 0;
 
-        int perSlot       = exp3_totalObservations / TimeSlots.Length;
-        int perPersonSlot = perSlot / 2;
+        // 計算總天數
+        int totalDays       = exp3_totalObservations / episodesPerVirtualDay;
+        int episodesPerDay  = episodesPerVirtualDay;
+        // 每天每個時間段各跑幾個 episode
+        int epPerSlotPerDay = Mathf.Max(1, episodesPerDay / TimeSlots.Length);
 
-        foreach (var slot in TimeSlots)
+        int episodeCount = 0;
+
+        Debug.Log($"[Experiment3] Start: {totalDays} virtual days, " +
+                  $"{epPerSlotPerDay} ep/slot/day, " +
+                  $"skipProb={skipProbability:P0}");
+
+        // 以天為單位循環
+        for (int day = 1; day <= totalDays; day++)
         {
-            currentVirtualHour = slot.virtualHour;
-            var momQueue = BuildWeightedQueue(
-                MomBehaviors, slot.momWeights, perPersonSlot);
-            var dadQueue = BuildWeightedQueue(
-                DadBehaviors, slot.dadWeights, perPersonSlot);
-            int maxLen = Mathf.Max(momQueue.Count, dadQueue.Count);
+            CurrentVirtualDay = day;
 
-            for (int i = 0; i < maxLen; i++)
+            // 每天跑 Morning → Noon → Afternoon → Evening
+            foreach (var slot in TimeSlots)
             {
-                if (i < momQueue.Count)
+                currentVirtualHour = slot.virtualHour;
+
+                // 建立這個時間段的行為佇列
+                var momQueue = BuildWeightedQueue(
+                    MomBehaviors, slot.momWeights, epPerSlotPerDay);
+                var dadQueue = BuildWeightedQueue(
+                    DadBehaviors, slot.dadWeights, epPerSlotPerDay);
+
+                int maxLen = Mathf.Max(momQueue.Count, dadQueue.Count);
+
+                for (int i = 0; i < maxLen; i++)
                 {
-                    CurrentVirtualDay =
-                        (episodeCount / episodesPerVirtualDay) + 1;
-
-                    if (useVirtualHour)
-                        PostVirtualHourFireAndForget(slot.virtualHour);
-
-                    yield return StartCoroutine(
-                        RunSingleEpisode(
-                            userMom, momQueue[i], slot.virtualHour));
-                    yield return new WaitForSeconds(minIntervalInSlot);
-                    totalRuns++;
-                    successRuns++;
-                    episodeCount++;
-
-                    // Insert noise episode every noiseInterval episodes
-                    if (addNoiseEpisodes &&
-                        episodeCount % noiseInterval == 0)
+                    // ── Mom episode ──────────────────────────────────
+                    if (i < momQueue.Count)
                     {
-                        yield return StartCoroutine(
-                            RunNoiseEpisode(
-                                userMom, slot.virtualHour,
-                                MomNoiseBehaviors));
-                        noiseRuns++;
                         totalRuns++;
-                        episodeCount++;
-                        CurrentVirtualDay =
-                            (episodeCount / episodesPerVirtualDay) + 1;
+
+                        // 隨機缺席：有 skipProbability 機率跳過
+                        if (Random.value < skipProbability)
+                        {
+                            skippedRuns++;
+                            Debug.Log($"[Skip] Day={day} {slot.name} " +
+                                      $"Mom {momQueue[i]} (absent)");
+                        }
+                        else
+                        {
+                            if (useVirtualHour)
+                                PostVirtualHourFireAndForget(slot.virtualHour);
+
+                            yield return StartCoroutine(
+                                RunSingleEpisode(userMom, momQueue[i],
+                                                 slot.virtualHour));
+                            yield return new WaitForSeconds(minIntervalInSlot);
+                            successRuns++;
+                            episodeCount++;
+                        }
+
+                        // Noise episode（基於成功執行的 episode 數量）
+                        if (addNoiseEpisodes &&
+                            episodeCount > 0 &&
+                            episodeCount % noiseInterval == 0)
+                        {
+                            yield return StartCoroutine(
+                                RunNoiseEpisode(userMom, slot.virtualHour,
+                                                MomNoiseBehaviors));
+                            noiseRuns++;
+                        }
                     }
-                }
 
-                if (i < dadQueue.Count)
-                {
-                    CurrentVirtualDay =
-                        (episodeCount / episodesPerVirtualDay) + 1;
-
-                    if (useVirtualHour)
-                        PostVirtualHourFireAndForget(slot.virtualHour);
-
-                    yield return StartCoroutine(
-                        RunSingleEpisode(
-                            userDad, dadQueue[i], slot.virtualHour));
-                    yield return new WaitForSeconds(minIntervalInSlot);
-                    totalRuns++;
-                    successRuns++;
-                    episodeCount++;
-
-                    // Insert noise episode every noiseInterval episodes
-                    if (addNoiseEpisodes &&
-                        episodeCount % noiseInterval == 0)
+                    // ── Dad episode ──────────────────────────────────
+                    if (i < dadQueue.Count)
                     {
-                        yield return StartCoroutine(
-                            RunNoiseEpisode(
-                                userDad, slot.virtualHour,
-                                DadNoiseBehaviors));
-                        noiseRuns++;
                         totalRuns++;
-                        episodeCount++;
-                        CurrentVirtualDay =
-                            (episodeCount / episodesPerVirtualDay) + 1;
+
+                        // 隨機缺席
+                        if (Random.value < skipProbability)
+                        {
+                            skippedRuns++;
+                            Debug.Log($"[Skip] Day={day} {slot.name} " +
+                                      $"Dad {dadQueue[i]} (absent)");
+                        }
+                        else
+                        {
+                            if (useVirtualHour)
+                                PostVirtualHourFireAndForget(slot.virtualHour);
+
+                            yield return StartCoroutine(
+                                RunSingleEpisode(userDad, dadQueue[i],
+                                                 slot.virtualHour));
+                            yield return new WaitForSeconds(minIntervalInSlot);
+                            successRuns++;
+                            episodeCount++;
+                        }
+
+                        // Noise episode
+                        if (addNoiseEpisodes &&
+                            episodeCount > 0 &&
+                            episodeCount % noiseInterval == 0)
+                        {
+                            yield return StartCoroutine(
+                                RunNoiseEpisode(userDad, slot.virtualHour,
+                                                DadNoiseBehaviors));
+                            noiseRuns++;
+                        }
                     }
                 }
             }
+
+            Debug.Log($"[Experiment3] Day {day}/{totalDays} done. " +
+                      $"Success={successRuns} Skipped={skippedRuns} " +
+                      $"Noise={noiseRuns}");
         }
 
-        Debug.Log($"[ExperimentRunner] Experiment3 complete. " +
-                  $"Regular={successRuns} Noise={noiseRuns} " +
-                  $"VirtualDays={CurrentVirtualDay}");
+        Debug.Log($"[Experiment3] Complete. " +
+                  $"Regular={successRuns} Skipped={skippedRuns} " +
+                  $"Noise={noiseRuns} VirtualDays={CurrentVirtualDay}");
     }
 
     IEnumerator RunNoiseEpisode(
         UserEntity user, float virtualHour, string[] noiseBehaviors)
     {
-        // Pick a random noise behavior
         string noiseBehavior = noiseBehaviors[
             Random.Range(0, noiseBehaviors.Length)];
 
-        Debug.Log($"[NoiseEpisode] {user.userID} -> {noiseBehavior} "
-                  + $"(day={CurrentVirtualDay})");
+        Debug.Log($"[NoiseEpisode] {user.userID} -> {noiseBehavior} " +
+                  $"(day={CurrentVirtualDay})");
 
         UserEntity otherUser = (user == userMom) ? userDad : userMom;
         if (otherUser != null) otherUser.gameObject.SetActive(false);
@@ -315,14 +358,11 @@ public class ExperimentRunner : MonoBehaviour
             virtualCameraBrain.SetVirtualHour(virtualHour);
 
         yield return StartCoroutine(user.SwitchActivity(noiseBehavior));
-
         yield return new WaitForSeconds(0.3f);
         yield return new WaitForSeconds(waitAfterCapture);
-
         yield return StartCoroutine(user.ReturnToIdle());
 
         if (otherUser != null) otherUser.gameObject.SetActive(true);
-
         yield return new WaitForSeconds(waitBetweenEpisodes);
 
         Debug.Log($"[NoiseEpisode] Done: {user.userID} {noiseBehavior}");
@@ -338,10 +378,8 @@ public class ExperimentRunner : MonoBehaviour
 
         foreach (var slot in TimeSlots)
         {
-            var mq = BuildWeightedQueue(
-                MomBehaviors, slot.momWeights, perSlot / 2);
-            var dq = BuildWeightedQueue(
-                DadBehaviors, slot.dadWeights, perSlot / 2);
+            var mq = BuildWeightedQueue(MomBehaviors, slot.momWeights, perSlot / 2);
+            var dq = BuildWeightedQueue(DadBehaviors, slot.dadWeights, perSlot / 2);
             foreach (var b in mq) pool.Add((userMom, b, slot.virtualHour));
             foreach (var b in dq) pool.Add((userDad, b, slot.virtualHour));
         }
@@ -358,8 +396,7 @@ public class ExperimentRunner : MonoBehaviour
             var (user, behavior, hour) = pool[ep];
             currentVirtualHour = hour;
             if (useVirtualHour) PostVirtualHourFireAndForget(hour);
-            yield return StartCoroutine(
-                RunSingleEpisode(user, behavior, hour));
+            yield return StartCoroutine(RunSingleEpisode(user, behavior, hour));
             totalRuns++;
         }
     }
@@ -367,8 +404,7 @@ public class ExperimentRunner : MonoBehaviour
     IEnumerator RunSingleEpisode(
         UserEntity targetUser, string behavior, float virtualHour)
     {
-        UserEntity otherUser =
-            (targetUser == userMom) ? userDad : userMom;
+        UserEntity otherUser = (targetUser == userMom) ? userDad : userMom;
         if (otherUser  != null) otherUser.gameObject.SetActive(false);
         if (targetUser != null) targetUser.gameObject.SetActive(true);
 
@@ -377,18 +413,15 @@ public class ExperimentRunner : MonoBehaviour
 
         yield return StartCoroutine(targetUser.SwitchActivity(behavior));
 
-        float jitterX = Random.Range(-0.4f, 0.4f);
-        float jitterZ = Random.Range(-0.4f, 0.4f);
-        targetUser.transform.position +=
-            new Vector3(jitterX, 0f, jitterZ);
+        float jitterX = Random.Range(-0.15f, 0.15f);
+        float jitterZ = Random.Range(-0.15f, 0.15f);
+        targetUser.transform.position += new Vector3(jitterX, 0f, jitterZ);
 
         yield return new WaitForSeconds(0.3f);
         yield return new WaitForSeconds(waitAfterCapture);
-
         yield return StartCoroutine(targetUser.ReturnToIdle());
 
         if (otherUser != null) otherUser.gameObject.SetActive(true);
-
         yield return new WaitForSeconds(waitBetweenEpisodes);
     }
 
@@ -397,11 +430,9 @@ public class ExperimentRunner : MonoBehaviour
 
     IEnumerator PostVirtualHourRoutine(float hour)
     {
-        string json =
-            $"{{\"virtual_hour\":{hour:F1}}}";
-        var req = new UnityWebRequest(
-            $"{backendUrl}/set_virtual_hour", "POST");
-        req.uploadHandler = new UploadHandlerRaw(
+        string json = $"{{\"virtual_hour\":{hour:F1}}}";
+        var req = new UnityWebRequest($"{backendUrl}/set_virtual_hour", "POST");
+        req.uploadHandler   = new UploadHandlerRaw(
             System.Text.Encoding.UTF8.GetBytes(json));
         req.downloadHandler = new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
@@ -450,8 +481,7 @@ public class ExperimentRunner : MonoBehaviour
     int GetTargetTotal() => mode switch
     {
         RunMode.Experiment1 =>
-            (MomBehaviors.Length + DadBehaviors.Length)
-            * exp1_samplesPerBehavior,
+            (MomBehaviors.Length + DadBehaviors.Length) * exp1_samplesPerBehavior,
         RunMode.Experiment3 => exp3_totalObservations,
         RunMode.Experiment4 => exp4_episodes,
         _                   => 0,
@@ -467,22 +497,22 @@ public class ExperimentRunner : MonoBehaviour
         }
         if (!isRunning) return;
 
-        string dayInfo = UseVirtualDay
-            ? $"  Day={CurrentVirtualDay}"
-            : "";
+        int totalDays = exp3_totalObservations / episodesPerVirtualDay;
 
-        string noiseInfo = addNoiseEpisodes
-            ? $"  Noise={noiseRuns}"
+        string dayInfo   = UseVirtualDay
+            ? $"  Day={CurrentVirtualDay}/{totalDays}"
             : "";
+        string skipInfo  = $"  Skip={skippedRuns}";
+        string noiseInfo = addNoiseEpisodes ? $"  Noise={noiseRuns}" : "";
 
         GUI.Label(
-            new Rect(10, 10, 800, 22),
-            $"[{mode}] {GetSlotName(currentVirtualHour)} "
-            + $"{currentVirtualHour:F0}:00"
-            + $"{dayInfo}{noiseInfo}  "
-            + $"Regular={successRuns}  "
-            + $"Total={totalRuns}/{GetTargetTotal()}  "
-            + $"[Esc] Stop"
+            new Rect(10, 10, 900, 22),
+            $"[{mode}] {GetSlotName(currentVirtualHour)} " +
+            $"{currentVirtualHour:F0}:00" +
+            $"{dayInfo}{skipInfo}{noiseInfo}  " +
+            $"Regular={successRuns}  " +
+            $"Total={totalRuns}/{GetTargetTotal()}  " +
+            $"[Esc] Stop"
         );
     }
 }
