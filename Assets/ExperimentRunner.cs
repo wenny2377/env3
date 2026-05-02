@@ -23,7 +23,7 @@ public class ExperimentRunner : MonoBehaviour
 
     [Header("Experiment Counts")]
     public int exp1_samplesPerBehavior = 20;
-    public int exp3_totalObservations  = 300;  
+    public int exp3_totalObservations  = 360;
     public int exp4_episodes           = 30;
 
     [Header("Timing Settings")]
@@ -39,23 +39,19 @@ public class ExperimentRunner : MonoBehaviour
     public bool runOnStart     = false;
 
     [Header("Virtual Day Settings")]
-    [Tooltip("Episodes per virtual day. Default=10 → 300 episodes = 30 virtual days")]
-    public int episodesPerVirtualDay = 10;
+    [Tooltip("12 episodes/day x 30 days = 360 total. Each slot gets 3 episodes.")]
+    public int episodesPerVirtualDay = 12;
 
     [Header("Noise Episodes Settings")]
-    [Tooltip("Add random noise episodes to improve FAT experiment validity")]
     public bool addNoiseEpisodes = true;
 
     [Tooltip("Insert one noise episode every N regular episodes")]
     public int noiseInterval = 10;
 
     [Header("Irregular Behavior Settings")]
-    [Tooltip(
-        "Probability (0~1) that a regular episode is skipped " +
-        "to simulate user absence or irregular behavior. " +
-        "Default=0.2 means 20% of episodes are skipped.")]
+    [Tooltip("0.2 = 20% absence rate, matches Gardner (2015) habit execution rate 70-85%")]
     [Range(0f, 1f)]
-    public float skipProbability = 0.2f;  // 新增：隨機缺席機率
+    public float skipProbability = 0.2f;
 
     public enum RunMode { Demo, Experiment1, Experiment3, Experiment4 }
 
@@ -79,30 +75,66 @@ public class ExperimentRunner : MonoBehaviour
     static readonly TimeSlot[] TimeSlots = new TimeSlot[]
     {
         new TimeSlot {
-            name="Morning", virtualHour=7f,
-            momWeights = new Dictionary<string,int>{{"Drink",3},{"Laying",1},{"Reading",1}},
-            dadWeights = new Dictionary<string,int>{{"Drink",2},{"Laying",1},{"Typing",3}}
+            name        = "Morning",
+            virtualHour = 7f,
+            momWeights  = new Dictionary<string, int> {
+                { "Drink",   5 },
+                { "Laying",  1 },
+                { "Reading", 1 },
+            },
+            dadWeights  = new Dictionary<string, int> {
+                { "Drink",  5 },
+                { "Laying", 1 },
+                { "Typing", 1 },
+            },
         },
         new TimeSlot {
-            name="Noon", virtualHour=12f,
-            momWeights = new Dictionary<string,int>{{"Drink",2},{"Laying",3},{"Reading",2}},
-            dadWeights = new Dictionary<string,int>{{"Drink",2},{"Laying",2},{"Typing",2}}
+            name        = "Noon",
+            virtualHour = 12f,
+            momWeights  = new Dictionary<string, int> {
+                { "Drink",   1 },
+                { "Laying",  5 },
+                { "Reading", 1 },
+            },
+            dadWeights  = new Dictionary<string, int> {
+                { "Drink",  1 },
+                { "Laying", 5 },
+                { "Typing", 1 },
+            },
         },
         new TimeSlot {
-            name="Afternoon", virtualHour=15f,
-            momWeights = new Dictionary<string,int>{{"Drink",1},{"Laying",2},{"Reading",3}},
-            dadWeights = new Dictionary<string,int>{{"Drink",1},{"Laying",1},{"Typing",4}}
+            name        = "Afternoon",
+            virtualHour = 15f,
+            momWeights  = new Dictionary<string, int> {
+                { "Drink",   1 },
+                { "Laying",  1 },
+                { "Reading", 5 },
+            },
+            dadWeights  = new Dictionary<string, int> {
+                { "Drink",  1 },
+                { "Laying", 1 },
+                { "Typing", 5 },
+            },
         },
         new TimeSlot {
-            name="Evening", virtualHour=20f,
-            momWeights = new Dictionary<string,int>{{"Drink",2},{"Laying",4},{"Reading",3}},
-            dadWeights = new Dictionary<string,int>{{"Drink",2},{"Laying",4},{"Typing",1}}
+            name        = "Evening",
+            virtualHour = 20f,
+            momWeights  = new Dictionary<string, int> {
+                { "Drink",   1 },
+                { "Laying",  5 },
+                { "Reading", 2 },
+            },
+            dadWeights  = new Dictionary<string, int> {
+                { "Drink",  2 },
+                { "Laying", 5 },
+                { "Typing", 1 },
+            },
         },
     };
 
     int   totalRuns          = 0;
     int   successRuns        = 0;
-    int   skippedRuns        = 0;  // 新增：記錄跳過次數
+    int   skippedRuns        = 0;
     int   noiseRuns          = 0;
     float currentVirtualHour = 7f;
     bool  isRunning          = false;
@@ -189,9 +221,7 @@ public class ExperimentRunner : MonoBehaviour
             case RunMode.Experiment4: yield return StartCoroutine(RunExperiment4()); break;
         }
         isRunning = false;
-        Debug.Log($"[ExperimentRunner] Done. " +
-                  $"Regular={successRuns} Skipped={skippedRuns} " +
-                  $"Noise={noiseRuns} Total={totalRuns}");
+        Debug.Log($"[ExperimentRunner] Done. Regular={successRuns} Skipped={skippedRuns} Noise={noiseRuns} Total={totalRuns}");
     }
 
     IEnumerator RunExperiment1()
@@ -213,138 +243,91 @@ public class ExperimentRunner : MonoBehaviour
             }
     }
 
-
     IEnumerator RunExperiment3()
     {
         UseVirtualDay     = true;
         CurrentVirtualDay = 1;
 
-        // 計算總天數
         int totalDays       = exp3_totalObservations / episodesPerVirtualDay;
-        int episodesPerDay  = episodesPerVirtualDay;
-        // 每天每個時間段各跑幾個 episode
-        int epPerSlotPerDay = Mathf.Max(1, episodesPerDay / TimeSlots.Length);
+        int epPerSlotPerDay = Mathf.Max(1, episodesPerVirtualDay / TimeSlots.Length);
+        int episodeCount    = 0;
 
-        int episodeCount = 0;
+        Debug.Log($"[Experiment3] Start: {totalDays} days, {epPerSlotPerDay} ep/slot, skipProb={skipProbability:P0}");
 
-        Debug.Log($"[Experiment3] Start: {totalDays} virtual days, " +
-                  $"{epPerSlotPerDay} ep/slot/day, " +
-                  $"skipProb={skipProbability:P0}");
-
-        // 以天為單位循環
         for (int day = 1; day <= totalDays; day++)
         {
             CurrentVirtualDay = day;
 
-            // 每天跑 Morning → Noon → Afternoon → Evening
             foreach (var slot in TimeSlots)
             {
                 currentVirtualHour = slot.virtualHour;
 
-                // 建立這個時間段的行為佇列
-                var momQueue = BuildWeightedQueue(
-                    MomBehaviors, slot.momWeights, epPerSlotPerDay);
-                var dadQueue = BuildWeightedQueue(
-                    DadBehaviors, slot.dadWeights, epPerSlotPerDay);
-
-                int maxLen = Mathf.Max(momQueue.Count, dadQueue.Count);
+                var momQueue = BuildWeightedQueue(MomBehaviors, slot.momWeights, epPerSlotPerDay);
+                var dadQueue = BuildWeightedQueue(DadBehaviors, slot.dadWeights, epPerSlotPerDay);
+                int maxLen   = Mathf.Max(momQueue.Count, dadQueue.Count);
 
                 for (int i = 0; i < maxLen; i++)
                 {
-                    // ── Mom episode ──────────────────────────────────
                     if (i < momQueue.Count)
                     {
                         totalRuns++;
-
-                        // 隨機缺席：有 skipProbability 機率跳過
                         if (Random.value < skipProbability)
                         {
                             skippedRuns++;
-                            Debug.Log($"[Skip] Day={day} {slot.name} " +
-                                      $"Mom {momQueue[i]} (absent)");
+                            Debug.Log($"[Skip] Day={day} {slot.name} Mom {momQueue[i]}");
                         }
                         else
                         {
-                            if (useVirtualHour)
-                                PostVirtualHourFireAndForget(slot.virtualHour);
-
-                            yield return StartCoroutine(
-                                RunSingleEpisode(userMom, momQueue[i],
-                                                 slot.virtualHour));
+                            if (useVirtualHour) PostVirtualHourFireAndForget(slot.virtualHour);
+                            yield return StartCoroutine(RunSingleEpisode(userMom, momQueue[i], slot.virtualHour));
                             yield return new WaitForSeconds(minIntervalInSlot);
                             successRuns++;
                             episodeCount++;
                         }
 
-                        // Noise episode（基於成功執行的 episode 數量）
-                        if (addNoiseEpisodes &&
-                            episodeCount > 0 &&
-                            episodeCount % noiseInterval == 0)
+                        if (addNoiseEpisodes && episodeCount > 0 && episodeCount % noiseInterval == 0)
                         {
-                            yield return StartCoroutine(
-                                RunNoiseEpisode(userMom, slot.virtualHour,
-                                                MomNoiseBehaviors));
+                            yield return StartCoroutine(RunNoiseEpisode(userMom, slot.virtualHour, MomNoiseBehaviors));
                             noiseRuns++;
                         }
                     }
 
-                    // ── Dad episode ──────────────────────────────────
                     if (i < dadQueue.Count)
                     {
                         totalRuns++;
-
-                        // 隨機缺席
                         if (Random.value < skipProbability)
                         {
                             skippedRuns++;
-                            Debug.Log($"[Skip] Day={day} {slot.name} " +
-                                      $"Dad {dadQueue[i]} (absent)");
+                            Debug.Log($"[Skip] Day={day} {slot.name} Dad {dadQueue[i]}");
                         }
                         else
                         {
-                            if (useVirtualHour)
-                                PostVirtualHourFireAndForget(slot.virtualHour);
-
-                            yield return StartCoroutine(
-                                RunSingleEpisode(userDad, dadQueue[i],
-                                                 slot.virtualHour));
+                            if (useVirtualHour) PostVirtualHourFireAndForget(slot.virtualHour);
+                            yield return StartCoroutine(RunSingleEpisode(userDad, dadQueue[i], slot.virtualHour));
                             yield return new WaitForSeconds(minIntervalInSlot);
                             successRuns++;
                             episodeCount++;
                         }
 
-                        // Noise episode
-                        if (addNoiseEpisodes &&
-                            episodeCount > 0 &&
-                            episodeCount % noiseInterval == 0)
+                        if (addNoiseEpisodes && episodeCount > 0 && episodeCount % noiseInterval == 0)
                         {
-                            yield return StartCoroutine(
-                                RunNoiseEpisode(userDad, slot.virtualHour,
-                                                DadNoiseBehaviors));
+                            yield return StartCoroutine(RunNoiseEpisode(userDad, slot.virtualHour, DadNoiseBehaviors));
                             noiseRuns++;
                         }
                     }
                 }
             }
 
-            Debug.Log($"[Experiment3] Day {day}/{totalDays} done. " +
-                      $"Success={successRuns} Skipped={skippedRuns} " +
-                      $"Noise={noiseRuns}");
+            Debug.Log($"[Experiment3] Day {day}/{totalDays} done. Success={successRuns} Skipped={skippedRuns} Noise={noiseRuns}");
         }
 
-        Debug.Log($"[Experiment3] Complete. " +
-                  $"Regular={successRuns} Skipped={skippedRuns} " +
-                  $"Noise={noiseRuns} VirtualDays={CurrentVirtualDay}");
+        Debug.Log($"[Experiment3] Complete. Regular={successRuns} Skipped={skippedRuns} Noise={noiseRuns} Days={CurrentVirtualDay}");
     }
 
-    IEnumerator RunNoiseEpisode(
-        UserEntity user, float virtualHour, string[] noiseBehaviors)
+    IEnumerator RunNoiseEpisode(UserEntity user, float virtualHour, string[] noiseBehaviors)
     {
-        string noiseBehavior = noiseBehaviors[
-            Random.Range(0, noiseBehaviors.Length)];
-
-        Debug.Log($"[NoiseEpisode] {user.userID} -> {noiseBehavior} " +
-                  $"(day={CurrentVirtualDay})");
+        string noiseBehavior = noiseBehaviors[Random.Range(0, noiseBehaviors.Length)];
+        Debug.Log($"[Noise] {user.userID} -> {noiseBehavior} (day={CurrentVirtualDay})");
 
         UserEntity otherUser = (user == userMom) ? userDad : userMom;
         if (otherUser != null) otherUser.gameObject.SetActive(false);
@@ -360,16 +343,14 @@ public class ExperimentRunner : MonoBehaviour
 
         if (otherUser != null) otherUser.gameObject.SetActive(true);
         yield return new WaitForSeconds(waitBetweenEpisodes);
-
-        Debug.Log($"[NoiseEpisode] Done: {user.userID} {noiseBehavior}");
     }
 
     IEnumerator RunExperiment4()
     {
         UseVirtualDay = false;
 
-        var pool = new List<(UserEntity user, string behavior, float hour)>();
-        var rng  = new System.Random(42);
+        var pool    = new List<(UserEntity user, string behavior, float hour)>();
+        var rng     = new System.Random(42);
         int perSlot = exp4_episodes / TimeSlots.Length;
 
         foreach (var slot in TimeSlots)
@@ -397,8 +378,7 @@ public class ExperimentRunner : MonoBehaviour
         }
     }
 
-    IEnumerator RunSingleEpisode(
-        UserEntity targetUser, string behavior, float virtualHour)
+    IEnumerator RunSingleEpisode(UserEntity targetUser, string behavior, float virtualHour)
     {
         UserEntity otherUser = (targetUser == userMom) ? userDad : userMom;
         if (otherUser  != null) otherUser.gameObject.SetActive(false);
@@ -428,18 +408,14 @@ public class ExperimentRunner : MonoBehaviour
     {
         string json = $"{{\"virtual_hour\":{hour:F1}}}";
         var req = new UnityWebRequest($"{backendUrl}/set_virtual_hour", "POST");
-        req.uploadHandler   = new UploadHandlerRaw(
-            System.Text.Encoding.UTF8.GetBytes(json));
+        req.uploadHandler   = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(json));
         req.downloadHandler = new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
         req.timeout = 3;
         yield return req.SendWebRequest();
     }
 
-    List<string> BuildWeightedQueue(
-        string[] behaviors,
-        Dictionary<string, int> weights,
-        int totalCount)
+    List<string> BuildWeightedQueue(string[] behaviors, Dictionary<string, int> weights, int totalCount)
     {
         int totalWeight = 0;
         foreach (var b in behaviors)
@@ -454,8 +430,7 @@ public class ExperimentRunner : MonoBehaviour
             int w     = weights.TryGetValue(b, out int ww) ? ww : 1;
             int count = (i == behaviors.Length - 1)
                 ? Mathf.Max(0, totalCount - allocated)
-                : Mathf.Max(0, Mathf.RoundToInt(
-                    (float)w / totalWeight * totalCount));
+                : Mathf.Max(0, Mathf.RoundToInt((float)w / totalWeight * totalCount));
             for (int j = 0; j < count; j++) result.Add(b);
             allocated += count;
         }
@@ -476,8 +451,7 @@ public class ExperimentRunner : MonoBehaviour
 
     int GetTargetTotal() => mode switch
     {
-        RunMode.Experiment1 =>
-            (MomBehaviors.Length + DadBehaviors.Length) * exp1_samplesPerBehavior,
+        RunMode.Experiment1 => (MomBehaviors.Length + DadBehaviors.Length) * exp1_samplesPerBehavior,
         RunMode.Experiment3 => exp3_totalObservations,
         RunMode.Experiment4 => exp4_episodes,
         _                   => 0,
@@ -487,28 +461,22 @@ public class ExperimentRunner : MonoBehaviour
     {
         if (mode == RunMode.Demo)
         {
-            GUI.Label(new Rect(10, 100, 500, 22),
-                "[Demo Mode] Camera observation active.");
+            GUI.Label(new Rect(10, 100, 500, 22), "[Demo Mode] Camera observation active.");
             return;
         }
         if (!isRunning) return;
 
         int totalDays = exp3_totalObservations / episodesPerVirtualDay;
 
-        string dayInfo   = UseVirtualDay
-            ? $"  Day={CurrentVirtualDay}/{totalDays}"
-            : "";
+        string dayInfo   = UseVirtualDay ? $"  Day={CurrentVirtualDay}/{totalDays}" : "";
         string skipInfo  = $"  Skip={skippedRuns}";
         string noiseInfo = addNoiseEpisodes ? $"  Noise={noiseRuns}" : "";
 
         GUI.Label(
             new Rect(10, 10, 900, 22),
-            $"[{mode}] {GetSlotName(currentVirtualHour)} " +
-            $"{currentVirtualHour:F0}:00" +
+            $"[{mode}] {GetSlotName(currentVirtualHour)} {currentVirtualHour:F0}:00" +
             $"{dayInfo}{skipInfo}{noiseInfo}  " +
-            $"Regular={successRuns}  " +
-            $"Total={totalRuns}/{GetTargetTotal()}  " +
-            $"[Esc] Stop"
+            $"Regular={successRuns}  Total={totalRuns}/{GetTargetTotal()}  [Esc] Stop"
         );
     }
 }
