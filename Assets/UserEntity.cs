@@ -17,12 +17,16 @@ public class UserEntity : MonoBehaviour
 
     [Header("Spots")]
     public Transform drinkSpot;
-    public Transform sittingSpot;
+    public Transform layingSpot;    // 修改：原本是 sittingSpot
+    public Transform readingSpot;   // 新增
+    public Transform typingSpot;    // 新增
     public Transform idleSpot;
 
     [Header("Waypoints")]
     public Transform[] drinkWaypoints;
-    public Transform[] sittingWaypoints;
+    public Transform[] layingWaypoints;  // 修改：原本是 sittingWaypoints
+    public Transform[] readingWaypoints; // 新增
+    public Transform[] typingWaypoints;  // 新增
     public Transform[] idleWaypoints;
 
     [Header("Movement")]
@@ -37,13 +41,13 @@ public class UserEntity : MonoBehaviour
     public BehaviorItem[] behaviorItems;
 
     [Header("Animator state names")]
-    public string stateIdle        = "Idle";
-    public string stateWalk        = "Walk";
-    public string stateDrink       = "Drink";
-    public string stateSittingIdle = "SittingIdle";
-    public string stateReading     = "Reading";
-    public string stateTyping      = "Typing";
-    public string stateNodding     = "Nodding";
+    public string stateIdle    = "Idle";
+    public string stateWalk    = "Walk";
+    public string stateDrink   = "Drink";
+    public string stateLaying  = "Laying";
+    public string stateReading = "Reading";
+    public string stateTyping  = "Typing";
+    public string stateNodding = "Nodding";
 
     public string currentActivity { get; private set; } = "Idle";
     public bool   IsBusy          { get; private set; } = false;
@@ -76,14 +80,14 @@ public class UserEntity : MonoBehaviour
             case "drink":
                 yield return StartCoroutine(DoDrink());   break;
             case "sit":
-            case "sittingidle":
-                yield return StartCoroutine(DoSit());     break;
+            case "laying":
+                yield return StartCoroutine(DoLaying());  break;
             case "reading":
                 yield return StartCoroutine(DoReading()); break;
             case "typing":
                 yield return StartCoroutine(DoTyping());  break;
             case "idle":
-                SetActivity("Idle"); PlayAnim(stateIdle); break;
+                yield return StartCoroutine(DoReturnToIdle()); break;
             default:
                 Debug.LogWarning($"[{userID}] Unknown activity: {activity}");
                 break;
@@ -105,11 +109,11 @@ public class UserEntity : MonoBehaviour
         yield return new WaitForSeconds(noddingDuration);
         PlayAnim(currentActivity switch
         {
-            "Drink"       => stateDrink,
-            "SittingIdle" => stateSittingIdle,
-            "Reading"     => stateReading,
-            "Typing"      => stateTyping,
-            _             => stateIdle
+            "Drink"   => stateDrink,
+            "Laying"  => stateLaying,
+            "Reading" => stateReading,
+            "Typing"  => stateTyping,
+            _         => stateIdle
         });
     }
 
@@ -125,35 +129,35 @@ public class UserEntity : MonoBehaviour
         PlayAnim(stateDrink);
     }
 
-    IEnumerator DoSit()
+    IEnumerator DoLaying()
     {
-        if (sittingSpot == null) { Warn("sittingSpot"); yield break; }
+        if (layingSpot == null) { Warn("layingSpot"); yield break; }
         SetActivity("Walking");
-        yield return StartCoroutine(WalkVia(GetApproachPos(sittingSpot), sittingWaypoints));
-        yield return StartCoroutine(SmoothRotateTo(sittingSpot.forward));
-        TeleportToSeat();
-        SetActivity("SittingIdle");
-        PlayAnim(stateSittingIdle);
+        yield return StartCoroutine(WalkVia(GetApproachPos(layingSpot), layingWaypoints));
+        yield return StartCoroutine(SmoothRotateTo(layingSpot.forward));
+        TeleportToSeat(layingSpot);
+        SetActivity("Laying");
+        PlayAnim(stateLaying);
     }
 
     IEnumerator DoReading()
     {
-        if (sittingSpot == null) { Warn("sittingSpot (Reading)"); yield break; }
+        if (readingSpot == null) { Warn("readingSpot"); yield break; }
         SetActivity("Walking");
-        yield return StartCoroutine(WalkVia(GetApproachPos(sittingSpot), sittingWaypoints));
-        yield return StartCoroutine(SmoothRotateTo(sittingSpot.forward));
-        TeleportToSeat();
+        yield return StartCoroutine(WalkVia(GetApproachPos(readingSpot), readingWaypoints));
+        yield return StartCoroutine(SmoothRotateTo(readingSpot.forward));
+        TeleportToSeat(readingSpot);
         SetActivity("Reading");
         PlayAnim(stateReading);
     }
 
     IEnumerator DoTyping()
     {
-        if (sittingSpot == null) { Warn("sittingSpot (Typing)"); yield break; }
+        if (typingSpot == null) { Warn("typingSpot"); yield break; }
         SetActivity("Walking");
-        yield return StartCoroutine(WalkVia(GetApproachPos(sittingSpot), sittingWaypoints));
-        yield return StartCoroutine(SmoothRotateTo(sittingSpot.forward));
-        TeleportToSeat();
+        yield return StartCoroutine(WalkVia(GetApproachPos(typingSpot), typingWaypoints));
+        yield return StartCoroutine(SmoothRotateTo(typingSpot.forward));
+        TeleportToSeat(typingSpot);
         SetActivity("Typing");
         PlayAnim(stateTyping);
     }
@@ -220,10 +224,10 @@ public class UserEntity : MonoBehaviour
         transform.rotation = tgt;
     }
 
-    void TeleportToSeat()
+    void TeleportToSeat(Transform targetSpot)
     {
-        transform.position = sittingSpot.position;
-        transform.rotation = sittingSpot.rotation;
+        transform.position = targetSpot.position;
+        transform.rotation = targetSpot.rotation;
         isSitting = true;
     }
 
@@ -260,14 +264,18 @@ public class UserEntity : MonoBehaviour
     void OnDrawGizmos()
     {
         DrawSpot(drinkSpot,   Color.yellow, "Drink");
-        DrawSpot(sittingSpot, Color.green,  "Sit/Read/Type");
+        DrawSpot(layingSpot,  Color.green,  "Laying");
+        DrawSpot(readingSpot, Color.blue,   "Reading");
+        DrawSpot(typingSpot,  Color.red,    "Typing");
         if (idleSpot != null)
         {
             Gizmos.color = Color.white;
             Gizmos.DrawWireSphere(idleSpot.position, 0.15f);
         }
         DrawWaypointPath(drinkWaypoints,   drinkSpot,   Color.yellow);
-        DrawWaypointPath(sittingWaypoints, sittingSpot, Color.green);
+        DrawWaypointPath(layingWaypoints,  layingSpot,  Color.green);
+        DrawWaypointPath(readingWaypoints, readingSpot, Color.blue);
+        DrawWaypointPath(typingWaypoints,  typingSpot,  Color.red);
     }
 
     void DrawSpot(Transform spot, Color c, string label)

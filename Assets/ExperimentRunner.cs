@@ -65,8 +65,8 @@ public class ExperimentRunner : MonoBehaviour
     static readonly string[] MomNoiseBehaviors = { "Standing", "Walking" };
     static readonly string[] DadNoiseBehaviors = { "Standing", "Walking" };
 
-    static readonly string[] MomBehaviors = { "Drink", "SittingIdle", "Reading" };
-    static readonly string[] DadBehaviors = { "Drink", "SittingIdle", "Typing"  };
+    static readonly string[] MomBehaviors = { "Drink", "Laying", "Reading" };
+    static readonly string[] DadBehaviors = { "Drink", "Laying", "Typing"  };
 
     struct TimeSlot
     {
@@ -80,23 +80,23 @@ public class ExperimentRunner : MonoBehaviour
     {
         new TimeSlot {
             name="Morning", virtualHour=7f,
-            momWeights = new Dictionary<string,int>{{"Drink",3},{"SittingIdle",1},{"Reading",1}},
-            dadWeights = new Dictionary<string,int>{{"Drink",2},{"SittingIdle",1},{"Typing",3}}
+            momWeights = new Dictionary<string,int>{{"Drink",3},{"Laying",1},{"Reading",1}},
+            dadWeights = new Dictionary<string,int>{{"Drink",2},{"Laying",1},{"Typing",3}}
         },
         new TimeSlot {
             name="Noon", virtualHour=12f,
-            momWeights = new Dictionary<string,int>{{"Drink",2},{"SittingIdle",3},{"Reading",2}},
-            dadWeights = new Dictionary<string,int>{{"Drink",2},{"SittingIdle",2},{"Typing",2}}
+            momWeights = new Dictionary<string,int>{{"Drink",2},{"Laying",3},{"Reading",2}},
+            dadWeights = new Dictionary<string,int>{{"Drink",2},{"Laying",2},{"Typing",2}}
         },
         new TimeSlot {
             name="Afternoon", virtualHour=15f,
-            momWeights = new Dictionary<string,int>{{"Drink",1},{"SittingIdle",2},{"Reading",3}},
-            dadWeights = new Dictionary<string,int>{{"Drink",1},{"SittingIdle",1},{"Typing",4}}
+            momWeights = new Dictionary<string,int>{{"Drink",1},{"Laying",2},{"Reading",3}},
+            dadWeights = new Dictionary<string,int>{{"Drink",1},{"Laying",1},{"Typing",4}}
         },
         new TimeSlot {
             name="Evening", virtualHour=20f,
-            momWeights = new Dictionary<string,int>{{"Drink",2},{"SittingIdle",4},{"Reading",3}},
-            dadWeights = new Dictionary<string,int>{{"Drink",2},{"SittingIdle",4},{"Typing",1}}
+            momWeights = new Dictionary<string,int>{{"Drink",2},{"Laying",4},{"Reading",3}},
+            dadWeights = new Dictionary<string,int>{{"Drink",2},{"Laying",4},{"Typing",1}}
         },
     };
 
@@ -213,11 +213,7 @@ public class ExperimentRunner : MonoBehaviour
             }
     }
 
-    // ── Experiment3（核心改動）────────────────────────────────────────
-    // 改前：4 個時間段各自跑完所有 episode（Morning × N → Noon × N → ...）
-    // 改後：以「天」為單位循環，每天都有 Morning → Noon → Afternoon → Evening
-    //       每個 episode 有 skipProbability 的機率跳過（模擬用戶缺席）
-    // ──────────────────────────────────────────────────────────────────
+
     IEnumerator RunExperiment3()
     {
         UseVirtualDay     = true;

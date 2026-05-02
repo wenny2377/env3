@@ -155,6 +155,7 @@ Transform:
   - {fileID: 283813366}
   - {fileID: 1138881478}
   - {fileID: 1191752966}
+  - {fileID: 175477716}
   - {fileID: 527693431}
   m_Father: {fileID: 989247574}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -905,6 +906,37 @@ MonoBehaviour:
   bubbleRoot: {fileID: 482699607}
   bubbleText: {fileID: 770462463}
   displayDuration: 5
+--- !u!1 &175477715
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 175477716}
+  m_Layer: 0
+  m_Name: 'Laying Spot '
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &175477716
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 175477715}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0.073912784, y: 0.7032332, z: -0.073912784, w: 0.7032332}
+  m_LocalPosition: {x: -0.9, y: -0.5, z: -2.5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 21519209}
+  m_LocalEulerAnglesHint: {x: 12, y: 90, z: 0}
 --- !u!1001 &182509373
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1580,10 +1612,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   userID: User_Dad
   drinkSpot: {fileID: 1191752966}
-  sittingSpot: {fileID: 527693431}
+  layingSpot: {fileID: 175477716}
+  readingSpot: {fileID: 0}
+  typingSpot: {fileID: 283813366}
   idleSpot: {fileID: 204572559}
   drinkWaypoints: []
-  sittingWaypoints: []
+  layingWaypoints: []
+  readingWaypoints: []
+  typingWaypoints: []
   idleWaypoints:
   - {fileID: 1138881478}
   walkSpeed: 1.4
@@ -1597,7 +1633,7 @@ MonoBehaviour:
   stateIdle: Idle
   stateWalk: Walk
   stateDrink: Drink
-  stateSittingIdle: SittingIdle
+  stateLaying: Laying
   stateReading: Reading
   stateTyping: Typing
   stateNodding: Nodding
@@ -6132,12 +6168,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   userID: User_Mom
   drinkSpot: {fileID: 836976212}
-  sittingSpot: {fileID: 322112114}
+  layingSpot: {fileID: 1944779873}
+  readingSpot: {fileID: 1919893029}
+  typingSpot: {fileID: 0}
   idleSpot: {fileID: 886232081}
   drinkWaypoints:
   - {fileID: 21884940}
-  sittingWaypoints:
-  - {fileID: 1623849907}
+  layingWaypoints: []
+  readingWaypoints: []
+  typingWaypoints: []
   idleWaypoints: []
   walkSpeed: 1.4
   arrivalThreshold: 0.08
@@ -6153,7 +6192,7 @@ MonoBehaviour:
   stateIdle: Idle
   stateWalk: Walk
   stateDrink: Drink
-  stateSittingIdle: SittingIdle
+  stateLaying: Laying
   stateReading: Reading
   stateTyping: Typing
   stateNodding: Nodding
@@ -8088,7 +8127,7 @@ Transform:
   m_GameObject: {fileID: 1919893028}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.7071068, z: -0, w: 0.7071068}
-  m_LocalPosition: {x: 1.34, y: 0, z: 5.27}
+  m_LocalPosition: {x: 1.19, y: 0.12, z: 5.3}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -8124,6 +8163,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1919893029}
+  - {fileID: 1944779873}
   - {fileID: 836976212}
   - {fileID: 21884940}
   - {fileID: 322112114}
@@ -8131,6 +8171,37 @@ Transform:
   - {fileID: 886232081}
   m_Father: {fileID: 989247574}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1944779872
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1944779873}
+  m_Layer: 0
+  m_Name: 'Laying Spot  '
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1944779873
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1944779872}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0.10452846, y: 0, z: 0, w: 0.9945219}
+  m_LocalPosition: {x: 0.87, y: -0.35, z: 5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1937520298}
+  m_LocalEulerAnglesHint: {x: 12, y: 0, z: 0}
 --- !u!1 &1967468807
 GameObject:
   m_ObjectHideFlags: 0

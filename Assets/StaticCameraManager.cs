@@ -17,8 +17,8 @@ public class StaticCameraManager : MonoBehaviour
     public UserEntity userDad;
 
     [Header("Capture Target States (case-sensitive, comma-separated)")]
-    [Tooltip("Snapshot triggers only when entering these activities\nDrink,SittingIdle,Typing,Reading")]
-    public string captureStates = "Drink,SittingIdle,Typing,Reading";
+    [Tooltip("Snapshot triggers only when entering these activities\nDrink,Laying,Typing,Reading")]
+    public string captureStates = "Drink,Laying,Typing,Reading";
 
     [Header("Capture Timing")]
     [Tooltip("Seconds to wait after entering a target state (lets the animation loop settle)\nThis is the fallback default — each state has its own value")]
@@ -261,7 +261,7 @@ public class StaticCameraManager : MonoBehaviour
     float GetSettleTime(string activity) => activity switch
     {
         "Drink"       => 0.3f,
-        "SittingIdle" => 0.5f,
+        "Laying" => 0.5f,
         "Typing"      => 0.4f,
         "Reading"     => 0.4f,
         _             => defaultSettleTime
