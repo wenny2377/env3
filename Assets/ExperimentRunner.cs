@@ -49,7 +49,7 @@ public class ExperimentRunner : MonoBehaviour
     public int noiseInterval = 10;
 
     [Header("Irregular Behavior Settings")]
-    [Tooltip("0.2 = 20% absence rate, matches Gardner (2015) habit execution rate 70-85%")]
+    [Tooltip("0.2 = 20% absence rate, matches Gardner (2015)")]
     [Range(0f, 1f)]
     public float skipProbability = 0.2f;
 
@@ -58,11 +58,11 @@ public class ExperimentRunner : MonoBehaviour
     public static int  CurrentVirtualDay = 1;
     public static bool UseVirtualDay     = false;
 
-    static readonly string[] MomNoiseBehaviors = { "Standing", "Walking" };
-    static readonly string[] DadNoiseBehaviors = { "Standing", "Walking" };
+    static readonly string[] MomNoiseBehaviors = { "Idle" };
+    static readonly string[] DadNoiseBehaviors = { "Idle" };
 
-    static readonly string[] MomBehaviors = { "Drink", "Laying", "Reading" };
-    static readonly string[] DadBehaviors = { "Drink", "Laying", "Typing"  };
+    static readonly string[] MomBehaviors = { "Drink", "Laying", "Reading", "Watching" };
+    static readonly string[] DadBehaviors = { "Drink", "Laying", "Typing",  "PhoneUse" };
 
     struct TimeSlot
     {
@@ -78,56 +78,48 @@ public class ExperimentRunner : MonoBehaviour
             name        = "Morning",
             virtualHour = 7f,
             momWeights  = new Dictionary<string, int> {
-                { "Drink",   5 },
-                { "Laying",  1 },
-                { "Reading", 1 },
+                { "Drink",    5 }, { "Laying",  1 },
+                { "Reading",  1 }, { "Watching",1 },
             },
             dadWeights  = new Dictionary<string, int> {
-                { "Drink",  5 },
-                { "Laying", 1 },
-                { "Typing", 1 },
+                { "Drink",    5 }, { "Laying",  1 },
+                { "Typing",   1 }, { "PhoneUse",1 },
             },
         },
         new TimeSlot {
             name        = "Noon",
             virtualHour = 12f,
             momWeights  = new Dictionary<string, int> {
-                { "Drink",   1 },
-                { "Laying",  5 },
-                { "Reading", 1 },
+                { "Drink",    1 }, { "Laying",  5 },
+                { "Reading",  1 }, { "Watching",1 },
             },
             dadWeights  = new Dictionary<string, int> {
-                { "Drink",  1 },
-                { "Laying", 5 },
-                { "Typing", 1 },
+                { "Drink",    1 }, { "Laying",  5 },
+                { "Typing",   1 }, { "PhoneUse",1 },
             },
         },
         new TimeSlot {
             name        = "Afternoon",
             virtualHour = 15f,
             momWeights  = new Dictionary<string, int> {
-                { "Drink",   1 },
-                { "Laying",  1 },
-                { "Reading", 5 },
+                { "Drink",    1 }, { "Laying",  1 },
+                { "Reading",  5 }, { "Watching",1 },
             },
             dadWeights  = new Dictionary<string, int> {
-                { "Drink",  1 },
-                { "Laying", 1 },
-                { "Typing", 5 },
+                { "Drink",    1 }, { "Laying",  1 },
+                { "Typing",   5 }, { "PhoneUse",1 },
             },
         },
         new TimeSlot {
             name        = "Evening",
             virtualHour = 20f,
             momWeights  = new Dictionary<string, int> {
-                { "Drink",   1 },
-                { "Laying",  5 },
-                { "Reading", 2 },
+                { "Drink",    1 }, { "Laying",  2 },
+                { "Reading",  1 }, { "Watching",5 },
             },
             dadWeights  = new Dictionary<string, int> {
-                { "Drink",  2 },
-                { "Laying", 5 },
-                { "Typing", 1 },
+                { "Drink",    2 }, { "Laying",  2 },
+                { "Typing",   1 }, { "PhoneUse",5 },
             },
         },
     };
@@ -145,22 +137,15 @@ public class ExperimentRunner : MonoBehaviour
         {
             if (userMom != null) userMom.gameObject.SetActive(true);
             if (userDad != null) userDad.gameObject.SetActive(true);
-            InitCameraForDemo();
-            Debug.Log("[ExperimentRunner] Demo mode — camera observation active.");
+            InitCamera();
+            Debug.Log("[ExperimentRunner] Demo mode.");
             return;
         }
 
         if (cameraManager == null)
             cameraManager = StaticCameraManager.Instance
                             ?? FindObjectOfType<StaticCameraManager>();
-
-        if (cameraManager != null)
-        {
-            if (kitchenNodes?.Count    > 0) cameraManager.RegisterRoomCameras("Kitchen",    kitchenNodes);
-            if (livingRoomNodes?.Count > 0) cameraManager.RegisterRoomCameras("LivingRoom", livingRoomNodes);
-            if (dadRoomNodes?.Count    > 0) cameraManager.RegisterRoomCameras("DadRoom",    dadRoomNodes);
-            if (virtualCameraBrain != null) cameraManager.virtualCameraBrain = virtualCameraBrain;
-        }
+        InitCamera();
 
         if (userMom != null) userMom.gameObject.SetActive(true);
         if (userDad != null) userDad.gameObject.SetActive(true);
@@ -168,24 +153,21 @@ public class ExperimentRunner : MonoBehaviour
         if (runOnStart) StartExperiment();
     }
 
-    void InitCameraForDemo()
+    void InitCamera()
     {
         if (cameraManager == null)
             cameraManager = StaticCameraManager.Instance
                             ?? FindObjectOfType<StaticCameraManager>();
-
         if (cameraManager == null)
         {
             Debug.LogWarning("[ExperimentRunner] StaticCameraManager not found.");
             return;
         }
-
         if (kitchenNodes?.Count    > 0) cameraManager.RegisterRoomCameras("Kitchen",    kitchenNodes);
         if (livingRoomNodes?.Count > 0) cameraManager.RegisterRoomCameras("LivingRoom", livingRoomNodes);
         if (dadRoomNodes?.Count    > 0) cameraManager.RegisterRoomCameras("DadRoom",    dadRoomNodes);
         if (virtualCameraBrain != null) cameraManager.virtualCameraBrain = virtualCameraBrain;
-
-        Debug.Log("[ExperimentRunner] Demo camera initialized.");
+        Debug.Log("[ExperimentRunner] Camera initialized.");
     }
 
     void Update()
@@ -284,7 +266,6 @@ public class ExperimentRunner : MonoBehaviour
                             successRuns++;
                             episodeCount++;
                         }
-
                         if (addNoiseEpisodes && episodeCount > 0 && episodeCount % noiseInterval == 0)
                         {
                             yield return StartCoroutine(RunNoiseEpisode(userMom, slot.virtualHour, MomNoiseBehaviors));
@@ -308,7 +289,6 @@ public class ExperimentRunner : MonoBehaviour
                             successRuns++;
                             episodeCount++;
                         }
-
                         if (addNoiseEpisodes && episodeCount > 0 && episodeCount % noiseInterval == 0)
                         {
                             yield return StartCoroutine(RunNoiseEpisode(userDad, slot.virtualHour, DadNoiseBehaviors));
@@ -326,22 +306,23 @@ public class ExperimentRunner : MonoBehaviour
 
     IEnumerator RunNoiseEpisode(UserEntity user, float virtualHour, string[] noiseBehaviors)
     {
-        string noiseBehavior = noiseBehaviors[Random.Range(0, noiseBehaviors.Length)];
-        Debug.Log($"[Noise] {user.userID} -> {noiseBehavior} (day={CurrentVirtualDay})");
+        string noise = noiseBehaviors[Random.Range(0, noiseBehaviors.Length)];
+        Debug.Log($"[Noise] {user.userID} -> {noise} (day={CurrentVirtualDay})");
 
-        UserEntity otherUser = (user == userMom) ? userDad : userMom;
-        if (otherUser != null) otherUser.gameObject.SetActive(false);
-        if (user      != null) user.gameObject.SetActive(true);
+        UserEntity other = (user == userMom) ? userDad : userMom;
+        if (other != null) other.gameObject.SetActive(false);
+        if (user  != null) user.gameObject.SetActive(true);
 
         if (virtualCameraBrain != null && virtualHour >= 0f)
             virtualCameraBrain.SetVirtualHour(virtualHour);
 
-        yield return StartCoroutine(user.SwitchActivity(noiseBehavior));
-        yield return new WaitForSeconds(0.3f);
+        user.lastAssignedActivity = noise;
+        yield return StartCoroutine(user.SwitchActivity(noise));
         yield return new WaitForSeconds(waitAfterCapture);
         yield return StartCoroutine(user.ReturnToIdle());
+        user.lastAssignedActivity = "";
 
-        if (otherUser != null) otherUser.gameObject.SetActive(true);
+        if (other != null) other.gameObject.SetActive(true);
         yield return new WaitForSeconds(waitBetweenEpisodes);
     }
 
@@ -380,24 +361,21 @@ public class ExperimentRunner : MonoBehaviour
 
     IEnumerator RunSingleEpisode(UserEntity targetUser, string behavior, float virtualHour)
     {
-        UserEntity otherUser = (targetUser == userMom) ? userDad : userMom;
-        if (otherUser  != null) otherUser.gameObject.SetActive(false);
-        if (targetUser != null) targetUser.gameObject.SetActive(true);
+        UserEntity other = (targetUser == userMom) ? userDad : userMom;
+        if (other       != null) other.gameObject.SetActive(false);
+        if (targetUser  != null) targetUser.gameObject.SetActive(true);
 
         if (virtualCameraBrain != null && virtualHour >= 0f)
             virtualCameraBrain.SetVirtualHour(virtualHour);
 
+        targetUser.lastAssignedActivity = behavior;
         yield return StartCoroutine(targetUser.SwitchActivity(behavior));
 
-        float jitterX = Random.Range(-0.15f, 0.15f);
-        float jitterZ = Random.Range(-0.15f, 0.15f);
-        targetUser.transform.position += new Vector3(jitterX, 0f, jitterZ);
-
-        yield return new WaitForSeconds(0.3f);
         yield return new WaitForSeconds(waitAfterCapture);
         yield return StartCoroutine(targetUser.ReturnToIdle());
+        targetUser.lastAssignedActivity = "";
 
-        if (otherUser != null) otherUser.gameObject.SetActive(true);
+        if (other != null) other.gameObject.SetActive(true);
         yield return new WaitForSeconds(waitBetweenEpisodes);
     }
 

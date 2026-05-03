@@ -17,32 +17,27 @@ public class StaticCameraManager : MonoBehaviour
     public UserEntity userDad;
 
     [Header("Capture Target States (case-sensitive, comma-separated)")]
-    [Tooltip("Snapshot triggers only when entering these activities\nDrink,Laying,Typing,Reading")]
+    [Tooltip("Drink,Laying,Typing,Reading")]
     public string captureStates = "Drink,Laying,Typing,Reading";
 
     [Header("Capture Timing")]
-    [Tooltip("Seconds to wait after entering a target state (lets the animation loop settle)\nThis is the fallback default — each state has its own value")]
     public float defaultSettleTime = 0.4f;
 
-    [Tooltip("Extra frames to wait after settle time (avoids Animator first-frame jitter)")]
+    [Tooltip("Extra frames to wait after settle time")]
     public int settleFrames = 2;
 
     [Header("Camera Score Threshold")]
-    [Tooltip("Nodes below this score are excluded from the capture candidate list\nRecommended: 0.45-0.60\nToo high: all nodes fall to Fallback\nToo low: poor-angle views are included")]
     [Range(0f, 1f)]
-    public float minScoreThreshold = 0.50f;
+    public float minScoreThreshold = 0.40f;
 
-    [Tooltip("Seconds to wait before re-scoring when all nodes fall below threshold")]
-    public float fallbackDelay = 0.5f;
-
-    [Tooltip("Maximum fallback retries before abandoning the current capture")]
-    public int fallbackMaxRetry = 3;
+    public float fallbackDelay    = 0.5f;
+    public int   fallbackMaxRetry = 3;
 
     [Header("Dependencies (auto-found if left empty)")]
     public VirtualCameraBrain virtualCameraBrain;
 
-    HashSet<string> captureStateSet;
-    Dictionary<string, List<CameraNode>> roomCameras = new Dictionary<string, List<CameraNode>>();
+    HashSet<string>                      captureStateSet;
+    Dictionary<string, List<CameraNode>> roomCameras = new();
 
     void Start()
     {
@@ -52,15 +47,15 @@ public class StaticCameraManager : MonoBehaviour
             virtualCameraBrain = FindObjectOfType<VirtualCameraBrain>();
 
         if (virtualCameraBrain == null)
-            Debug.LogError("[StaticCameraManager] VirtualCameraBrain not found — " +
-                           "create an empty GameObject, attach VirtualCameraBrain.cs, " +
-                           "and drag the main Camera into its mainCamera field");
+            Debug.LogError("[StaticCameraManager] VirtualCameraBrain not found.");
 
         if (userMom != null) StartCoroutine(SmartScanRoutine(userMom));
-        else Debug.LogWarning("[StaticCameraManager] userMom is not assigned");
+        else Debug.LogWarning("[StaticCameraManager] userMom not assigned");
 
         if (userDad != null) StartCoroutine(SmartScanRoutine(userDad));
-        else Debug.LogWarning("[StaticCameraManager] userDad is not assigned");
+        else Debug.LogWarning("[StaticCameraManager] userDad not assigned");
+
+        Debug.Log("[StaticCameraManager] SmartScanRoutine active for all modes.");
     }
 
     public void RegisterRoomCameras(string roomName, List<CameraNode> cameras)
@@ -71,7 +66,19 @@ public class StaticCameraManager : MonoBehaviour
             return;
         }
         roomCameras[roomName] = cameras;
-        Debug.Log($"[StaticCameraManager] Registered '{roomName}': {cameras.Count} virtual node(s)");
+        Debug.Log($"[StaticCameraManager] Registered '{roomName}': {cameras.Count} node(s)");
+    }
+
+    public List<CameraNode> GetCamerasForUser(UserEntity user)
+    {
+        return FindCamerasForUser(user);
+    }
+
+    public List<CameraNode> GetScoredCamerasForUser(UserEntity user)
+    {
+        var cams = FindCamerasForUser(user);
+        if (cams == null || cams.Count == 0) return null;
+        return ScoreCamerasRanked(user, cams);
     }
 
     public void RequestSnapshot(Transform[] pivots, string room, string userID, string activity)
@@ -90,7 +97,7 @@ public class StaticCameraManager : MonoBehaviour
         if (nodes.Count > 0)
             StartCoroutine(CaptureWithFallback(target, activity, nodes));
         else
-            Debug.LogWarning("[StaticCameraManager] RequestSnapshot: no CameraNode found in Transform[]");
+            Debug.LogWarning("[StaticCameraManager] RequestSnapshot: no CameraNode found.");
     }
 
     IEnumerator SmartScanRoutine(UserEntity user)
@@ -106,7 +113,6 @@ public class StaticCameraManager : MonoBehaviour
                 prev = cur;
 
                 yield return new WaitForSeconds(GetSettleTime(cur));
-
                 for (int f = 0; f < settleFrames; f++)
                     yield return null;
 
@@ -119,13 +125,16 @@ public class StaticCameraManager : MonoBehaviour
                 List<CameraNode> cams = FindCamerasForUser(user);
                 if (cams == null || cams.Count == 0)
                 {
-                    Debug.LogWarning($"[StaticCameraManager] {user.userID}: no registered camera nodes found — " +
-                                     "ensure ExperimentRunner or RoomArea has called RegisterRoomCameras()");
+                    Debug.LogWarning($"[StaticCameraManager] {user.userID}: no camera nodes found.");
                     prev = user.currentActivity;
                     continue;
                 }
 
-                yield return StartCoroutine(CaptureWithFallback(user, cur, cams));
+                string activityLabel = !string.IsNullOrEmpty(user.lastAssignedActivity)
+                    ? user.lastAssignedActivity
+                    : cur;
+
+                StartCoroutine(CaptureWithFallback(user, activityLabel, cams));
             }
             else
             {
@@ -136,7 +145,7 @@ public class StaticCameraManager : MonoBehaviour
         }
     }
 
-    IEnumerator CaptureWithFallback(UserEntity user, string activity, List<CameraNode> cameras)
+    public IEnumerator CaptureWithFallback(UserEntity user, string activity, List<CameraNode> cameras)
     {
         for (int retry = 0; retry <= fallbackMaxRetry; retry++)
         {
@@ -157,39 +166,32 @@ public class StaticCameraManager : MonoBehaviour
             {
                 float best = GetBestScore(cameras);
                 Debug.Log($"[StaticCameraManager] {user.userID} | {activity} | " +
-                          $"all nodes below threshold (best={best:F2} < {minScoreThreshold})" +
-                          $" — Fallback {retry + 1}/{fallbackMaxRetry}");
+                          $"below threshold (best={best:F2}) — Fallback {retry + 1}/{fallbackMaxRetry}");
                 yield return new WaitForSeconds(fallbackDelay);
-                if (user.currentActivity != activity) yield break;
             }
             else
             {
                 Debug.LogWarning($"[StaticCameraManager] {user.userID} | {activity} | " +
-                                 "fallback limit reached, capture abandoned — " +
-                                 "consider lowering minScoreThreshold or adjusting node positions/FOV/orientation");
+                                 "fallback limit reached, capture abandoned.");
             }
         }
     }
 
     List<CameraNode> ScoreCamerasRanked(UserEntity user, List<CameraNode> cameras)
     {
-        Vector3 aimPos = user.GetAimPosition();
-        var qualified = new List<CameraNode>();
+        Vector3 aimPos    = user.GetAimPosition();
+        var     qualified = new List<CameraNode>();
 
         foreach (var cam in cameras)
         {
             if (cam == null) continue;
 
-            Vector3 nodePos = cam.transform.position;
+            Vector3 nodePos  = cam.transform.position;
             Vector3 toTarget = (aimPos - nodePos).normalized;
-            float angle = Vector3.Angle(cam.transform.forward, toTarget);
-            float halfFov = cam.fieldOfView * 0.5f;
+            float   angle    = Vector3.Angle(cam.transform.forward, toTarget);
+            float   halfFov  = cam.fieldOfView * 0.5f;
 
-            if (angle > halfFov)
-            {
-                cam.lastScore = 0f;
-                continue;
-            }
+            if (angle > halfFov) { cam.lastScore = 0f; continue; }
 
             float vis = 1f;
             if (Physics.Linecast(nodePos, aimPos, out RaycastHit hit))
@@ -200,11 +202,10 @@ public class StaticCameraManager : MonoBehaviour
             }
 
             float angleFactor = Mathf.Clamp01(1f - angle / halfFov);
-            float dist = Vector3.Distance(nodePos, aimPos);
-            float distFactor = Mathf.Clamp01(1f - dist / 10f);
-
-            float score = (vis * 0.5f + angleFactor * 0.3f + distFactor * 0.2f)
-                          * cam.scoreMultiplier;
+            float dist        = Vector3.Distance(nodePos, aimPos);
+            float distFactor  = Mathf.Clamp01(1f - dist / 10f);
+            float score       = (vis * 0.5f + angleFactor * 0.3f + distFactor * 0.2f)
+                                * cam.scoreMultiplier;
             cam.lastScore = score;
 
             if (score >= minScoreThreshold)
@@ -223,14 +224,14 @@ public class StaticCameraManager : MonoBehaviour
             foreach (var v in roomCameras.Values) return v;
         }
 
-        string nearest = null;
-        float minDist = float.MaxValue;
-        Vector3 uPos = user.transform.position;
+        string  nearest = null;
+        float   minDist = float.MaxValue;
+        Vector3 uPos    = user.transform.position;
 
         foreach (var kv in roomCameras)
         {
             Vector3 center = Vector3.zero;
-            int cnt = 0;
+            int     cnt    = 0;
             foreach (var c in kv.Value)
                 if (c != null) { center += c.transform.position; cnt++; }
             if (cnt == 0) continue;
@@ -260,11 +261,11 @@ public class StaticCameraManager : MonoBehaviour
 
     float GetSettleTime(string activity) => activity switch
     {
-        "Drink"       => 0.3f,
-        "Laying" => 0.5f,
-        "Typing"      => 0.4f,
-        "Reading"     => 0.4f,
-        _             => defaultSettleTime
+        "Drink"   => 0.3f,
+        "Laying"  => 0.5f,
+        "Typing"  => 0.4f,
+        "Reading" => 0.4f,
+        _         => defaultSettleTime
     };
 
     void OnDrawGizmos()
@@ -275,10 +276,10 @@ public class StaticCameraManager : MonoBehaviour
             foreach (var cam in kv.Value)
             {
                 if (cam == null) continue;
-                Gizmos.color = cam.lastScore >= minScoreThreshold          ? Color.green
-                             : cam.lastScore >= minScoreThreshold * 0.7f   ? Color.yellow
-                             : cam.lastScore > 0f                           ? Color.red
-                             :                                                Color.gray;
+                Gizmos.color = cam.lastScore >= minScoreThreshold        ? Color.green
+                             : cam.lastScore >= minScoreThreshold * 0.7f ? Color.yellow
+                             : cam.lastScore > 0f                         ? Color.red
+                             :                                              Color.gray;
                 Gizmos.DrawWireSphere(cam.transform.position, 0.15f);
                 Gizmos.DrawRay(cam.transform.position, cam.transform.forward * 2f);
             }

@@ -17,16 +17,20 @@ public class UserEntity : MonoBehaviour
 
     [Header("Spots")]
     public Transform drinkSpot;
-    public Transform layingSpot;    // 修改：原本是 sittingSpot
-    public Transform readingSpot;   // 新增
-    public Transform typingSpot;    // 新增
+    public Transform layingSpot;
+    public Transform readingSpot;
+    public Transform typingSpot;
+    public Transform watchingSpot;
+    public Transform phoneSpot;
     public Transform idleSpot;
 
     [Header("Waypoints")]
     public Transform[] drinkWaypoints;
-    public Transform[] layingWaypoints;  // 修改：原本是 sittingWaypoints
-    public Transform[] readingWaypoints; // 新增
-    public Transform[] typingWaypoints;  // 新增
+    public Transform[] layingWaypoints;
+    public Transform[] readingWaypoints;
+    public Transform[] typingWaypoints;
+    public Transform[] watchingWaypoints;
+    public Transform[] phoneWaypoints;
     public Transform[] idleWaypoints;
 
     [Header("Movement")]
@@ -41,20 +45,24 @@ public class UserEntity : MonoBehaviour
     public BehaviorItem[] behaviorItems;
 
     [Header("Animator state names")]
-    public string stateIdle    = "Idle";
-    public string stateWalk    = "Walk";
-    public string stateDrink   = "Drink";
-    public string stateLaying  = "Laying";
-    public string stateReading = "Reading";
-    public string stateTyping  = "Typing";
-    public string stateNodding = "Nodding";
+    public string stateIdle     = "Standing";
+    public string stateWalk     = "Walking";
+    public string stateDrink    = "Drinking";
+    public string stateLaying   = "Laying";
+    public string stateReading  = "Reading";
+    public string stateTyping   = "Typing";
+    public string stateWatching = "Watching";
+    public string statePhone    = "PhoneUse";
+    public string stateNodding  = "Nodding";
 
-    public string currentActivity { get; private set; } = "Idle";
-    public bool   IsBusy          { get; private set; } = false;
+    public string currentActivity      { get; private set; } = "Idle";
+    public bool   IsBusy               { get; private set; } = false;
+    public string lastAssignedActivity = "";
+
     public Vector3 GetAimPosition() => transform.position + Vector3.up * 1.2f;
 
     Animator anim;
-    bool isSitting = false;
+    bool     isSitting = false;
 
     void Start()
     {
@@ -62,10 +70,8 @@ public class UserEntity : MonoBehaviour
         if (behaviorItems != null)
             foreach (var bi in behaviorItems)
             {
-                if (bi.item != null)
-                    bi.item.SetActive(false);
-                if (bi.sceneCounterpart != null)
-                    bi.sceneCounterpart.SetActive(true);
+                if (bi.item != null)           bi.item.SetActive(false);
+                if (bi.sceneCounterpart != null) bi.sceneCounterpart.SetActive(true);
             }
         PlayAnim(stateIdle);
     }
@@ -77,17 +83,13 @@ public class UserEntity : MonoBehaviour
 
         switch (activity.ToLower())
         {
-            case "drink":
-                yield return StartCoroutine(DoDrink());   break;
-            case "sit":
-            case "laying":
-                yield return StartCoroutine(DoLaying());  break;
-            case "reading":
-                yield return StartCoroutine(DoReading()); break;
-            case "typing":
-                yield return StartCoroutine(DoTyping());  break;
-            case "idle":
-                yield return StartCoroutine(DoReturnToIdle()); break;
+            case "drink":    yield return StartCoroutine(DoDrink());         break;
+            case "laying":   yield return StartCoroutine(DoLaying());        break;
+            case "reading":  yield return StartCoroutine(DoReading());       break;
+            case "typing":   yield return StartCoroutine(DoTyping());        break;
+            case "watching": yield return StartCoroutine(DoWatching());      break;
+            case "phoneuse": yield return StartCoroutine(DoPhoneUse());      break;
+            case "idle":     yield return StartCoroutine(DoReturnToIdle());  break;
             default:
                 Debug.LogWarning($"[{userID}] Unknown activity: {activity}");
                 break;
@@ -109,11 +111,13 @@ public class UserEntity : MonoBehaviour
         yield return new WaitForSeconds(noddingDuration);
         PlayAnim(currentActivity switch
         {
-            "Drink"   => stateDrink,
-            "Laying"  => stateLaying,
-            "Reading" => stateReading,
-            "Typing"  => stateTyping,
-            _         => stateIdle
+            "Drink"    => stateDrink,
+            "Laying"   => stateLaying,
+            "Reading"  => stateReading,
+            "Typing"   => stateTyping,
+            "Watching" => stateWatching,
+            "PhoneUse" => statePhone,
+            _          => stateIdle
         });
     }
 
@@ -160,6 +164,27 @@ public class UserEntity : MonoBehaviour
         TeleportToSeat(typingSpot);
         SetActivity("Typing");
         PlayAnim(stateTyping);
+    }
+
+    IEnumerator DoWatching()
+    {
+        if (watchingSpot == null) { Warn("watchingSpot"); yield break; }
+        SetActivity("Walking");
+        yield return StartCoroutine(WalkVia(GetApproachPos(watchingSpot), watchingWaypoints));
+        yield return StartCoroutine(SmoothRotateTo(watchingSpot.forward));
+        TeleportToSeat(watchingSpot);
+        SetActivity("Watching");
+        PlayAnim(stateWatching);
+    }
+
+    IEnumerator DoPhoneUse()
+    {
+        if (phoneSpot == null) { Warn("phoneSpot"); yield break; }
+        SetActivity("Walking");
+        yield return StartCoroutine(WalkVia(phoneSpot.position, phoneWaypoints));
+        yield return StartCoroutine(SmoothRotateTo(phoneSpot.forward));
+        SetActivity("PhoneUse");
+        PlayAnim(statePhone);
     }
 
     IEnumerator DoReturnToIdle()
@@ -224,10 +249,10 @@ public class UserEntity : MonoBehaviour
         transform.rotation = tgt;
     }
 
-    void TeleportToSeat(Transform targetSpot)
+    void TeleportToSeat(Transform spot)
     {
-        transform.position = targetSpot.position;
-        transform.rotation = targetSpot.rotation;
+        transform.position = spot.position;
+        transform.rotation = spot.rotation;
         isSitting = true;
     }
 
@@ -242,17 +267,11 @@ public class UserEntity : MonoBehaviour
     {
         currentActivity = a;
         if (behaviorItems == null) return;
-
         foreach (var bi in behaviorItems)
         {
             if (bi.item == null) continue;
-
-            bool active = string.Equals(
-                bi.activity, a,
-                System.StringComparison.OrdinalIgnoreCase);
-
+            bool active = string.Equals(bi.activity, a, System.StringComparison.OrdinalIgnoreCase);
             bi.item.SetActive(active);
-
             if (bi.sceneCounterpart != null)
                 bi.sceneCounterpart.SetActive(!active);
         }
@@ -263,19 +282,23 @@ public class UserEntity : MonoBehaviour
 
     void OnDrawGizmos()
     {
-        DrawSpot(drinkSpot,   Color.yellow, "Drink");
-        DrawSpot(layingSpot,  Color.green,  "Laying");
-        DrawSpot(readingSpot, Color.blue,   "Reading");
-        DrawSpot(typingSpot,  Color.red,    "Typing");
+        DrawSpot(drinkSpot,    Color.yellow,  "Drink");
+        DrawSpot(layingSpot,   Color.green,   "Laying");
+        DrawSpot(readingSpot,  Color.blue,    "Reading");
+        DrawSpot(typingSpot,   Color.red,     "Typing");
+        DrawSpot(watchingSpot, Color.cyan,    "Watching");
+        DrawSpot(phoneSpot,    Color.magenta, "PhoneUse");
         if (idleSpot != null)
         {
             Gizmos.color = Color.white;
             Gizmos.DrawWireSphere(idleSpot.position, 0.15f);
         }
-        DrawWaypointPath(drinkWaypoints,   drinkSpot,   Color.yellow);
-        DrawWaypointPath(layingWaypoints,  layingSpot,  Color.green);
-        DrawWaypointPath(readingWaypoints, readingSpot, Color.blue);
-        DrawWaypointPath(typingWaypoints,  typingSpot,  Color.red);
+        DrawWaypointPath(drinkWaypoints,    drinkSpot,    Color.yellow);
+        DrawWaypointPath(layingWaypoints,   layingSpot,   Color.green);
+        DrawWaypointPath(readingWaypoints,  readingSpot,  Color.blue);
+        DrawWaypointPath(typingWaypoints,   typingSpot,   Color.red);
+        DrawWaypointPath(watchingWaypoints, watchingSpot, Color.cyan);
+        DrawWaypointPath(phoneWaypoints,    phoneSpot,    Color.magenta);
     }
 
     void DrawSpot(Transform spot, Color c, string label)
