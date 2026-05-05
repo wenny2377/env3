@@ -93,7 +93,7 @@ public class DemoController : MonoBehaviour
         {
             userMom.gameObject.SetActive(true);
             if (!userMom.IsBusy)
-                yield return StartCoroutine(userMom.SwitchActivity("sit"));
+                yield return StartCoroutine(userMom.SwitchActivity("Watching"));
         }
 
         yield return new WaitForSeconds(1.5f);
@@ -169,7 +169,7 @@ public class DemoController : MonoBehaviour
             _guiStatus = $"User_Mom: Drink ({i + 1}/{observeActionsCount})";
             yield return StartCoroutine(userMom.SwitchActivity("Drink"));
             yield return new WaitForSeconds(observeWaitPerAction);
-            yield return StartCoroutine(userMom.ReturnToIdle());
+            yield return StartCoroutine(userMom.ReturnToStanding());
             yield return new WaitForSeconds(1f);
         }
 
@@ -183,7 +183,7 @@ public class DemoController : MonoBehaviour
             _guiStatus = $"User_Dad: Typing ({i + 1}/{observeActionsCount})";
             yield return StartCoroutine(userDad.SwitchActivity("Typing"));
             yield return new WaitForSeconds(observeWaitPerAction);
-            yield return StartCoroutine(userDad.ReturnToIdle());
+            yield return StartCoroutine(userDad.ReturnToStanding());
             yield return new WaitForSeconds(1f);
         }
 
@@ -194,7 +194,7 @@ public class DemoController : MonoBehaviour
         if (userMom != null)
         {
             userMom.gameObject.SetActive(true);
-            yield return StartCoroutine(userMom.SwitchActivity("sit"));
+            yield return StartCoroutine(userMom.SwitchActivity("Watching"));
         }
 
         _guiStatus = "Observation complete.";
@@ -213,7 +213,7 @@ public class DemoController : MonoBehaviour
         {
             target.gameObject.SetActive(true);
             if (!target.IsBusy)
-                yield return StartCoroutine(target.SwitchActivity("sit"));
+                yield return StartCoroutine(target.SwitchActivity("Watching"));
         }
 
         yield return new WaitForSeconds(1.5f);

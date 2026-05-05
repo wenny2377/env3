@@ -152,6 +152,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 204572559}
+  - {fileID: 1850975579}
   - {fileID: 283813366}
   - {fileID: 1138881478}
   - {fileID: 1191752966}
@@ -184,7 +185,7 @@ Transform:
   m_GameObject: {fileID: 21884939}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.7071068, z: -0, w: 0.7071068}
-  m_LocalPosition: {x: 2.816, y: 0, z: 2.64}
+  m_LocalPosition: {x: 1.054, y: 0, z: 2.64}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1026,7 +1027,7 @@ GameObject:
   m_Component:
   - component: {fileID: 204572559}
   m_Layer: 0
-  m_Name: 'Dad_Idle Spot '
+  m_Name: 'Standing Spot '
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1617,15 +1618,14 @@ MonoBehaviour:
   typingSpot: {fileID: 283813366}
   watchingSpot: {fileID: 0}
   phoneSpot: {fileID: 0}
-  idleSpot: {fileID: 204572559}
+  standingSpot: {fileID: 204572559}
   drinkWaypoints: []
   layingWaypoints: []
   readingWaypoints: []
   typingWaypoints: []
   watchingWaypoints: []
   phoneWaypoints: []
-  idleWaypoints:
-  - {fileID: 1138881478}
+  standingWaypoints: []
   walkSpeed: 1.4
   arrivalThreshold: 0.08
   rotationSpeed: 8
@@ -1634,7 +1634,7 @@ MonoBehaviour:
   - activity: Drink
     item: {fileID: 651223593}
     sceneCounterpart: {fileID: 0}
-  stateIdle: Standing
+  stateStanding: Standing
   stateWalk: Walking
   stateDrink: Drinking
   stateLaying: Laying
@@ -2916,7 +2916,7 @@ Transform:
   m_GameObject: {fileID: 886232080}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.7071068, z: -0, w: 0.7071068}
-  m_LocalPosition: {x: 3.02, y: 0.841, z: 3.21}
+  m_LocalPosition: {x: 3.604, y: 0.841, z: 3.231}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -6274,15 +6274,16 @@ MonoBehaviour:
   typingSpot: {fileID: 0}
   watchingSpot: {fileID: 2067145566}
   phoneSpot: {fileID: 0}
-  idleSpot: {fileID: 886232081}
+  standingSpot: {fileID: 1844501487}
   drinkWaypoints:
   - {fileID: 21884940}
+  - {fileID: 1957235494}
   layingWaypoints: []
   readingWaypoints: []
   typingWaypoints: []
   watchingWaypoints: []
   phoneWaypoints: []
-  idleWaypoints: []
+  standingWaypoints: []
   walkSpeed: 1.4
   arrivalThreshold: 0.08
   rotationSpeed: 8
@@ -6297,7 +6298,7 @@ MonoBehaviour:
   - activity: Watching
     item: {fileID: 1098631709}
     sceneCounterpart: {fileID: 0}
-  stateIdle: Standing
+  stateStanding: Standing
   stateWalk: Walking
   stateDrink: Drinking
   stateLaying: Laying
@@ -7828,6 +7829,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1565739702}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1844501486
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1844501487}
+  m_Layer: 0
+  m_Name: 'Standing Spot '
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1844501487
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1844501486}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: 0.6809261, z: -0, w: 0.73235214}
+  m_LocalPosition: {x: 3.41, y: 0, z: 3.49}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1937520298}
+  m_LocalEulerAnglesHint: {x: 0, y: 85.832, z: 0}
 --- !u!1001 &1848846353
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -7889,6 +7921,37 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 6a26a8189ff45e2f396995417da6dfe9, type: 3}
+--- !u!1 &1850975578
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1850975579}
+  m_Layer: 0
+  m_Name: 'phone Spot  '
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1850975579
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1850975578}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: 0.64805776, z: -0, w: -0.7615912}
+  m_LocalPosition: {x: 4.84, y: 1.31, z: -0.39}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 21519209}
+  m_LocalEulerAnglesHint: {x: 0, y: 279.20898, z: 0}
 --- !u!1 &1871381806
 GameObject:
   m_ObjectHideFlags: 0
@@ -8338,7 +8401,9 @@ Transform:
   - {fileID: 2067145566}
   - {fileID: 1944779873}
   - {fileID: 836976212}
+  - {fileID: 1844501487}
   - {fileID: 21884940}
+  - {fileID: 1957235494}
   - {fileID: 322112114}
   - {fileID: 1623849907}
   - {fileID: 886232081}
@@ -8375,6 +8440,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1937520298}
   m_LocalEulerAnglesHint: {x: 12, y: 0, z: 0}
+--- !u!1 &1957235493
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1957235494}
+  m_Layer: 0
+  m_Name: Drink way2
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1957235494
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1957235493}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: 0.7071068, z: -0, w: 0.7071068}
+  m_LocalPosition: {x: 2.598, y: -0.195, z: 2.64}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1937520298}
+  m_LocalEulerAnglesHint: {x: 0, y: 90, z: 0}
 --- !u!1 &1967468807
 GameObject:
   m_ObjectHideFlags: 0

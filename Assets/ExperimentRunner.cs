@@ -58,8 +58,8 @@ public class ExperimentRunner : MonoBehaviour
     public static int  CurrentVirtualDay = 1;
     public static bool UseVirtualDay     = false;
 
-    static readonly string[] MomNoiseBehaviors = { "Idle" };
-    static readonly string[] DadNoiseBehaviors = { "Idle" };
+    static readonly string[] MomNoiseBehaviors = { "Standing" };
+    static readonly string[] DadNoiseBehaviors = { "Standing" };
 
     static readonly string[] MomBehaviors = { "Drink", "Laying", "Reading", "Watching" };
     static readonly string[] DadBehaviors = { "Drink", "Laying", "Typing",  "PhoneUse" };
@@ -319,7 +319,7 @@ public class ExperimentRunner : MonoBehaviour
         user.lastAssignedActivity = noise;
         yield return StartCoroutine(user.SwitchActivity(noise));
         yield return new WaitForSeconds(waitAfterCapture);
-        yield return StartCoroutine(user.ReturnToIdle());
+        yield return StartCoroutine(user.ReturnToStanding());
         user.lastAssignedActivity = "";
 
         if (other != null) other.gameObject.SetActive(true);
@@ -372,7 +372,7 @@ public class ExperimentRunner : MonoBehaviour
         yield return StartCoroutine(targetUser.SwitchActivity(behavior));
 
         yield return new WaitForSeconds(waitAfterCapture);
-        yield return StartCoroutine(targetUser.ReturnToIdle());
+        yield return StartCoroutine(targetUser.ReturnToStanding());
         targetUser.lastAssignedActivity = "";
 
         if (other != null) other.gameObject.SetActive(true);

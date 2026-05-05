@@ -22,7 +22,7 @@ public class UserEntity : MonoBehaviour
     public Transform typingSpot;
     public Transform watchingSpot;
     public Transform phoneSpot;
-    public Transform idleSpot;
+    public Transform standingSpot;
 
     [Header("Waypoints")]
     public Transform[] drinkWaypoints;
@@ -31,7 +31,7 @@ public class UserEntity : MonoBehaviour
     public Transform[] typingWaypoints;
     public Transform[] watchingWaypoints;
     public Transform[] phoneWaypoints;
-    public Transform[] idleWaypoints;
+    public Transform[] standingWaypoints;
 
     [Header("Movement")]
     public float walkSpeed        = 1.4f;
@@ -45,7 +45,7 @@ public class UserEntity : MonoBehaviour
     public BehaviorItem[] behaviorItems;
 
     [Header("Animator state names")]
-    public string stateIdle     = "Standing";
+    public string stateStanding = "Standing";
     public string stateWalk     = "Walking";
     public string stateDrink    = "Drinking";
     public string stateLaying   = "Laying";
@@ -55,7 +55,7 @@ public class UserEntity : MonoBehaviour
     public string statePhone    = "PhoneUse";
     public string stateNodding  = "Nodding";
 
-    public string currentActivity      { get; private set; } = "Idle";
+    public string currentActivity      { get; private set; } = "Standing";
     public bool   IsBusy               { get; private set; } = false;
     public string lastAssignedActivity = "";
 
@@ -73,7 +73,13 @@ public class UserEntity : MonoBehaviour
                 if (bi.item != null)           bi.item.SetActive(false);
                 if (bi.sceneCounterpart != null) bi.sceneCounterpart.SetActive(true);
             }
-        PlayAnim(stateIdle);
+        StartCoroutine(InitAnim());
+    }
+
+    IEnumerator InitAnim()
+    {
+        yield return null;
+        PlayAnim(stateStanding);
     }
 
     public IEnumerator SwitchActivity(string activity)
@@ -83,13 +89,13 @@ public class UserEntity : MonoBehaviour
 
         switch (activity.ToLower())
         {
-            case "drink":    yield return StartCoroutine(DoDrink());         break;
-            case "laying":   yield return StartCoroutine(DoLaying());        break;
-            case "reading":  yield return StartCoroutine(DoReading());       break;
-            case "typing":   yield return StartCoroutine(DoTyping());        break;
-            case "watching": yield return StartCoroutine(DoWatching());      break;
-            case "phoneuse": yield return StartCoroutine(DoPhoneUse());      break;
-            case "idle":     yield return StartCoroutine(DoReturnToIdle());  break;
+            case "drink":    yield return StartCoroutine(DoDrink());            break;
+            case "laying":   yield return StartCoroutine(DoLaying());           break;
+            case "reading":  yield return StartCoroutine(DoReading());          break;
+            case "typing":   yield return StartCoroutine(DoTyping());           break;
+            case "watching": yield return StartCoroutine(DoWatching());         break;
+            case "phoneuse": yield return StartCoroutine(DoPhoneUse());         break;
+            case "standing": yield return StartCoroutine(DoReturnToStanding()); break;
             default:
                 Debug.LogWarning($"[{userID}] Unknown activity: {activity}");
                 break;
@@ -98,10 +104,10 @@ public class UserEntity : MonoBehaviour
         IsBusy = false;
     }
 
-    public IEnumerator ReturnToIdle()
+    public IEnumerator ReturnToStanding()
     {
         IsBusy = true;
-        yield return StartCoroutine(DoReturnToIdle());
+        yield return StartCoroutine(DoReturnToStanding());
         IsBusy = false;
     }
 
@@ -117,7 +123,7 @@ public class UserEntity : MonoBehaviour
             "Typing"   => stateTyping,
             "Watching" => stateWatching,
             "PhoneUse" => statePhone,
-            _          => stateIdle
+            _          => stateStanding
         });
     }
 
@@ -187,22 +193,22 @@ public class UserEntity : MonoBehaviour
         PlayAnim(statePhone);
     }
 
-    IEnumerator DoReturnToIdle()
+    IEnumerator DoReturnToStanding()
     {
         if (isSitting)
         {
-            PlayAnim(stateIdle);
+            PlayAnim(stateStanding);
             Vector3 p = transform.position; p.y = 0f;
             transform.position = p;
             isSitting = false;
         }
-        if (idleSpot != null)
+        if (standingSpot != null)
         {
             SetActivity("Walking");
-            yield return StartCoroutine(WalkVia(idleSpot.position, idleWaypoints));
+            yield return StartCoroutine(WalkVia(standingSpot.position, standingWaypoints));
         }
-        SetActivity("Idle");
-        PlayAnim(stateIdle);
+        SetActivity("Standing");
+        PlayAnim(stateStanding);
     }
 
     IEnumerator WalkVia(Vector3 target, Transform[] wps)
@@ -277,8 +283,15 @@ public class UserEntity : MonoBehaviour
         }
     }
 
-    void PlayAnim(string s) => anim.Play(s, 0, 0f);
-    void Warn(string s)     => Debug.LogWarning($"[{userID}] {s} not set");
+    void PlayAnim(string s)
+    {
+        int hash = Animator.StringToHash(s);
+        if (anim.HasState(0, hash))
+            anim.Play(hash, 0, 0f);
+        else
+            Debug.LogWarning($"[{userID}] Animator state '{s}' NOT FOUND — check Animator Controller");
+    }
+    void Warn(string s) => Debug.LogWarning($"[{userID}] {s} not set");
 
     void OnDrawGizmos()
     {
@@ -288,10 +301,10 @@ public class UserEntity : MonoBehaviour
         DrawSpot(typingSpot,   Color.red,     "Typing");
         DrawSpot(watchingSpot, Color.cyan,    "Watching");
         DrawSpot(phoneSpot,    Color.magenta, "PhoneUse");
-        if (idleSpot != null)
+        if (standingSpot != null)
         {
             Gizmos.color = Color.white;
-            Gizmos.DrawWireSphere(idleSpot.position, 0.15f);
+            Gizmos.DrawWireSphere(standingSpot.position, 0.15f);
         }
         DrawWaypointPath(drinkWaypoints,    drinkSpot,    Color.yellow);
         DrawWaypointPath(layingWaypoints,   layingSpot,   Color.green);
@@ -314,9 +327,9 @@ public class UserEntity : MonoBehaviour
 
     void DrawWaypointPath(Transform[] wps, Transform final, Color c)
     {
-        if (wps == null || wps.Length == 0 || idleSpot == null) return;
+        if (wps == null || wps.Length == 0 || standingSpot == null) return;
         Gizmos.color = new Color(c.r, c.g, c.b, 0.4f);
-        Vector3 prev = idleSpot.position;
+        Vector3 prev = standingSpot.position;
         foreach (var wp in wps)
         {
             if (wp != null) { Gizmos.DrawLine(prev, wp.position); prev = wp.position; }
