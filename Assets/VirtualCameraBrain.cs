@@ -5,9 +5,6 @@ using UnityEngine.Networking;
 
 public class VirtualCameraBrain : MonoBehaviour
 {
-    [Header("Main Camera (Required)")]
-    public Camera mainCamera;
-
     [Header("Flask Endpoint")]
     public string predictUrl = "http://127.0.0.1:5000/predict";
 
@@ -15,84 +12,52 @@ public class VirtualCameraBrain : MonoBehaviour
     [Range(1, 4)]
     public int topN = 2;
 
-    [Header("Frames to Wait Before Each Capture")]
-    [Range(1, 4)]
-    public int captureWaitFrames = 2;
-
     [Header("Capture Resolution (Square)")]
     public int renderWidth  = 512;
     public int renderHeight = 512;
 
-    [Header("Restore Camera After Capture")]
-    public bool restoreCamera = true;
-
-    float      virtualHour   = -1f;
-    Vector3    originalPos;
-    Quaternion originalRot;
-    bool       originalSaved = false;
-
-    // ── 虛擬天日期換算 ─────────────────────────────────────────────────
-    // 第一次收到 virtual_day=1 時記錄當天真實日期作為基準
-    // 之後 virtual_day=N 換算成 基準日期 + (N-1) 天
-    // 這樣 last_date 格式統一為 "YYYY-MM-DD"，不會和 weight 搞混
+    // ── Virtual day tracking ─────────────────────────────────────
     static System.DateTime? experimentBaseDate = null;
 
     static string VirtualDayToDateString(int virtualDay)
     {
         if (experimentBaseDate == null)
             experimentBaseDate = System.DateTime.Today;
-        
         return experimentBaseDate.Value
             .AddDays(virtualDay - 1)
             .ToString("yyyy-MM-dd");
     }
 
-    // 重置基準日期（resetall 時呼叫）
     public static void ResetBaseDate()
     {
         experimentBaseDate = null;
-        Debug.Log("[VirtualDay] Base date reset.");
+        Debug.Log("[VCB] Base date reset.");
     }
+
+    float virtualHour = -1f;
+    public void SetVirtualHour(float hour) => virtualHour = hour;
 
     void Start()
     {
-        if (mainCamera == null)
-            mainCamera = Camera.main;
-
-        if (mainCamera == null)
-        {
-            Debug.LogError("[VirtualCameraBrain] mainCamera not found.");
-            return;
-        }
-
-        originalPos   = mainCamera.transform.position;
-        originalRot   = mainCamera.transform.rotation;
-        originalSaved = true;
-
-        Debug.Log($"[VirtualCameraBrain] Initialized | topN={topN} | " +
-                  $"captureWaitFrames={captureWaitFrames} | " +
-                  $"resolution={renderWidth}x{renderHeight}");
+        Debug.Log(
+            $"[VCB] Initialized | topN={topN} | " +
+            $"resolution={renderWidth}x{renderHeight} | " +
+            $"mode=OffScreen per-node Camera");
     }
 
-    public void SetVirtualHour(float hour) => virtualHour = hour;
-
+    // ── Main capture entry point ─────────────────────────────────
     public IEnumerator ExecuteMultiCapture(
         UserEntity       user,
         List<CameraNode> sortedNodes,
         string           activity)
     {
-        Debug.Log($"[VCB] ExecuteMultiCapture | user={user.userID} | " +
-                  $"activity={activity} | nodes={sortedNodes.Count}");
-
-        if (mainCamera == null)
-        {
-            Debug.LogError("[VirtualCameraBrain] mainCamera is null");
-            yield break;
-        }
+        Debug.Log(
+            $"[VCB] ExecuteMultiCapture | user={user.userID} | " +
+            $"activity={activity} | nodes={sortedNodes.Count}");
 
         if (sortedNodes == null || sortedNodes.Count == 0)
         {
-            Debug.LogWarning("[VirtualCameraBrain] sortedNodes is empty");
+            Debug.LogWarning("[VCB] sortedNodes is empty");
             yield break;
         }
 
@@ -106,41 +71,74 @@ public class VirtualCameraBrain : MonoBehaviour
         {
             CameraNode node = sortedNodes[i];
 
-            mainCamera.transform.position = node.transform.position;
-            mainCamera.transform.rotation = node.transform.rotation;
+            // ── Find the Camera child component ──────────────────
+            // Camera is a disabled child of CameraNode
+            Camera nodeCam =
+                node.GetComponentInChildren<Camera>(
+                    includeInactive: true);
 
-            for (int f = 0; f < captureWaitFrames; f++)
-                yield return new WaitForEndOfFrame();
+            if (nodeCam == null)
+            {
+                Debug.LogWarning(
+                    $"[VCB] No Camera found under node " +
+                    $"'{node.nodeName}'. " +
+                    $"Add a disabled Camera child to this CameraNode.");
+                continue;
+            }
 
-            RenderTexture rt = new RenderTexture(renderWidth, renderHeight, 24);
-            mainCamera.targetTexture = rt;
-            mainCamera.Render();
+            // ── Sync FOV from CameraNode setting ─────────────────
+            nodeCam.fieldOfView = node.fieldOfView;
 
+            // ── Off-screen render ─────────────────────────────────
+            RenderTexture rt = new RenderTexture(
+                renderWidth, renderHeight, 24);
+
+            nodeCam.targetTexture = rt;
+            nodeCam.enabled       = true;
+            nodeCam.Render();
+            nodeCam.enabled       = false;
+            nodeCam.targetTexture = null;
+
+            // ── Read pixels ───────────────────────────────────────
             RenderTexture.active = rt;
-            var tex = new Texture2D(renderWidth, renderHeight,
-                                    TextureFormat.RGB24, false);
-            tex.ReadPixels(new Rect(0, 0, renderWidth, renderHeight), 0, 0);
+            var tex = new Texture2D(
+                renderWidth, renderHeight,
+                TextureFormat.RGB24, false);
+            tex.ReadPixels(
+                new Rect(0, 0, renderWidth, renderHeight), 0, 0);
             tex.Apply();
             RenderTexture.active = null;
 
-            imageList.Add(System.Convert.ToBase64String(tex.EncodeToPNG()));
+            imageList.Add(
+                System.Convert.ToBase64String(tex.EncodeToPNG()));
             nodeNames.Add(node.nodeName);
             nodeScores.Add(node.lastScore);
 
-            mainCamera.targetTexture = null;
             Destroy(rt);
             Destroy(tex);
 
-            Debug.Log($"[VirtualCameraBrain] [{i + 1}/{captureCount}] " +
-                      $"node={node.nodeName} score={node.lastScore:F2}");
+            Debug.Log(
+                $"[VCB] [{i + 1}/{captureCount}] " +
+                $"node={node.nodeName} " +
+                $"score={node.lastScore:F2} " +
+                $"fov={node.fieldOfView} " +
+                $"(off-screen)");
+
+            // One frame between captures
+            yield return null;
         }
 
-        if (restoreCamera && originalSaved)
+        if (imageList.Count == 0)
         {
-            mainCamera.transform.position = originalPos;
-            mainCamera.transform.rotation = originalRot;
+            Debug.LogWarning(
+                $"[VCB] No images captured for " +
+                $"{user.userID} | {activity}. " +
+                $"Check that each CameraNode has a " +
+                $"disabled Camera child.");
+            yield break;
         }
 
+        // POST is fire-and-forget after capture finishes
         StartCoroutine(PostMultiImage(
             user, activity, imageList, nodeNames, nodeScores));
     }
@@ -150,9 +148,12 @@ public class VirtualCameraBrain : MonoBehaviour
     {
         yield return StartCoroutine(
             ExecuteMultiCapture(
-                user, new List<CameraNode> { camNode }, activity));
+                user,
+                new List<CameraNode> { camNode },
+                activity));
     }
 
+    // ── POST to Flask /predict ───────────────────────────────────
     IEnumerator PostMultiImage(
         UserEntity   user,
         string       activity,
@@ -164,6 +165,8 @@ public class VirtualCameraBrain : MonoBehaviour
             ? virtualHour
             : (float)System.DateTime.Now.Hour;
 
+        // Extract room from first node name
+        // e.g. "Kitchen_Cam1" → "Kitchen"
         string roomName = "";
         if (nodeNames.Count > 0)
         {
@@ -173,20 +176,21 @@ public class VirtualCameraBrain : MonoBehaviour
                 : nodeNames[0];
         }
 
-
         string virtualDayField = "";
         if (ExperimentRunner.UseVirtualDay)
         {
             string dateStr = VirtualDayToDateString(
                 ExperimentRunner.CurrentVirtualDay);
-            virtualDayField = $"\"virtual_day\":\"{dateStr}\",";
+            virtualDayField =
+                $"\"virtual_day\":\"{dateStr}\",";
         }
 
         string json = "{"
             + $"\"userID\":\"{Esc(user.userID)}\","
             + $"\"activity\":\"{Esc(activity)}\","
             + $"\"room_name\":\"{Esc(roomName)}\","
-            + $"\"virtual_hour\":{hour.ToString("F1", InvCulture)},"
+            + $"\"virtual_hour\":"
+            + $"{hour.ToString("F1", InvCulture)},"
             + virtualDayField
             + $"\"image_count\":{imageList.Count},"
             + $"\"image_list\":{StrArrayJson(imageList)},"
@@ -195,7 +199,8 @@ public class VirtualCameraBrain : MonoBehaviour
             + "}";
 
         using var req = new UnityWebRequest(predictUrl, "POST");
-        byte[] body = System.Text.Encoding.UTF8.GetBytes(json);
+        byte[] body =
+            System.Text.Encoding.UTF8.GetBytes(json);
         req.uploadHandler   = new UploadHandlerRaw(body);
         req.downloadHandler = new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
@@ -208,17 +213,20 @@ public class VirtualCameraBrain : MonoBehaviour
             string dayLog = ExperimentRunner.UseVirtualDay
                 ? $" day={VirtualDayToDateString(ExperimentRunner.CurrentVirtualDay)}"
                 : "";
-            Debug.Log($"[VirtualCameraBrain] POST ok | {user.userID} | " +
-                      $"{activity} | {imageList.Count} img | " +
-                      $"hour={hour}{dayLog}");
+            Debug.Log(
+                $"[VCB] POST ok | {user.userID} | " +
+                $"{activity} | {imageList.Count} img | " +
+                $"hour={hour}{dayLog}");
         }
         else
         {
             Debug.LogWarning(
-                $"[VirtualCameraBrain] POST failed: {req.error}");
+                $"[VCB] POST failed: {req.error} | " +
+                $"{user.userID} | {activity}");
         }
     }
 
+    // ── String helpers ───────────────────────────────────────────
     static readonly System.Globalization.CultureInfo InvCulture =
         System.Globalization.CultureInfo.InvariantCulture;
 
