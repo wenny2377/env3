@@ -707,6 +707,37 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
+--- !u!1 &109469914
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 109469915}
+  m_Layer: 0
+  m_Name: 'Openinging Spot  '
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &109469915
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 109469914}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0.10452846, y: 0, z: 0, w: 0.9945219}
+  m_LocalPosition: {x: 0.87, y: -0.35, z: 5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1937520298}
+  m_LocalEulerAnglesHint: {x: 12, y: 0, z: 0}
 --- !u!1 &114034326
 GameObject:
   m_ObjectHideFlags: 0
@@ -1126,7 +1157,7 @@ Transform:
   m_GameObject: {fileID: 204572558}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
-  m_LocalPosition: {x: 1.18, y: 1.31, z: 1.52}
+  m_LocalPosition: {x: 1.18, y: 0.111, z: 1.52}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1551,7 +1582,7 @@ GameObject:
   m_Component:
   - component: {fileID: 322112114}
   m_Layer: 0
-  m_Name: Mom_Sitting Spot
+  m_Name: Sitting Spot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1781,18 +1812,37 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   userID: User_Dad
   drinkSpot: {fileID: 1191752966}
+  sittingDrinkSpot: {fileID: 1850975579}
+  eatSpot: {fileID: 1850975579}
+  cookSpot: {fileID: 283813366}
+  openSpot: {fileID: 1850975579}
   layingSpot: {fileID: 175477716}
-  readingSpot: {fileID: 0}
-  typingSpot: {fileID: 283813366}
-  watchingSpot: {fileID: 0}
+  watchingSpot: {fileID: 1850975579}
+  readingSpot: {fileID: 1850975579}
+  cleanSpot: {fileID: 1850975579}
   phoneSpot: {fileID: 1850975579}
+  typingSpot: {fileID: 283813366}
+  dadReadingSpot: {fileID: 283813366}
+  dadPhoneSpot: {fileID: 1850975579}
+  dadCleanSpot: {fileID: 1850975579}
   standingSpot: {fileID: 204572559}
+  fridgeDoor: {fileID: 0}
+  fridgeOpenAngle: -90
+  fridgeOpenSpeed: 90
   drinkWaypoints: []
+  sittingDrinkWaypoints: []
+  eatWaypoints: []
+  cookWaypoints: []
+  openWaypoints: []
   layingWaypoints: []
-  readingWaypoints: []
-  typingWaypoints: []
   watchingWaypoints: []
+  readingWaypoints: []
+  cleanWaypoints: []
   phoneWaypoints: []
+  typingWaypoints: []
+  dadReadingWaypoints: []
+  dadPhoneWaypoints: []
+  dadCleanWaypoints: []
   standingWaypoints: []
   walkSpeed: 1.4
   arrivalThreshold: 0.08
@@ -1802,6 +1852,13 @@ MonoBehaviour:
   jitterRadius: 0.25
   backendUrl: http://localhost:5000
   noddingDuration: 1.5
+  drinkDuration: 2
+  eatDuration: 3
+  cookDuration: 3
+  openDuration: 2
+  cleanDuration: 3
+  pickUpDuration: 1
+  putDownDuration: 1
   behaviorItems:
   - activity: Drinking
     item: {fileID: 651223593}
@@ -1812,12 +1869,19 @@ MonoBehaviour:
   stateStanding: Standing
   stateWalk: Walking
   stateDrink: Drinking
+  stateSittingDrink: SittingDrink
   stateLaying: Laying
   stateReading: Reading
   stateTyping: Typing
   stateWatching: Watching
   statePhone: PhoneUse
   stateNodding: Nodding
+  stateEating: Eating
+  stateCooking: Cooking
+  stateCleaning: Cleaning
+  stateOpening: Opening
+  statePickingUp: PickingUp
+  statePuttingDown: PuttingDown
   lastAssignedActivity: 
   currentVirtualHour: -1
 --- !u!95 &426001003
@@ -2067,6 +2131,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &519770948
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 519770949}
+  m_Layer: 0
+  m_Name: 'Cleaning Spot   '
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &519770949
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 519770948}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0.10452846, y: 0, z: 0, w: 0.9945219}
+  m_LocalPosition: {x: 4.04, y: -0.35, z: 5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1937520298}
+  m_LocalEulerAnglesHint: {x: 12, y: 0, z: 0}
 --- !u!1 &527693430
 GameObject:
   m_ObjectHideFlags: 0
@@ -2295,6 +2390,37 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 04641a9be2dfff41b89b0e874cdc1ba3, type: 3}
   m_PrefabInstance: {fileID: 596908979}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &613033332
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 613033333}
+  m_Layer: 0
+  m_Name: 'PhoneUse Spot '
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &613033333
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 613033332}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: 0.7071068, z: -0, w: 0.7071068}
+  m_LocalPosition: {x: 4.08, y: 0.841, z: 4.03}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1937520298}
+  m_LocalEulerAnglesHint: {x: 0, y: 90, z: 0}
 --- !u!1 &628797318
 GameObject:
   m_ObjectHideFlags: 0
@@ -3212,7 +3338,7 @@ GameObject:
   m_Component:
   - component: {fileID: 836976212}
   m_Layer: 0
-  m_Name: Mom_Drink Spot
+  m_Name: Drinking Spot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3326,7 +3452,7 @@ GameObject:
   m_Component:
   - component: {fileID: 886232081}
   m_Layer: 0
-  m_Name: Mom_Idle Spot
+  m_Name: Sttanding Spot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3645,7 +3771,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   userMom: {fileID: 1464156698}
   userDad: {fileID: 426001001}
-  captureStates: Drinking,Watching,Typing,Reading,Laying,PhoneUse
+  captureStates: Drinking,Watching,Typing,Reading,Laying,PhoneUse,SittingDrink,Cooking,Opening
   defaultSettleTime: 0.4
   settleFrames: 2
   captureCooldown: 3
@@ -4370,6 +4496,22 @@ PrefabInstance:
     - target: {fileID: 107769818691643300, guid: c393ace4b60e4a0499625847c5e85698, type: 3}
       propertyPath: m_StaticEditorFlags
       value: 2147483647
+      objectReference: {fileID: 0}
+    - target: {fileID: 337148621836604265, guid: c393ace4b60e4a0499625847c5e85698, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 47.46715
+      objectReference: {fileID: 0}
+    - target: {fileID: 337148621836604265, guid: c393ace4b60e4a0499625847c5e85698, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 32.06353
+      objectReference: {fileID: 0}
+    - target: {fileID: 337148621836604265, guid: c393ace4b60e4a0499625847c5e85698, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 1.4591
+      objectReference: {fileID: 0}
+    - target: {fileID: 337148621836604265, guid: c393ace4b60e4a0499625847c5e85698, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 2.6624
       objectReference: {fileID: 0}
     - target: {fileID: 399666181948536385, guid: c393ace4b60e4a0499625847c5e85698, type: 3}
       propertyPath: m_StaticEditorFlags
@@ -5289,6 +5431,37 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 898728170716609665, guid: 2dd0c77bab35a7048a41bf224a521d77, type: 3}
   m_PrefabInstance: {fileID: 1160415677}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1120326899
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1120326900}
+  m_Layer: 0
+  m_Name: 'SittingDrink Spot '
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1120326900
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1120326899}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
+  m_LocalPosition: {x: 1.12, y: 0, z: 6.19}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1937520298}
+  m_LocalEulerAnglesHint: {x: 0, y: 90, z: 0}
 --- !u!1001 &1137564777
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -6441,6 +6614,37 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
+--- !u!1 &1321187781
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1321187782}
+  m_Layer: 0
+  m_Name: 'Eating Spot  '
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1321187782
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1321187781}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 3.1, y: 0, z: -1.8}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1937520298}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1333792319
 GameObject:
   m_ObjectHideFlags: 0
@@ -7112,27 +7316,46 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1464156696}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4a56d8e63d3695b449a93d3969e97ac1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   userID: User_Mom
   drinkSpot: {fileID: 836976212}
+  sittingDrinkSpot: {fileID: 1120326900}
+  eatSpot: {fileID: 1321187782}
+  cookSpot: {fileID: 1738125033}
+  openSpot: {fileID: 109469915}
   layingSpot: {fileID: 1944779873}
-  readingSpot: {fileID: 1919893029}
-  typingSpot: {fileID: 0}
   watchingSpot: {fileID: 2067145566}
-  phoneSpot: {fileID: 0}
+  readingSpot: {fileID: 1919893029}
+  cleanSpot: {fileID: 519770949}
+  phoneSpot: {fileID: 1623849907}
+  typingSpot: {fileID: 0}
+  dadReadingSpot: {fileID: 0}
+  dadPhoneSpot: {fileID: 0}
+  dadCleanSpot: {fileID: 0}
   standingSpot: {fileID: 1844501487}
+  fridgeDoor: {fileID: 1844501487}
+  fridgeOpenAngle: -90
+  fridgeOpenSpeed: 90
   drinkWaypoints:
   - {fileID: 21884940}
   - {fileID: 1957235494}
+  sittingDrinkWaypoints: []
+  eatWaypoints: []
+  cookWaypoints: []
+  openWaypoints: []
   layingWaypoints: []
-  readingWaypoints: []
-  typingWaypoints: []
   watchingWaypoints: []
+  readingWaypoints: []
+  cleanWaypoints: []
   phoneWaypoints: []
+  typingWaypoints: []
+  dadReadingWaypoints: []
+  dadPhoneWaypoints: []
+  dadCleanWaypoints: []
   standingWaypoints: []
   walkSpeed: 1.4
   arrivalThreshold: 0.08
@@ -7142,6 +7365,13 @@ MonoBehaviour:
   jitterRadius: 0.25
   backendUrl: http://localhost:5000
   noddingDuration: 1.5
+  drinkDuration: 2
+  eatDuration: 3
+  cookDuration: 3
+  openDuration: 2
+  cleanDuration: 3
+  pickUpDuration: 1
+  putDownDuration: 1
   behaviorItems:
   - activity: Drinking
     item: {fileID: 1983104184}
@@ -7155,12 +7385,19 @@ MonoBehaviour:
   stateStanding: Standing
   stateWalk: Walking
   stateDrink: Drinking
+  stateSittingDrink: SittingDrink
   stateLaying: Laying
   stateReading: Reading
   stateTyping: Typing
   stateWatching: Watching
   statePhone: PhoneUse
   stateNodding: Nodding
+  stateEating: Eating
+  stateCooking: Cooking
+  stateCleaning: Cleaning
+  stateOpening: Opening
+  statePickingUp: PickingUp
+  statePuttingDown: PuttingDown
   lastAssignedActivity: 
   currentVirtualHour: -1
 --- !u!95 &1464156700
@@ -8201,6 +8438,37 @@ MonoBehaviour:
   addNoiseEpisodes: 1
   noiseInterval: 10
   skipProbability: 0.2
+--- !u!1 &1738125032
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1738125033}
+  m_Layer: 0
+  m_Name: 'Cooking Spot '
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1738125033
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1738125032}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
+  m_LocalPosition: {x: 5.48, y: 0, z: -1.48}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1937520298}
+  m_LocalEulerAnglesHint: {x: 0, y: 90, z: 0}
 --- !u!1 &1767132911
 GameObject:
   m_ObjectHideFlags: 0
@@ -8805,7 +9073,7 @@ Transform:
   m_GameObject: {fileID: 1850975578}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.64805776, z: -0, w: -0.7615912}
-  m_LocalPosition: {x: 4.84, y: 1.31, z: -0.39}
+  m_LocalPosition: {x: 4.84, y: -0.045, z: -0.39}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -8893,8 +9161,8 @@ Transform:
   m_GameObject: {fileID: 1882815005}
   serializedVersion: 2
   m_LocalRotation: {x: -0.7071068, y: 0, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 2.042, y: 0.00999999, z: 1.0275037}
-  m_LocalScale: {x: 18.967905, y: 18.967905, z: 18.967905}
+  m_LocalPosition: {x: 2.042, y: 0.043228, z: 1.105}
+  m_LocalScale: {x: 18.967905, y: 18.967905, z: 23}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1812814142}
@@ -9222,7 +9490,7 @@ Transform:
   m_GameObject: {fileID: 1919893028}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.7071068, z: -0, w: 0.7071068}
-  m_LocalPosition: {x: 1.19, y: 0.12, z: 6.75}
+  m_LocalPosition: {x: 1.19, y: 0.12, z: 4.56}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -9258,15 +9526,21 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1919893029}
+  - {fileID: 1321187782}
   - {fileID: 2067145566}
   - {fileID: 1944779873}
+  - {fileID: 109469915}
+  - {fileID: 519770949}
   - {fileID: 836976212}
+  - {fileID: 1120326900}
+  - {fileID: 1738125033}
   - {fileID: 1844501487}
+  - {fileID: 613033333}
+  - {fileID: 886232081}
   - {fileID: 21884940}
   - {fileID: 1957235494}
   - {fileID: 322112114}
   - {fileID: 1623849907}
-  - {fileID: 886232081}
   m_Father: {fileID: 989247574}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1944779872
@@ -9555,7 +9829,7 @@ Transform:
   m_GameObject: {fileID: 2067145565}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.7071068, z: -0, w: 0.7071068}
-  m_LocalPosition: {x: 1.19, y: 0.12, z: 4.49}
+  m_LocalPosition: {x: 1.19, y: 0.12, z: 5.91}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
