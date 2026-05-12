@@ -8,6 +8,9 @@ public class TestModeRunner : MonoBehaviour
     public UserEntity userMom;
     public UserEntity userDad;
 
+    [Header("Follow Camera")]
+    public DemoFollowCamera followCamera;
+
     [Header("Test Settings")]
     public float actionHoldTime    = 2.0f;
     public float betweenActionTime = 0.5f;
@@ -32,11 +35,13 @@ public class TestModeRunner : MonoBehaviour
     void Start()
     {
         _user = userMom;
+        SetCameraTarget(_user);
+
         if (_user == null)
             Debug.LogError("[TestMode] userMom is not assigned!");
         else
             Debug.Log($"[TestMode] Ready | user={_user.userID} | " +
-                      $"Space=start Tab=switch Esc=stop");
+                      $"Space=start  Tab=switch  Esc=stop");
     }
 
     void Update()
@@ -45,6 +50,7 @@ public class TestModeRunner : MonoBehaviour
         {
             Stop();
             _user = (_user == userMom) ? userDad : userMom;
+            SetCameraTarget(_user);
             Debug.Log($"[TestMode] Switched to {_user?.userID}");
             return;
         }
@@ -73,6 +79,12 @@ public class TestModeRunner : MonoBehaviour
         }
     }
 
+    void SetCameraTarget(UserEntity user)
+    {
+        if (followCamera == null || user == null) return;
+        followCamera.target = user.transform;
+    }
+
     void Stop()
     {
         if (_routine != null)
@@ -94,7 +106,6 @@ public class TestModeRunner : MonoBehaviour
     {
         _running = true;
 
-        // Wait 2 frames for NavMeshAgent to fully initialize
         yield return null;
         yield return null;
 
@@ -110,16 +121,12 @@ public class TestModeRunner : MonoBehaviour
             _current = action;
 
             Debug.Log($"[TestMode] [{i+1}/{seq.Length}] {action} | " +
-                      $"pos={user.transform.position} | " +
                       $"IsBusy={user.IsBusy}");
 
             user.lastAssignedActivity = action;
             user.ResetBusy();
 
             yield return StartCoroutine(user.SwitchActivity(action));
-
-            Debug.Log($"[TestMode] [{i+1}/{seq.Length}] {action} done");
-
             yield return new WaitForSeconds(actionHoldTime);
 
             user.ResetBusy();

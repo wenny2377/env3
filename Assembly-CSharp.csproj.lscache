@@ -55,6 +55,7 @@ Assets/
  BehaviorDemoController.cs
  CameraNode.cs
  DemoController.cs
+ DemoFollowCamera.cs
  DynamicSyncManager.cs
  ExperimentRunner.cs
  Kevin Iglesias/Human Animations/Scripts/SpineProxy.cs
