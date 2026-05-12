@@ -16,9 +16,10 @@ public class StaticCameraManager : MonoBehaviour
     public UserEntity userMom;
     public UserEntity userDad;
 
-    // Core actions that trigger camera capture.
-    // Opening, PickingUp, PuttingDown, Walking, Standing
-    // are excluded — they are not evaluated by BG1.
+    // Only core habitual behaviors trigger capture.
+    // Opening, Walking, Standing are excluded:
+    //   - Opening is a transitional action, not a habit
+    //   - Walking and Standing carry no behavioral semantics
     [Header("Capture Target States (case-sensitive, comma-separated)")]
     public string captureStates =
         "Drinking,SittingDrink,Eating,Cooking,Laying," +
@@ -61,22 +62,13 @@ public class StaticCameraManager : MonoBehaviour
         Debug.Log($"[SCM] Started | captureStates=[{captureStates}]");
     }
 
-    // Press T to force-capture userMom (debug)
     void Update()
     {
         if (!Input.GetKeyDown(KeyCode.T)) return;
-        if (userMom == null)
-        {
-            Debug.LogWarning("[SCM-T] userMom is null");
-            return;
-        }
+        if (userMom == null) return;
         var cams = FindCamerasForUser(userMom);
-        if (cams == null || cams.Count == 0)
-        {
-            Debug.LogWarning("[SCM-T] No cameras found");
-            return;
-        }
-        Debug.Log("[SCM-T] Force capture: Drinking");
+        if (cams == null || cams.Count == 0) return;
+        Debug.Log("[SCM-T] Force capture userMom");
         StartCoroutine(CaptureWithBestNodes(userMom, "Drinking", cams));
     }
 
@@ -99,17 +91,18 @@ public class StaticCameraManager : MonoBehaviour
     }
 
     // ── Core scan loop ───────────────────────────────────────────
+    // Event-driven: triggers when currentActivity changes to a
+    // captureState. Settle time ensures animation is stable before
+    // capture. This matches real-world motion-detection triggering.
     IEnumerator SmartScanRoutine(UserEntity user)
     {
         string lastCaptured = "";
         float  cooldown     = 0f;
 
-        Debug.Log($"[SCM] SmartScanRoutine started for {user.userID}");
-
         while (true)
         {
-            string cur  = user.currentActivity;
-            cooldown   -= 0.1f;
+            string cur   = user.currentActivity;
+            cooldown    -= 0.1f;
 
             bool inSet      = captureStateSet.Contains(cur);
             bool isNew      = cur != lastCaptured;
@@ -120,21 +113,24 @@ public class StaticCameraManager : MonoBehaviour
                 lastCaptured = cur;
                 cooldown     = captureCooldown;
 
-                Debug.Log($"[SCM] {user.userID} | {cur} detected, " +
-                          $"settling {GetSettleTime(cur)}s...");
+                float settle = GetSettleTime(cur);
+                Debug.Log($"[SCM] {user.userID} | {cur} | " +
+                          $"settling {settle}s...");
 
-                yield return new WaitForSeconds(GetSettleTime(cur));
+                yield return new WaitForSeconds(settle);
                 for (int f = 0; f < settleFrames; f++)
                     yield return null;
 
+                // Confirm activity hasn't changed during settle
                 if (!captureStateSet.Contains(user.currentActivity))
                 {
-                    Debug.Log($"[SCM] {user.userID} | changed during settle, skip.");
+                    Debug.Log($"[SCM] {user.userID} | " +
+                              $"changed during settle, skip.");
                     yield return new WaitForSeconds(0.1f);
                     continue;
                 }
 
-                // Wait for any in-progress capture
+                // Wait for lock
                 float lockWait = 0f;
                 while (_isCapturing && lockWait < 15f)
                 {
@@ -143,7 +139,8 @@ public class StaticCameraManager : MonoBehaviour
                 }
                 if (_isCapturing)
                 {
-                    Debug.LogWarning($"[SCM] {user.userID} | lock timeout, skip.");
+                    Debug.LogWarning($"[SCM] {user.userID} | " +
+                                     $"lock timeout, skip.");
                     yield return new WaitForSeconds(0.1f);
                     continue;
                 }
@@ -156,12 +153,13 @@ public class StaticCameraManager : MonoBehaviour
                     continue;
                 }
 
-                // Use ground truth label if available
+                // Use per-action label (set by ExperimentRunner
+                // to current action, not sequence groundTruth)
                 string label =
                     !string.IsNullOrEmpty(user.lastAssignedActivity)
                     ? user.lastAssignedActivity : cur;
 
-                Debug.Log($"[SCM] Triggering: {user.userID} | {label}");
+                Debug.Log($"[SCM] {user.userID} | {label} | capturing");
 
                 yield return StartCoroutine(
                     CaptureWithBestNodes(user, label, cams));
@@ -171,7 +169,6 @@ public class StaticCameraManager : MonoBehaviour
         }
     }
 
-    // ── Capture with global lock ─────────────────────────────────
     public IEnumerator CaptureWithBestNodes(
         UserEntity user, string activity,
         List<CameraNode> cameras)
@@ -183,7 +180,7 @@ public class StaticCameraManager : MonoBehaviour
 
         string names = string.Join(", ",
             toUse.ConvertAll(n => $"{n.nodeName}({n.lastScore:F2})"));
-        Debug.Log($"[SCM] {user.userID} | {activity} | VCB: [{names}]");
+        Debug.Log($"[SCM] {user.userID} | {activity} | [{names}]");
 
         if (virtualCameraBrain == null)
         {
@@ -195,11 +192,10 @@ public class StaticCameraManager : MonoBehaviour
         yield return StartCoroutine(
             virtualCameraBrain.ExecuteMultiCapture(user, toUse, activity));
 
-        Debug.Log($"[SCM] Capture done: {user.userID} | {activity}");
+        Debug.Log($"[SCM] done: {user.userID} | {activity}");
         _isCapturing = false;
     }
 
-    // ── Camera scoring ───────────────────────────────────────────
     List<CameraNode> ScoreCamerasRanked(
         UserEntity user, List<CameraNode> cameras)
     {
@@ -245,7 +241,6 @@ public class StaticCameraManager : MonoBehaviour
         return scored;
     }
 
-    // ── Room / user helpers ──────────────────────────────────────
     List<CameraNode> FindCamerasForUser(UserEntity user)
     {
         if (roomCameras.Count == 0) return null;
@@ -281,22 +276,22 @@ public class StaticCameraManager : MonoBehaviour
         return null;
     }
 
+    // Settle time = time to wait after activity changes before capture.
+    // Should be less than action duration so animation is visible.
+    // Opening is NOT in captureStates so its settle time is unused,
+    // but kept here for reference.
     float GetSettleTime(string activity) => activity switch
     {
-        "Drinking"     => 0.3f,
-        "SittingDrink" => 0.4f,
-        "Eating"       => 0.5f,
-        "Cooking"      => 0.4f,
-        "Laying"       => 0.5f,
-        "Watching"     => 0.4f,
-        "Reading"      => 0.4f,
-        "Cleaning"     => 0.4f,
-        "PhoneUse"     => 0.3f,
-        "Typing"       => 0.4f,
-        // Choice B: also capture these transitional actions
-        "Opening"      => 0.2f,
-        "PickingUp"    => 0.2f,
-        "PuttingDown"  => 0.2f,
+        "Drinking"     => 1.0f,
+        "SittingDrink" => 1.5f,
+        "Eating"       => 2.0f,
+        "Cooking"      => 1.5f,
+        "Laying"       => 2.0f,
+        "Watching"     => 2.0f,
+        "Reading"      => 2.0f,
+        "Cleaning"     => 1.5f,
+        "PhoneUse"     => 1.5f,
+        "Typing"       => 1.5f,
         _              => defaultSettleTime,
     };
 

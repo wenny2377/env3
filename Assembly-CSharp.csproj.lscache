@@ -63,6 +63,7 @@ Assets/
  SceneSyncManager.cs
  Sharedpayload.cs
  StaticCameraManager.cs
+ TestRunner.cs
  TutorialInfo/Scripts/Readme.cs
  ui and nav/
   DialogueInput.cs

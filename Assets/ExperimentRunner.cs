@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.Networking;
 
 public class ExperimentRunner : MonoBehaviour
@@ -23,7 +24,7 @@ public class ExperimentRunner : MonoBehaviour
 
     [Header("Experiment Counts")]
     public int exp1_samplesPerBehavior = 20;
-    public int exp3_totalObservations  = 360;  // 30 days x 12 ep/day
+    public int exp3_totalObservations  = 360;
     public int exp4_episodes           = 30;
 
     [Header("Timing Settings")]
@@ -39,7 +40,7 @@ public class ExperimentRunner : MonoBehaviour
     public bool runOnStart     = false;
 
     [Header("Virtual Day Settings")]
-    public int episodesPerVirtualDay = 12;  // 6 slots x 2 ep/slot
+    public int episodesPerVirtualDay = 12;
 
     [Header("Noise Episodes")]
     public bool addNoiseEpisodes = true;
@@ -57,10 +58,6 @@ public class ExperimentRunner : MonoBehaviour
     public static int  CurrentVirtualDay = 1;
     public static bool UseVirtualDay     = false;
 
-    // ── Behavior sequence definition ─────────────────────────────
-    // actions[]   = steps executed in order
-    // groundTruth = label written to eval_logs (core habitual action)
-    // weight      = relative probability for weighted random selection
     struct BehaviorSequence
     {
         public string[] actions;
@@ -70,14 +67,12 @@ public class ExperimentRunner : MonoBehaviour
 
     struct TimeSlot
     {
-        public string            name;
-        public float             virtualHour;
+        public string             name;
+        public float              virtualHour;
         public BehaviorSequence[] momSequences;
         public BehaviorSequence[] dadSequences;
     }
 
-    // ── BG1 single-action lists ───────────────────────────────────
-    // 10 visually distinct behaviors evaluated by VLM
     static readonly string[] MomBG1Behaviors = {
         "Drinking", "Eating", "Cooking",
         "Laying", "Watching", "Reading",
@@ -91,41 +86,28 @@ public class ExperimentRunner : MonoBehaviour
 
     static readonly string[] NoiseActions = { "Standing" };
 
-    // ── Time slots ────────────────────────────────────────────────
-    // Scene mapping (no Bedroom — DadRoom covers desk/bed actions):
-    //   Morning   → Kitchen
-    //   Noon      → LivingRoom
-    //   Afternoon → DadRoom
-    //   Evening   → Kitchen then LivingRoom
-    //   Cleanup   → LivingRoom
-    //   Night     → LivingRoom (Mom sofa) / DadRoom (Dad bed)
     static readonly TimeSlot[] TimeSlots = new TimeSlot[]
     {
-        // ── Morning 07:00 @ Kitchen ──────────────────────────────
         new TimeSlot {
             name        = "Morning",
             virtualHour = 7f,
             momSequences = new BehaviorSequence[] {
                 new BehaviorSequence {
-                    // Open fridge → pick up food → cook → eat → drink
                     actions     = new[]{ "Opening","Cooking","Eating","Drinking" },
                     groundTruth = "Eating",
                     weight      = 3,
                 },
                 new BehaviorSequence {
-                    // Quick drink only
                     actions     = new[]{ "Drinking" },
                     groundTruth = "Drinking",
                     weight      = 4,
                 },
                 new BehaviorSequence {
-                    // Open fridge → sit and drink
                     actions     = new[]{ "Opening","SittingDrink" },
                     groundTruth = "SittingDrink",
                     weight      = 2,
                 },
                 new BehaviorSequence {
-                    // Cook then eat
                     actions     = new[]{ "Cooking","Eating" },
                     groundTruth = "Eating",
                     weight      = 3,
@@ -154,14 +136,11 @@ public class ExperimentRunner : MonoBehaviour
                 },
             },
         },
-
-        // ── Noon 12:00 @ LivingRoom ───────────────────────────────
         new TimeSlot {
             name        = "Noon",
             virtualHour = 12f,
             momSequences = new BehaviorSequence[] {
                 new BehaviorSequence {
-                    // Sit on sofa then lay down for nap
                     actions     = new[]{ "Laying" },
                     groundTruth = "Laying",
                     weight      = 4,
@@ -205,8 +184,6 @@ public class ExperimentRunner : MonoBehaviour
                 },
             },
         },
-
-        // ── Afternoon 15:00 @ DadRoom ─────────────────────────────
         new TimeSlot {
             name        = "Afternoon",
             virtualHour = 15f,
@@ -234,7 +211,6 @@ public class ExperimentRunner : MonoBehaviour
             },
             dadSequences = new BehaviorSequence[] {
                 new BehaviorSequence {
-                    // Sit at desk → type → read
                     actions     = new[]{ "Typing" },
                     groundTruth = "Typing",
                     weight      = 4,
@@ -256,14 +232,11 @@ public class ExperimentRunner : MonoBehaviour
                 },
             },
         },
-
-        // ── Evening 19:00 @ Kitchen then LivingRoom ───────────────
         new TimeSlot {
             name        = "Evening",
             virtualHour = 19f,
             momSequences = new BehaviorSequence[] {
                 new BehaviorSequence {
-                    // Cook → eat → watch TV
                     actions     = new[]{ "Cooking","Eating","Watching" },
                     groundTruth = "Watching",
                     weight      = 4,
@@ -291,7 +264,6 @@ public class ExperimentRunner : MonoBehaviour
             },
             dadSequences = new BehaviorSequence[] {
                 new BehaviorSequence {
-                    // Cook → eat → phone
                     actions     = new[]{ "Cooking","Eating","PhoneUse" },
                     groundTruth = "PhoneUse",
                     weight      = 4,
@@ -318,15 +290,11 @@ public class ExperimentRunner : MonoBehaviour
                 },
             },
         },
-
-        // ── Cleanup 20:30 @ LivingRoom ────────────────────────────
-        // Matches document section 1.4 Cleanup slot
         new TimeSlot {
             name        = "Cleanup",
             virtualHour = 20.5f,
             momSequences = new BehaviorSequence[] {
                 new BehaviorSequence {
-                    // Pick up broom → clean → put down
                     actions     = new[]{ "Cleaning" },
                     groundTruth = "Cleaning",
                     weight      = 3,
@@ -350,14 +318,11 @@ public class ExperimentRunner : MonoBehaviour
                 },
             },
         },
-
-        // ── Night 23:00 @ LivingRoom (Mom) / DadRoom (Dad) ────────
         new TimeSlot {
             name        = "Night",
             virtualHour = 23f,
             momSequences = new BehaviorSequence[] {
                 new BehaviorSequence {
-                    // Read on sofa then lay down
                     actions     = new[]{ "Reading","Laying" },
                     groundTruth = "Laying",
                     weight      = 3,
@@ -380,7 +345,6 @@ public class ExperimentRunner : MonoBehaviour
             },
             dadSequences = new BehaviorSequence[] {
                 new BehaviorSequence {
-                    // Phone in bed then lay down
                     actions     = new[]{ "DadPhone","Laying" },
                     groundTruth = "Laying",
                     weight      = 3,
@@ -404,7 +368,6 @@ public class ExperimentRunner : MonoBehaviour
         },
     };
 
-    // ─────────────────────────────────────────────────────────────
     int   totalRuns          = 0;
     int   successRuns        = 0;
     int   skippedRuns        = 0;
@@ -415,19 +378,10 @@ public class ExperimentRunner : MonoBehaviour
     static readonly System.Globalization.CultureInfo InvCulture =
         System.Globalization.CultureInfo.InvariantCulture;
 
-    // ── Unity lifecycle ──────────────────────────────────────────
     void Start()
     {
-        if (userMom != null && userMom.standingSpot != null)
-        {
-            userMom.transform.position = userMom.standingSpot.position;
-            userMom.transform.rotation = userMom.standingSpot.rotation;
-        }
-        if (userDad != null && userDad.standingSpot != null)
-        {
-            userDad.transform.position = userDad.standingSpot.position;
-            userDad.transform.rotation = userDad.standingSpot.rotation;
-        }
+        WarpUserToSpot(userMom);
+        WarpUserToSpot(userDad);
 
         if (mode == RunMode.Demo)
         {
@@ -446,6 +400,15 @@ public class ExperimentRunner : MonoBehaviour
         if (userDad != null) userDad.gameObject.SetActive(true);
 
         if (runOnStart) StartExperiment();
+    }
+
+    void WarpUserToSpot(UserEntity user)
+    {
+        if (user == null || user.standingSpot == null) return;
+        user.transform.position = user.standingSpot.position;
+        user.transform.rotation = user.standingSpot.rotation;
+        var ag = user.GetComponent<NavMeshAgent>();
+        if (ag != null) ag.Warp(user.standingSpot.position);
     }
 
     void InitCamera()
@@ -468,6 +431,7 @@ public class ExperimentRunner : MonoBehaviour
     void Update()
     {
         if (mode == RunMode.Demo) return;
+
         if (Input.GetKeyDown(KeyCode.Space) && !isRunning)
             StartExperiment();
         if (Input.GetKeyDown(KeyCode.Escape) && isRunning)
@@ -501,7 +465,6 @@ public class ExperimentRunner : MonoBehaviour
                   $"Skipped={skippedRuns} Noise={noiseRuns} Total={totalRuns}");
     }
 
-    // ── Experiment 1: BG1 single-action VLM accuracy ─────────────
     IEnumerator RunExperiment1()
     {
         UseVirtualDay = false;
@@ -521,23 +484,17 @@ public class ExperimentRunner : MonoBehaviour
             }
     }
 
-    // ── Experiment 3: 30-day habit learning ──────────────────────
-    // Follows the document's design:
-    //   6 time slots x episodesPerVirtualDay / 6 per slot
-    //   skipProbability = 0.2 (Gardner 2015)
-    //   noiseInterval = 10
     IEnumerator RunExperiment3()
     {
         UseVirtualDay     = true;
         CurrentVirtualDay = 1;
 
-        int totalDays = exp3_totalObservations / episodesPerVirtualDay;
-        int epPerSlot = Mathf.Max(1, episodesPerVirtualDay / TimeSlots.Length);
+        int totalDays    = exp3_totalObservations / episodesPerVirtualDay;
+        int epPerSlot    = Mathf.Max(1, episodesPerVirtualDay / TimeSlots.Length);
         int episodeCount = 0;
 
         Debug.Log($"[Experiment3] {totalDays} days | " +
-                  $"{epPerSlot} ep/slot | skip={skipProbability:P0} | " +
-                  $"slots={TimeSlots.Length}");
+                  $"{epPerSlot} ep/slot | skip={skipProbability:P0}");
 
         for (int day = 1; day <= totalDays; day++)
         {
@@ -548,8 +505,8 @@ public class ExperimentRunner : MonoBehaviour
                 currentVirtualHour = slot.virtualHour;
                 SetUsersVirtualHour(slot.virtualHour);
 
-                var momQ = BuildSequenceQueue(slot.momSequences, epPerSlot);
-                var dadQ = BuildSequenceQueue(slot.dadSequences, epPerSlot);
+                var momQ   = BuildSequenceQueue(slot.momSequences, epPerSlot);
+                var dadQ   = BuildSequenceQueue(slot.dadSequences, epPerSlot);
                 int maxLen = Mathf.Max(momQ.Count, dadQ.Count);
 
                 for (int i = 0; i < maxLen; i++)
@@ -615,11 +572,11 @@ public class ExperimentRunner : MonoBehaviour
             }
 
             Debug.Log($"[Experiment3] Day {day}/{totalDays} | " +
-                      $"success={successRuns} skip={skippedRuns} noise={noiseRuns}");
+                      $"success={successRuns} skip={skippedRuns} " +
+                      $"noise={noiseRuns}");
         }
     }
 
-    // ── Experiment 4: randomized sequence evaluation ──────────────
     IEnumerator RunExperiment4()
     {
         UseVirtualDay = false;
@@ -653,9 +610,6 @@ public class ExperimentRunner : MonoBehaviour
         }
     }
 
-    // ── Episode: single action (Experiment1 / BG1) ───────────────
-    // Runs exactly one action and captures it.
-    // ground truth = the action itself.
     IEnumerator RunSingleActionEpisode(
         UserEntity targetUser, string action, float virtualHour)
     {
@@ -667,9 +621,14 @@ public class ExperimentRunner : MonoBehaviour
             virtualCameraBrain.SetVirtualHour(virtualHour);
         SetUsersVirtualHour(virtualHour);
 
+        WarpUserToSpot(targetUser);
+        yield return null;
+
         targetUser.lastAssignedActivity = action;
+        targetUser.ResetBusy();
         yield return StartCoroutine(targetUser.SwitchActivity(action));
         yield return new WaitForSeconds(waitAfterCapture);
+
         yield return StartCoroutine(targetUser.ReturnToStanding());
         targetUser.lastAssignedActivity = "";
 
@@ -677,11 +636,6 @@ public class ExperimentRunner : MonoBehaviour
         yield return new WaitForSeconds(waitBetweenEpisodes);
     }
 
-    // ── Episode: behavior sequence (Experiment3 / BG3) ───────────
-    // Executes each action in the sequence in order.
-    // lastAssignedActivity = groundTruth throughout the episode.
-    // Camera is triggered by StaticCameraManager on core action states.
-    // ResetBusy() between steps allows chained SwitchActivity calls.
     IEnumerator RunSequenceEpisode(
         UserEntity targetUser, BehaviorSequence seq,
         float virtualHour)
@@ -694,27 +648,21 @@ public class ExperimentRunner : MonoBehaviour
             virtualCameraBrain.SetVirtualHour(virtualHour);
         SetUsersVirtualHour(virtualHour);
 
-        targetUser.lastAssignedActivity = seq.groundTruth;
-
         foreach (string action in seq.actions)
         {
+            targetUser.lastAssignedActivity = action;
             targetUser.ResetBusy();
             yield return StartCoroutine(targetUser.SwitchActivity(action));
             yield return new WaitForSeconds(0.3f);
         }
 
         yield return new WaitForSeconds(waitAfterCapture);
-        yield return StartCoroutine(targetUser.ReturnToStanding());
         targetUser.lastAssignedActivity = "";
 
         if (other != null) other.gameObject.SetActive(true);
         yield return new WaitForSeconds(waitBetweenEpisodes);
     }
 
-    // ── Noise episode ─────────────────────────────────────────────
-    // Inserts a non-habitual action every noiseInterval episodes.
-    // Simulates background noise; weight is not accumulated
-    // (Standing is in NO_WEIGHT_ACTIONS in perception.py).
     IEnumerator RunNoiseEpisode(UserEntity user, float virtualHour)
     {
         string noise = NoiseActions[Random.Range(0, NoiseActions.Length)];
@@ -730,15 +678,12 @@ public class ExperimentRunner : MonoBehaviour
         user.ResetBusy();
         yield return StartCoroutine(user.SwitchActivity(noise));
         yield return new WaitForSeconds(waitAfterCapture);
-        yield return StartCoroutine(user.ReturnToStanding());
         user.lastAssignedActivity = "";
 
         if (other != null) other.gameObject.SetActive(true);
         yield return new WaitForSeconds(waitBetweenEpisodes);
     }
 
-    // ── Sequence queue builder ────────────────────────────────────
-    // Builds a weighted randomized list of sequences for one time slot.
     List<BehaviorSequence> BuildSequenceQueue(
         BehaviorSequence[] sequences, int totalCount)
     {
@@ -768,7 +713,6 @@ public class ExperimentRunner : MonoBehaviour
         return result;
     }
 
-    // ── Virtual hour helpers ─────────────────────────────────────
     void SetUsersVirtualHour(float hour)
     {
         if (userMom != null) userMom.currentVirtualHour = hour;
@@ -793,7 +737,6 @@ public class ExperimentRunner : MonoBehaviour
         yield return req.SendWebRequest();
     }
 
-    // ── GUI ──────────────────────────────────────────────────────
     string GetSlotName(float hour) =>
         hour >= 23f ? "Night"     :
         hour >= 20f ? "Cleanup"   :
@@ -813,16 +756,11 @@ public class ExperimentRunner : MonoBehaviour
 
     void OnGUI()
     {
-        if (mode == RunMode.Demo)
-        {
-            GUI.Label(new Rect(10, 100, 500, 22),
-                "[Demo Mode] Camera observation active.");
-            return;
-        }
+        if (mode == RunMode.Demo) return;
         if (!isRunning) return;
 
-        int totalDays = exp3_totalObservations / episodesPerVirtualDay;
-        string dayInfo = UseVirtualDay
+        int    totalDays = exp3_totalObservations / episodesPerVirtualDay;
+        string dayInfo   = UseVirtualDay
             ? $"  Day={CurrentVirtualDay}/{totalDays}" : "";
 
         GUI.Label(
