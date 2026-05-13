@@ -12,25 +12,25 @@ public class TestModeRunner : MonoBehaviour
     public DemoFollowCamera followCamera;
 
     [Header("Test Settings")]
-    public float actionHoldTime    = 2.0f;
+    public float actionHoldTime = 2.0f;
     public float betweenActionTime = 0.5f;
 
     static readonly string[] MomSequence = {
-        "Drinking", "SittingDrink", "Eating", "Cooking",
+        "Cleaning","Drinking", "SittingDrink", "Eating", "Cooking",
         "Opening", "Laying", "Watching", "Reading",
-        "Cleaning", "PhoneUse",
+         "PhoneUse",
     };
 
     static readonly string[] DadSequence = {
-        "Drinking", "SittingDrink", "Eating", "Cooking",
-        "Opening", "Laying", "Typing", "DadReading",
+        "Laying", "Drinking", "SittingDrink", "Eating", "Cooking",
+        "Opening", "Typing", "DadReading",
         "DadPhone", "DadCleaning",
     };
 
-    bool       _running = false;
-    UserEntity _user    = null;
-    string     _current = "";
-    Coroutine  _routine = null;
+    bool _running = false;
+    UserEntity _user = null;
+    string _current = "";
+    Coroutine _routine = null;
 
     void Start()
     {
@@ -85,6 +85,9 @@ public class TestModeRunner : MonoBehaviour
         followCamera.target = user.transform;
     }
 
+    UserEntity GetOther(UserEntity user) =>
+        user == userMom ? userDad : userMom;
+
     void Stop()
     {
         if (_routine != null)
@@ -92,11 +95,17 @@ public class TestModeRunner : MonoBehaviour
             StopCoroutine(_routine);
             _routine = null;
         }
+
+        // Restore both users
+        if (userMom != null) userMom.gameObject.SetActive(true);
+        if (userDad != null) userDad.gameObject.SetActive(true);
+
         if (_user != null)
         {
             _user.ResetBusy();
             StartCoroutine(_user.ReturnToStanding());
         }
+
         _running = false;
         _current = "";
         Debug.Log("[TestMode] Stopped");
@@ -106,12 +115,14 @@ public class TestModeRunner : MonoBehaviour
     {
         _running = true;
 
+        UserEntity other = GetOther(user);
+
         yield return null;
         yield return null;
 
         string[] seq = (user == userMom) ? MomSequence : DadSequence;
         Debug.Log($"[TestMode] Sequence start | {user.userID} | " +
-                  $"{seq.Length} actions | IsBusy={user.IsBusy}");
+                  $"{seq.Length} actions");
 
         for (int i = 0; i < seq.Length; i++)
         {
@@ -120,8 +131,11 @@ public class TestModeRunner : MonoBehaviour
             string action = seq[i];
             _current = action;
 
-            Debug.Log($"[TestMode] [{i+1}/{seq.Length}] {action} | " +
-                      $"IsBusy={user.IsBusy}");
+            // Hide other user during action
+            if (other != null) other.gameObject.SetActive(false);
+            if (user != null) user.gameObject.SetActive(true);
+
+            Debug.Log($"[TestMode] [{i + 1}/{seq.Length}] {action}");
 
             user.lastAssignedActivity = action;
             user.ResetBusy();
@@ -130,9 +144,11 @@ public class TestModeRunner : MonoBehaviour
             yield return new WaitForSeconds(actionHoldTime);
 
             user.ResetBusy();
-            yield return StartCoroutine(user.ReturnToStanding());
             yield return new WaitForSeconds(betweenActionTime);
         }
+
+        // Restore other user after sequence
+        if (other != null) other.gameObject.SetActive(true);
 
         _running = false;
         _current = "";
@@ -142,7 +158,7 @@ public class TestModeRunner : MonoBehaviour
     void OnGUI()
     {
         string userName = _user?.userID ?? "None";
-        string status   = _running ? $"Running: {_current}" : "idle";
+        string status = _running ? $"Running: {_current}" : "idle";
         GUI.Label(new Rect(10, 50, 700, 22),
             $"[TestMode] {userName} | {status} | " +
             $"Space=start  Tab=switch  Esc=stop");

@@ -47,7 +47,7 @@ public class UserEntity : MonoBehaviour
     [Header("Fridge Door")]
     public Transform fridgeDoor;
     public Transform fridgeHingePoint;
-    public float fridgeOpenAngle = 90f;
+    public float fridgeOpenAngle = -90f;
     public float fridgeOpenSpeed = 90f;
 
     [Header("Movement")]
