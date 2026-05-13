@@ -16,9 +16,9 @@ public class TestModeRunner : MonoBehaviour
     public float betweenActionTime = 0.5f;
 
     static readonly string[] MomSequence = {
-        "Opening","Eating", "Cleaning","Drinking", "SittingDrink",  "Cooking",
+        "PhoneUse","Opening","Eating", "Cleaning","Drinking", "SittingDrink",  "Cooking",
          "Laying", "Watching", "Reading",
-         "PhoneUse",
+         
     };
 
     static readonly string[] DadSequence = {
