@@ -15,8 +15,8 @@ public class ExperimentRunner : MonoBehaviour
     public VirtualCameraBrain  virtualCameraBrain;
 
     [Header("Camera Nodes")]
-    public List<CameraNode> kitchenNodes;
     public List<CameraNode> livingRoomNodes;
+    public List<CameraNode> kitchenNodes;
     public List<CameraNode> dadRoomNodes;
 
     [Header("Run Mode")]
