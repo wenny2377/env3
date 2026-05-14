@@ -16,7 +16,6 @@ public class VirtualCameraBrain : MonoBehaviour
     public int renderWidth  = 512;
     public int renderHeight = 512;
 
-    // ── Virtual day tracking ─────────────────────────────────────
     static System.DateTime? experimentBaseDate = null;
 
     static string VirtualDayToDateString(int virtualDay)
@@ -45,7 +44,6 @@ public class VirtualCameraBrain : MonoBehaviour
             $"mode=OffScreen per-node Camera");
     }
 
-    // ── Main capture entry point ─────────────────────────────────
     public IEnumerator ExecuteMultiCapture(
         UserEntity       user,
         List<CameraNode> sortedNodes,
@@ -71,46 +69,33 @@ public class VirtualCameraBrain : MonoBehaviour
         {
             CameraNode node = sortedNodes[i];
 
-            // ── Find the Camera child component ──────────────────
-            // Camera is a disabled child of CameraNode
             Camera nodeCam =
-                node.GetComponentInChildren<Camera>(
-                    includeInactive: true);
+                node.GetComponentInChildren<Camera>(includeInactive: true);
 
             if (nodeCam == null)
             {
                 Debug.LogWarning(
-                    $"[VCB] No Camera found under node " +
-                    $"'{node.nodeName}'. " +
+                    $"[VCB] No Camera found under node '{node.nodeName}'. " +
                     $"Add a disabled Camera child to this CameraNode.");
                 continue;
             }
 
-            // ── Sync FOV from CameraNode setting ─────────────────
             nodeCam.fieldOfView = node.fieldOfView;
 
-            // ── Off-screen render ─────────────────────────────────
-            RenderTexture rt = new RenderTexture(
-                renderWidth, renderHeight, 24);
-
+            RenderTexture rt = new RenderTexture(renderWidth, renderHeight, 24);
             nodeCam.targetTexture = rt;
             nodeCam.enabled       = true;
             nodeCam.Render();
             nodeCam.enabled       = false;
             nodeCam.targetTexture = null;
 
-            // ── Read pixels ───────────────────────────────────────
             RenderTexture.active = rt;
-            var tex = new Texture2D(
-                renderWidth, renderHeight,
-                TextureFormat.RGB24, false);
-            tex.ReadPixels(
-                new Rect(0, 0, renderWidth, renderHeight), 0, 0);
+            var tex = new Texture2D(renderWidth, renderHeight, TextureFormat.RGB24, false);
+            tex.ReadPixels(new Rect(0, 0, renderWidth, renderHeight), 0, 0);
             tex.Apply();
             RenderTexture.active = null;
 
-            imageList.Add(
-                System.Convert.ToBase64String(tex.EncodeToPNG()));
+            imageList.Add(System.Convert.ToBase64String(tex.EncodeToPNG()));
             nodeNames.Add(node.nodeName);
             nodeScores.Add(node.lastScore);
 
@@ -124,21 +109,17 @@ public class VirtualCameraBrain : MonoBehaviour
                 $"fov={node.fieldOfView} " +
                 $"(off-screen)");
 
-            // One frame between captures
             yield return null;
         }
 
         if (imageList.Count == 0)
         {
             Debug.LogWarning(
-                $"[VCB] No images captured for " +
-                $"{user.userID} | {activity}. " +
-                $"Check that each CameraNode has a " +
-                $"disabled Camera child.");
+                $"[VCB] No images captured for {user.userID} | {activity}. " +
+                $"Check that each CameraNode has a disabled Camera child.");
             yield break;
         }
 
-        // POST is fire-and-forget after capture finishes
         StartCoroutine(PostMultiImage(
             user, activity, imageList, nodeNames, nodeScores));
     }
@@ -147,13 +128,9 @@ public class VirtualCameraBrain : MonoBehaviour
         UserEntity user, CameraNode camNode, string activity)
     {
         yield return StartCoroutine(
-            ExecuteMultiCapture(
-                user,
-                new List<CameraNode> { camNode },
-                activity));
+            ExecuteMultiCapture(user, new List<CameraNode> { camNode }, activity));
     }
 
-    // ── POST to Flask /predict ───────────────────────────────────
     IEnumerator PostMultiImage(
         UserEntity   user,
         string       activity,
@@ -165,8 +142,6 @@ public class VirtualCameraBrain : MonoBehaviour
             ? virtualHour
             : (float)System.DateTime.Now.Hour;
 
-        // Extract room from first node name
-        // e.g. "Kitchen_Cam1" → "Kitchen"
         string roomName = "";
         if (nodeNames.Count > 0)
         {
@@ -181,26 +156,40 @@ public class VirtualCameraBrain : MonoBehaviour
         {
             string dateStr = VirtualDayToDateString(
                 ExperimentRunner.CurrentVirtualDay);
-            virtualDayField =
-                $"\"virtual_day\":\"{dateStr}\",";
+            virtualDayField = $"\"virtual_day\":\"{dateStr}\",";
         }
+
+        Vector3 pos = user.transform.position;
+        Vector3 fwd = user.transform.forward;
+
+        string posJson =
+            $"\"user_pos\":{{" +
+            $"\"x\":{pos.x.ToString("F3", InvCulture)}," +
+            $"\"y\":{pos.y.ToString("F3", InvCulture)}," +
+            $"\"z\":{pos.z.ToString("F3", InvCulture)}}}";
+
+        string fwdJson =
+            $"\"user_forward\":{{" +
+            $"\"x\":{fwd.x.ToString("F3", InvCulture)}," +
+            $"\"y\":{fwd.y.ToString("F3", InvCulture)}," +
+            $"\"z\":{fwd.z.ToString("F3", InvCulture)}}}";
 
         string json = "{"
             + $"\"userID\":\"{Esc(user.userID)}\","
             + $"\"activity\":\"{Esc(activity)}\","
             + $"\"room_name\":\"{Esc(roomName)}\","
-            + $"\"virtual_hour\":"
-            + $"{hour.ToString("F1", InvCulture)},"
+            + $"\"virtual_hour\":{hour.ToString("F1", InvCulture)},"
             + virtualDayField
             + $"\"image_count\":{imageList.Count},"
             + $"\"image_list\":{StrArrayJson(imageList)},"
             + $"\"source_nodes\":{StrArrayJson(nodeNames)},"
-            + $"\"node_scores\":{FloatArrayJson(nodeScores)}"
+            + $"\"node_scores\":{FloatArrayJson(nodeScores)},"
+            + posJson + ","
+            + fwdJson
             + "}";
 
         using var req = new UnityWebRequest(predictUrl, "POST");
-        byte[] body =
-            System.Text.Encoding.UTF8.GetBytes(json);
+        byte[] body = System.Text.Encoding.UTF8.GetBytes(json);
         req.uploadHandler   = new UploadHandlerRaw(body);
         req.downloadHandler = new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
@@ -216,17 +205,16 @@ public class VirtualCameraBrain : MonoBehaviour
             Debug.Log(
                 $"[VCB] POST ok | {user.userID} | " +
                 $"{activity} | {imageList.Count} img | " +
-                $"hour={hour}{dayLog}");
+                $"hour={hour}{dayLog} | " +
+                $"pos=({pos.x:F2},{pos.z:F2}) fwd=({fwd.x:F2},{fwd.z:F2})");
         }
         else
         {
             Debug.LogWarning(
-                $"[VCB] POST failed: {req.error} | " +
-                $"{user.userID} | {activity}");
+                $"[VCB] POST failed: {req.error} | {user.userID} | {activity}");
         }
     }
 
-    // ── String helpers ───────────────────────────────────────────
     static readonly System.Globalization.CultureInfo InvCulture =
         System.Globalization.CultureInfo.InvariantCulture;
 

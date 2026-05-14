@@ -28,8 +28,9 @@ public class DynamicSyncManager : MonoBehaviour
     [Header("Debug")]
     public bool verboseLog = false;
 
-    Dictionary<string, Vector3> lastPos    = new Dictionary<string, Vector3>();
-    Dictionary<string, Vector3> lastObjPos = new Dictionary<string, Vector3>();
+    Dictionary<string, Vector3>    lastPos    = new Dictionary<string, Vector3>();
+    Dictionary<string, Quaternion> lastRot    = new Dictionary<string, Quaternion>();
+    Dictionary<string, Vector3>    lastObjPos = new Dictionary<string, Vector3>();
 
     static readonly System.Globalization.CultureInfo Inv =
         System.Globalization.CultureInfo.InvariantCulture;
@@ -70,13 +71,30 @@ public class DynamicSyncManager : MonoBehaviour
         {
             if (user == null) continue;
 
-            Vector3 pos = user.transform.position;
+            Vector3    pos = user.transform.position;
+            Quaternion rot = user.transform.rotation;
 
-            if (lastPos.ContainsKey(user.userID) &&
-                Vector3.Distance(pos, lastPos[user.userID]) < moveTolerance)
-                continue;
+            bool posMoved = !lastPos.ContainsKey(user.userID) ||
+                            Vector3.Distance(pos, lastPos[user.userID]) >= moveTolerance;
+            bool rotMoved = !lastRot.ContainsKey(user.userID) ||
+                            Quaternion.Angle(rot, lastRot[user.userID]) >= 1f;
+
+            if (!posMoved && !rotMoved) continue;
 
             lastPos[user.userID] = pos;
+            lastRot[user.userID] = rot;
+
+            Vector3 fwd = user.transform.forward;
+
+            string fwdJson =
+                "\"forward\":["
+                + fwd.x.ToString("F3", Inv) + ","
+                + fwd.y.ToString("F3", Inv) + ","
+                + fwd.z.ToString("F3", Inv) + "]";
+
+            string extra =
+                "\"activity\":\""  + EscStr(user.currentActivity) + "\","
+                + fwdJson;
 
             string entry = BuildObjectJson(
                 label:  user.userID.ToLower(),
@@ -84,7 +102,7 @@ public class DynamicSyncManager : MonoBehaviour
                 x:      pos.x,
                 z:      pos.z,
                 source: "unity_user",
-                extra:  "\"activity\":\"" + EscStr(user.currentActivity) + "\""
+                extra:  extra
             );
             entries.Add(entry);
         }
