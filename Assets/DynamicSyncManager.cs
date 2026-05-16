@@ -9,11 +9,8 @@ public class DynamicSyncManager : MonoBehaviour
     public UserEntity userMom;
     public UserEntity userDad;
 
-    [Header("Experiment Objects (synced during Exp modes)")]
+    [Header("Experiment Objects")]
     public List<GameObject> dynamicObjects = new List<GameObject>();
-
-    [Header("Demo Objects (synced during Demo mode only)")]
-    public List<GameObject> demoObjects = new List<GameObject>();
 
     [Header("Backend")]
     public string backendUrl = "http://localhost:5000";
@@ -35,23 +32,10 @@ public class DynamicSyncManager : MonoBehaviour
     static readonly System.Globalization.CultureInfo Inv =
         System.Globalization.CultureInfo.InvariantCulture;
 
-    ExperimentRunner _runner;
-
     void Start()
     {
-        _runner = FindObjectOfType<ExperimentRunner>();
         StartCoroutine(PositionLoop());
         StartCoroutine(ObjectLoop());
-    }
-
-    bool IsDemo()
-    {
-        return _runner != null && _runner.mode == ExperimentRunner.RunMode.Demo;
-    }
-
-    List<GameObject> ActiveObjects()
-    {
-        return IsDemo() ? demoObjects : dynamicObjects;
     }
 
     IEnumerator PositionLoop()
@@ -93,7 +77,7 @@ public class DynamicSyncManager : MonoBehaviour
                 + fwd.z.ToString("F3", Inv) + "]";
 
             string extra =
-                "\"activity\":\""  + EscStr(user.currentActivity) + "\","
+                "\"activity\":\"" + EscStr(user.currentActivity) + "\","
                 + fwdJson;
 
             string entry = BuildObjectJson(
@@ -124,13 +108,12 @@ public class DynamicSyncManager : MonoBehaviour
 
     IEnumerator SendObjects()
     {
-        var objects = ActiveObjects();
-        if (objects == null || objects.Count == 0) yield break;
+        if (dynamicObjects == null || dynamicObjects.Count == 0) yield break;
 
         var  entries  = new List<string>();
         bool anyMoved = false;
 
-        foreach (var obj in objects)
+        foreach (var obj in dynamicObjects)
         {
             if (obj == null || !obj.activeInHierarchy) continue;
 
@@ -188,10 +171,10 @@ public class DynamicSyncManager : MonoBehaviour
     {
         string xs   = x.ToString("F3", Inv);
         string zs   = z.ToString("F3", Inv);
-        string json = "{\"label\":\""    + EscStr(label)  + "\","
-                    + "\"room\":\""      + EscStr(room)   + "\","
-                    + "\"position\":["   + xs + "," + zs  + "],"
-                    + "\"source\":\""    + EscStr(source) + "\"";
+        string json = "{\"label\":\""  + EscStr(label)  + "\","
+                    + "\"room\":\""    + EscStr(room)   + "\","
+                    + "\"position\":[" + xs + "," + zs  + "],"
+                    + "\"source\":\""  + EscStr(source) + "\"";
 
         if (!string.IsNullOrEmpty(extra))
             json += "," + extra;

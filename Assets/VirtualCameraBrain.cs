@@ -40,8 +40,7 @@ public class VirtualCameraBrain : MonoBehaviour
     {
         Debug.Log(
             $"[VCB] Initialized | topN={topN} | " +
-            $"resolution={renderWidth}x{renderHeight} | " +
-            $"mode=OffScreen per-node Camera");
+            $"resolution={renderWidth}x{renderHeight}");
     }
 
     public IEnumerator ExecuteMultiCapture(
@@ -67,16 +66,14 @@ public class VirtualCameraBrain : MonoBehaviour
 
         for (int i = 0; i < captureCount; i++)
         {
-            CameraNode node = sortedNodes[i];
-
-            Camera nodeCam =
+            CameraNode node   = sortedNodes[i];
+            Camera     nodeCam =
                 node.GetComponentInChildren<Camera>(includeInactive: true);
 
             if (nodeCam == null)
             {
                 Debug.LogWarning(
-                    $"[VCB] No Camera found under node '{node.nodeName}'. " +
-                    $"Add a disabled Camera child to this CameraNode.");
+                    $"[VCB] No Camera under '{node.nodeName}'.");
                 continue;
             }
 
@@ -90,12 +87,15 @@ public class VirtualCameraBrain : MonoBehaviour
             nodeCam.targetTexture = null;
 
             RenderTexture.active = rt;
-            var tex = new Texture2D(renderWidth, renderHeight, TextureFormat.RGB24, false);
-            tex.ReadPixels(new Rect(0, 0, renderWidth, renderHeight), 0, 0);
+            var tex = new Texture2D(
+                renderWidth, renderHeight, TextureFormat.RGB24, false);
+            tex.ReadPixels(
+                new Rect(0, 0, renderWidth, renderHeight), 0, 0);
             tex.Apply();
             RenderTexture.active = null;
 
-            imageList.Add(System.Convert.ToBase64String(tex.EncodeToPNG()));
+            imageList.Add(
+                System.Convert.ToBase64String(tex.EncodeToPNG()));
             nodeNames.Add(node.nodeName);
             nodeScores.Add(node.lastScore);
 
@@ -103,11 +103,9 @@ public class VirtualCameraBrain : MonoBehaviour
             Destroy(tex);
 
             Debug.Log(
-                $"[VCB] [{i + 1}/{captureCount}] " +
+                $"[VCB] [{i+1}/{captureCount}] " +
                 $"node={node.nodeName} " +
-                $"score={node.lastScore:F2} " +
-                $"fov={node.fieldOfView} " +
-                $"(off-screen)");
+                $"score={node.lastScore:F2}");
 
             yield return null;
         }
@@ -115,8 +113,7 @@ public class VirtualCameraBrain : MonoBehaviour
         if (imageList.Count == 0)
         {
             Debug.LogWarning(
-                $"[VCB] No images captured for {user.userID} | {activity}. " +
-                $"Check that each CameraNode has a disabled Camera child.");
+                $"[VCB] No images captured for {user.userID} | {activity}.");
             yield break;
         }
 
@@ -128,7 +125,8 @@ public class VirtualCameraBrain : MonoBehaviour
         UserEntity user, CameraNode camNode, string activity)
     {
         yield return StartCoroutine(
-            ExecuteMultiCapture(user, new List<CameraNode> { camNode }, activity));
+            ExecuteMultiCapture(
+                user, new List<CameraNode> { camNode }, activity));
     }
 
     IEnumerator PostMultiImage(
@@ -193,7 +191,7 @@ public class VirtualCameraBrain : MonoBehaviour
         req.uploadHandler   = new UploadHandlerRaw(body);
         req.downloadHandler = new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
-        req.timeout = 30;
+        req.timeout = 100;
 
         yield return req.SendWebRequest();
 
@@ -203,10 +201,9 @@ public class VirtualCameraBrain : MonoBehaviour
                 ? $" day={VirtualDayToDateString(ExperimentRunner.CurrentVirtualDay)}"
                 : "";
             Debug.Log(
-                $"[VCB] POST ok | {user.userID} | " +
-                $"{activity} | {imageList.Count} img | " +
-                $"hour={hour}{dayLog} | " +
-                $"pos=({pos.x:F2},{pos.z:F2}) fwd=({fwd.x:F2},{fwd.z:F2})");
+                $"[VCB] POST ok | {user.userID} | {activity} | " +
+                $"{imageList.Count} img | hour={hour}{dayLog} | " +
+                $"pos=({pos.x:F2},{pos.z:F2})");
         }
         else
         {
