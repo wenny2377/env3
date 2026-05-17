@@ -117,7 +117,7 @@ public class VirtualCameraBrain : MonoBehaviour
             yield break;
         }
 
-        StartCoroutine(PostMultiImage(
+        yield return StartCoroutine(PostMultiImage(
             user, activity, imageList, nodeNames, nodeScores));
     }
 

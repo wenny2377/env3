@@ -22,10 +22,10 @@ public class ExperimentRunner : MonoBehaviour
     [Header("Run Mode")]
     public RunMode mode = RunMode.Demo;
 
-    [Header("Experiment 1 Settings")]
-    public int exp1_samplesPerBehavior = 10;
+    [Header("Recognition Experiment Settings")]
+    public int rec_samplesPerBehavior = 20;
 
-    [Header("Experiment 3 Settings")]
+    [Header("Habit Experiment Settings")]
     public int   exp3_totalObservations  = 300;
     public int   episodesPerVirtualDay   = 10;
     public bool  addNoiseEpisodes        = true;
@@ -107,7 +107,7 @@ public class ExperimentRunner : MonoBehaviour
     [Header("Dad Spots - PhoneUse")]
     public Transform[] dadPhoneSpots = new Transform[3];
 
-    public enum RunMode { Demo, Experiment1, Experiment3 }
+    public enum RunMode { Demo, RecognitionExp, HabitExp }
 
     public static int  CurrentVirtualDay = 1;
     public static bool UseVirtualDay     = false;
@@ -128,12 +128,12 @@ public class ExperimentRunner : MonoBehaviour
     }
 
     // ── Experiment1 行為列表 ─────────────────────────────────────
-    static readonly string[] MomBG1Behaviors = {
+    static readonly string[] MomBehaviors = {
         "Drinking", "SittingDrink", "Eating", "Cooking", "Opening",
         "Laying", "Watching", "Reading", "Cleaning", "PhoneUse",
     };
 
-    static readonly string[] DadBG1Behaviors = {
+    static readonly string[] DadBehaviors = {
         "Drinking", "SittingDrink", "Eating", "Cooking", "Opening",
         "Laying", "Typing", "Reading", "Cleaning", "PhoneUse",
     };
@@ -488,10 +488,10 @@ public class ExperimentRunner : MonoBehaviour
         isRunning = true;
         switch (mode)
         {
-            case RunMode.Experiment1:
-                yield return StartCoroutine(RunExperiment1()); break;
-            case RunMode.Experiment3:
-                yield return StartCoroutine(RunExperiment3()); break;
+            case RunMode.RecognitionExp:
+                yield return StartCoroutine(RunRecognitionExp()); break;
+            case RunMode.HabitExp:
+                yield return StartCoroutine(RunHabitExp()); break;
         }
         isRunning = false;
         Debug.Log($"[ExperimentRunner] Done. " +
@@ -499,18 +499,19 @@ public class ExperimentRunner : MonoBehaviour
                   $"Noise={noiseRuns} Total={totalRuns}");
     }
 
-    IEnumerator RunExperiment1()
+    IEnumerator RunRecognitionExp()
     {
         UseVirtualDay = false;
         cameraManager.captureMode = StaticCameraManager.CaptureMode.Manual;
+        Debug.Log("[RecognitionExp] Starting: " + (MomBehaviors.Length + DadBehaviors.Length) + " behaviors x " + rec_samplesPerBehavior + " samples x 2 users = " + ((MomBehaviors.Length + DadBehaviors.Length) * rec_samplesPerBehavior) + " episodes");
 
-        Debug.Log($"[Exp1] Mom: {MomBG1Behaviors.Length} behaviors " +
-                  $"x {exp1_samplesPerBehavior} samples");
+        Debug.Log($"[Exp1] Mom: {MomBehaviors.Length} behaviors " +
+                  $"x {rec_samplesPerBehavior} samples");
 
-        for (int i = 0; i < MomBG1Behaviors.Length; i++)
+        for (int i = 0; i < MomBehaviors.Length; i++)
         {
-            string behavior = MomBG1Behaviors[i];
-            for (int s = 0; s < exp1_samplesPerBehavior; s++)
+            string behavior = MomBehaviors[i];
+            for (int s = 0; s < rec_samplesPerBehavior; s++)
             {
                 Transform spot = GetMomSpot(behavior, s);
                 yield return StartCoroutine(
@@ -520,13 +521,13 @@ public class ExperimentRunner : MonoBehaviour
             }
         }
 
-        Debug.Log($"[Exp1] Dad: {DadBG1Behaviors.Length} behaviors " +
-                  $"x {exp1_samplesPerBehavior} samples");
+        Debug.Log($"[Exp1] Dad: {DadBehaviors.Length} behaviors " +
+                  $"x {rec_samplesPerBehavior} samples");
 
-        for (int i = 0; i < DadBG1Behaviors.Length; i++)
+        for (int i = 0; i < DadBehaviors.Length; i++)
         {
-            string behavior = DadBG1Behaviors[i];
-            for (int s = 0; s < exp1_samplesPerBehavior; s++)
+            string behavior = DadBehaviors[i];
+            for (int s = 0; s < rec_samplesPerBehavior; s++)
             {
                 Transform spot = GetDadSpot(behavior, s);
                 yield return StartCoroutine(
@@ -537,7 +538,7 @@ public class ExperimentRunner : MonoBehaviour
         }
     }
 
-    IEnumerator RunExperiment3()
+    IEnumerator RunHabitExp()
     {
         UseVirtualDay     = true;
         CurrentVirtualDay = 1;
@@ -579,7 +580,8 @@ public class ExperimentRunner : MonoBehaviour
                                 PostVirtualHourFireAndForget(slot.virtualHour);
                             yield return StartCoroutine(
                                 RunSequenceEpisode(
-                                    userMom, momQ[i], slot.virtualHour));
+                                    userMom, momQ[i],
+                                    slot.virtualHour, episodeCount));
                             yield return new WaitForSeconds(minIntervalInSlot);
                             successRuns++;
                             episodeCount++;
@@ -608,7 +610,8 @@ public class ExperimentRunner : MonoBehaviour
                                 PostVirtualHourFireAndForget(slot.virtualHour);
                             yield return StartCoroutine(
                                 RunSequenceEpisode(
-                                    userDad, dadQ[i], slot.virtualHour));
+                                    userDad, dadQ[i],
+                                    slot.virtualHour, episodeCount));
                             yield return new WaitForSeconds(minIntervalInSlot);
                             successRuns++;
                             episodeCount++;
@@ -662,12 +665,17 @@ public class ExperimentRunner : MonoBehaviour
         yield return StartCoroutine(targetUser.ReturnToStanding());
         targetUser.lastAssignedActivity = "";
 
-        if (other != null) other.gameObject.SetActive(true);
+        if (other != null)
+        {
+            WarpUserToSpot(other);
+            other.gameObject.SetActive(true);
+        }
         yield return new WaitForSeconds(waitBetweenEpisodes);
     }
 
     IEnumerator RunSequenceEpisode(
-        UserEntity targetUser, BehaviorSequence seq, float virtualHour)
+        UserEntity targetUser, BehaviorSequence seq,
+        float virtualHour, int episodeIndex = 0)
     {
         UserEntity other = (targetUser == userMom) ? userDad : userMom;
         if (other      != null) other.gameObject.SetActive(false);
@@ -677,19 +685,43 @@ public class ExperimentRunner : MonoBehaviour
             virtualCameraBrain.SetVirtualHour(virtualHour);
         SetUsersVirtualHour(virtualHour);
 
-        foreach (string action in seq.actions)
+        // Execute all actions EXCEPT the last one using default spots.
+        // This prevents overrideSpot from being consumed by intermediate
+        // actions (e.g. Opening in "Opening → Cooking → Eating").
+        int lastIdx = seq.actions.Length - 1;
+        for (int i = 0; i < lastIdx; i++)
         {
-            targetUser.lastAssignedActivity = action;
+            string midAction = seq.actions[i];
+            targetUser.lastAssignedActivity = midAction;
             targetUser.ResetBusy();
-            yield return StartCoroutine(targetUser.SwitchActivity(action));
+            yield return StartCoroutine(targetUser.SwitchActivity(midAction));
             yield return new WaitForSeconds(0.5f);
         }
 
+        // Set overrideSpot only for the final (ground-truth) action.
+        // If the sequence has only one action, lastIdx == 0 so the loop
+        // above is skipped and this still runs correctly.
+        string finalAction = seq.actions[lastIdx];
+        Transform spot = (targetUser == userMom)
+            ? GetMomSpot(seq.groundTruth, episodeIndex)
+            : GetDadSpot(seq.groundTruth, episodeIndex);
+        if (spot != null)
+            targetUser.overrideSpot = spot;
+
+        targetUser.lastAssignedActivity = finalAction;
+        targetUser.ResetBusy();
+        yield return StartCoroutine(targetUser.SwitchActivity(finalAction));
+
+        // Wait for camera capture at ground-truth spot.
         targetUser.lastAssignedActivity = seq.groundTruth;
         yield return new WaitForSeconds(waitAfterCapture);
         targetUser.lastAssignedActivity = "";
 
-        if (other != null) other.gameObject.SetActive(true);
+        if (other != null)
+        {
+            WarpUserToSpot(other);
+            other.gameObject.SetActive(true);
+        }
         yield return new WaitForSeconds(waitBetweenEpisodes);
     }
 
@@ -710,7 +742,11 @@ public class ExperimentRunner : MonoBehaviour
         yield return new WaitForSeconds(waitAfterCapture);
         user.lastAssignedActivity = "";
 
-        if (other != null) other.gameObject.SetActive(true);
+        if (other != null)
+        {
+            WarpUserToSpot(other);
+            other.gameObject.SetActive(true);
+        }
         yield return new WaitForSeconds(waitBetweenEpisodes);
     }
 
@@ -768,10 +804,10 @@ public class ExperimentRunner : MonoBehaviour
 
     int GetTargetTotal() => mode switch
     {
-        RunMode.Experiment1 =>
-            (MomBG1Behaviors.Length + DadBG1Behaviors.Length)
-            * exp1_samplesPerBehavior,
-        RunMode.Experiment3 => exp3_totalObservations,
+        RunMode.RecognitionExp =>
+            (MomBehaviors.Length + DadBehaviors.Length)
+            * rec_samplesPerBehavior,
+        RunMode.HabitExp => exp3_totalObservations,
         _                   => 0,
     };
 

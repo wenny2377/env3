@@ -23,7 +23,7 @@ public class StaticCameraManager : MonoBehaviour
 
     [Header("Capture Target States")]
     public string captureStates =
-        "Drinking,SittingDrink,Eating,Cooking," +
+        "Drinking,SittingDrink,Eating,Cooking,Opening," +
         "Laying,Watching,Reading,Cleaning,PhoneUse,Typing";
 
     [Header("Capture Timing")]

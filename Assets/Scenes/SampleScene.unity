@@ -5736,7 +5736,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 963194225}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5971bcf852c74b3f4848660186c0be45, type: 3}
   m_Name: 
@@ -10663,9 +10663,9 @@ MonoBehaviour:
   - {fileID: 1603672535}
   - {fileID: 267607256}
   - {fileID: 1074887085}
-  mode: 1
-  exp1_samplesPerBehavior: 10
-  exp3_totalObservations: 120
+  mode: 2
+  rec_samplesPerBehavior: 20
+  exp3_totalObservations: 300
   episodesPerVirtualDay: 10
   addNoiseEpisodes: 1
   noiseInterval: 10
