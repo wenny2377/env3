@@ -110,7 +110,8 @@ public class ExperimentRunner : MonoBehaviour
     public enum RunMode { Demo, RecognitionExp, HabitExp }
 
     public static int  CurrentVirtualDay = 1;
-    public static bool UseVirtualDay     = false;
+    public static bool   UseVirtualDay        = false;
+    public static string CurrentExperimentMode = "";
 
     struct BehaviorSequence
     {
@@ -395,7 +396,8 @@ public class ExperimentRunner : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Escape) && isRunning)
         {
             StopAllCoroutines();
-            isRunning = false;
+            CurrentExperimentMode = "";
+            isRunning             = false;
             Debug.Log("[ExperimentRunner] Stopped by user.");
         }
     }
@@ -493,7 +495,8 @@ public class ExperimentRunner : MonoBehaviour
             case RunMode.HabitExp:
                 yield return StartCoroutine(RunHabitExp()); break;
         }
-        isRunning = false;
+        CurrentExperimentMode = "";
+        isRunning             = false;
         Debug.Log($"[ExperimentRunner] Done. " +
                   $"Regular={successRuns} Skipped={skippedRuns} " +
                   $"Noise={noiseRuns} Total={totalRuns}");
@@ -501,7 +504,8 @@ public class ExperimentRunner : MonoBehaviour
 
     IEnumerator RunRecognitionExp()
     {
-        UseVirtualDay = false;
+        UseVirtualDay            = false;
+        CurrentExperimentMode    = "recognition";
         cameraManager.captureMode = StaticCameraManager.CaptureMode.Manual;
         Debug.Log("[RecognitionExp] Starting: " + (MomBehaviors.Length + DadBehaviors.Length) + " behaviors x " + rec_samplesPerBehavior + " samples x 2 users = " + ((MomBehaviors.Length + DadBehaviors.Length) * rec_samplesPerBehavior) + " episodes");
 
@@ -540,8 +544,9 @@ public class ExperimentRunner : MonoBehaviour
 
     IEnumerator RunHabitExp()
     {
-        UseVirtualDay     = true;
-        CurrentVirtualDay = 1;
+        UseVirtualDay         = true;
+        CurrentExperimentMode = "habit";
+        CurrentVirtualDay     = 1;
         cameraManager.captureMode = StaticCameraManager.CaptureMode.EventDriven;
 
         int totalDays = exp3_totalObservations / episodesPerVirtualDay;

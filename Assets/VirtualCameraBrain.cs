@@ -172,12 +172,17 @@ public class VirtualCameraBrain : MonoBehaviour
             $"\"y\":{fwd.y.ToString("F3", InvCulture)}," +
             $"\"z\":{fwd.z.ToString("F3", InvCulture)}}}";
 
+        string experimentMode = ExperimentRunner.CurrentExperimentMode;
+        string expModeField    = !string.IsNullOrEmpty(experimentMode)
+            ? $"\"experiment_mode\":\"{Esc(experimentMode)}\"," : "";
+
         string json = "{"
             + $"\"userID\":\"{Esc(user.userID)}\","
             + $"\"activity\":\"{Esc(activity)}\","
             + $"\"room_name\":\"{Esc(roomName)}\","
             + $"\"virtual_hour\":{hour.ToString("F1", InvCulture)},"
             + virtualDayField
+            + expModeField
             + $"\"image_count\":{imageList.Count},"
             + $"\"image_list\":{StrArrayJson(imageList)},"
             + $"\"source_nodes\":{StrArrayJson(nodeNames)},"
