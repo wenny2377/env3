@@ -5777,7 +5777,7 @@ Transform:
   m_GameObject: {fileID: 963603335}
   serializedVersion: 2
   m_LocalRotation: {x: -0.09147132, y: 0.8848247, z: -0.19616088, w: -0.4126005}
-  m_LocalPosition: {x: 6, y: 2, z: 7.5}
+  m_LocalPosition: {x: 6.078, y: 2.155, z: 7.625}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -5827,7 +5827,7 @@ Transform:
   m_GameObject: {fileID: 977725250}
   serializedVersion: 2
   m_LocalRotation: {x: 0.19996412, y: -0.3736123, z: 0.08282785, w: 0.90198}
-  m_LocalPosition: {x: 6, y: 2, z: 3}
+  m_LocalPosition: {x: 6.523, y: 2.09, z: 3.251}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -9240,7 +9240,7 @@ Transform:
   m_GameObject: {fileID: 1503849963}
   serializedVersion: 2
   m_LocalRotation: {x: 0.06698733, y: 0.9330127, z: -0.25000006, w: 0.25000006}
-  m_LocalPosition: {x: 1, y: 2.2, z: 7.5}
+  m_LocalPosition: {x: 0.71, y: 2.2, z: 7.33}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -10663,18 +10663,17 @@ MonoBehaviour:
   - {fileID: 1603672535}
   - {fileID: 267607256}
   - {fileID: 1074887085}
-  mode: 1
+  mode: 2
   rec_samplesPerBehavior: 5
   exp3_totalObservations: 300
   episodesPerVirtualDay: 10
   addNoiseEpisodes: 1
   noiseInterval: 10
   skipProbability: 0.2
-  waitAfterCapture: 3
+  waitAfterCapture: 8
   waitBetweenEpisodes: 2
   minIntervalInSlot: 1.5
   backendUrl: http://localhost:5000
-  useVirtualHour: 1
   runOnStart: 1
   momDrinkingSpots:
   - {fileID: 836976212}
