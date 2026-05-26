@@ -17,7 +17,7 @@ public class DynamicSyncManager : MonoBehaviour
 
     [Header("Intervals (seconds)")]
     public float positionInterval   = 0.5f;
-    public float objectSyncInterval = 5.0f;
+    public float objectSyncInterval = 2.0f;
 
     [Header("Movement Threshold")]
     public float moveTolerance = 0.02f;
@@ -110,41 +110,79 @@ public class DynamicSyncManager : MonoBehaviour
     {
         if (dynamicObjects == null || dynamicObjects.Count == 0) yield break;
 
-        var  entries  = new List<string>();
-        bool anyMoved = false;
+        var entries   = new List<string>();
+        var allLabels = new List<string>();
 
         foreach (var obj in dynamicObjects)
         {
-            if (obj == null || !obj.activeInHierarchy) continue;
+            if (obj == null) continue;
 
-            Vector3 pos = obj.transform.position;
-            string  key = obj.name;
+            string heldBy = FindHolderOf(obj);
+            bool   isHeld = !string.IsNullOrEmpty(heldBy);
 
-            bool moved = !lastObjPos.ContainsKey(key) ||
-                         Vector3.Distance(pos, lastObjPos[key]) > moveTolerance;
-
-            if (moved)
+            Vector3 pos;
+            if (isHeld)
             {
-                lastObjPos[key] = pos;
-                anyMoved        = true;
+                UserEntity holder = GetUserByID(heldBy);
+                pos = holder != null ? holder.transform.position : obj.transform.position;
+            }
+            else
+            {
+                if (!obj.activeInHierarchy) continue;
+                pos = obj.transform.position;
             }
 
-            string room  = DetectRoom(obj.transform.position);
+            string key = obj.name;
+            bool moved = !lastObjPos.ContainsKey(key) ||
+                         Vector3.Distance(pos, lastObjPos[key]) > moveTolerance;
+            if (moved) lastObjPos[key] = pos;
+
+            string room  = DetectRoom(pos);
+            string extra = string.IsNullOrEmpty(heldBy)
+                ? ""
+                : "\"held_by\":\"" + EscStr(heldBy) + "\"";
+
             string entry = BuildObjectJson(
                 label:  obj.name.ToLower(),
                 room:   room,
                 x:      pos.x,
                 z:      pos.z,
                 source: "unity",
-                extra:  ""
+                extra:  extra
             );
             entries.Add(entry);
+            allLabels.Add(obj.name.ToLower());
         }
 
-        if (!anyMoved) yield break;
+        if (entries.Count == 0) yield break;
 
         string json = "{\"objects\":[" + string.Join(",", entries) + "]}";
         yield return StartCoroutine(PostJson(backendUrl + "/dynamic_sync", json, "objects"));
+    }
+
+    string FindHolderOf(GameObject obj)
+    {
+        foreach (var user in new UserEntity[] { userMom, userDad })
+        {
+            if (user == null) continue;
+            var items = user.GetBehaviorItems();
+            if (items == null) continue;
+            foreach (var bi in items)
+            {
+                if (bi == null) continue;
+                if ((bi.sceneCounterpart  == obj && bi.sceneCounterpart  != null && !bi.sceneCounterpart.activeSelf) ||
+                    (bi.sceneCounterpart2 == obj && bi.sceneCounterpart2 != null && !bi.sceneCounterpart2.activeSelf))
+                    return user.userID;
+            }
+        }
+        return "";
+    }
+
+    UserEntity GetUserByID(string userID)
+    {
+        if (userMom != null && userMom.userID == userID) return userMom;
+        if (userDad != null && userDad.userID == userID) return userDad;
+        return null;
     }
 
     IEnumerator PostJson(string url, string json, string label)

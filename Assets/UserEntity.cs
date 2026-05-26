@@ -83,42 +83,41 @@ public class UserEntity : MonoBehaviour
     public BehaviorItem phoneItem;
 
     [Header("Animator state names")]
-    public string stateStanding    = "Standing";
-    public string stateWalk        = "Walking";
-    public string stateDrink       = "Drinking";
+    public string stateStanding     = "Standing";
+    public string stateWalk         = "Walking";
+    public string stateDrink        = "Drinking";
     public string stateSittingDrink = "SittingDrink";
-    public string stateLaying      = "Laying";
-    public string stateReading     = "Reading";
-    public string stateTyping      = "Typing";
-    public string stateWatching    = "Watching";
-    public string statePhone       = "PhoneUse";
-    public string stateNodding     = "Nodding";
-    public string stateEating      = "Eating";
-    public string stateCooking     = "Cooking";
-    public string stateCleaning    = "Cleaning";
-    public string stateOpening     = "Opening";
-    public string statePickingUp   = "PickingUp";
-    public string statePuttingDown = "PuttingDown";
+    public string stateLaying       = "Laying";
+    public string stateReading      = "Reading";
+    public string stateTyping       = "Typing";
+    public string stateWatching     = "Watching";
+    public string statePhone        = "PhoneUse";
+    public string stateNodding      = "Nodding";
+    public string stateEating       = "Eating";
+    public string stateCooking      = "Cooking";
+    public string stateCleaning     = "Cleaning";
+    public string stateOpening      = "Opening";
+    public string statePickingUp    = "PickingUp";
+    public string statePuttingDown  = "PuttingDown";
 
-    public string currentActivity { get; private set; } = "Standing";
-    public bool   IsBusy          { get; private set; } = false;
+    public string currentActivity      { get; private set; } = "Standing";
+    public bool   IsBusy               { get; private set; } = false;
     public string lastAssignedActivity = "";
 
-    [HideInInspector]
-    public float     currentVirtualHour = -1f;
-
-    [HideInInspector]
-    public Transform overrideSpot = null;
+    [HideInInspector] public float     currentVirtualHour = -1f;
+    [HideInInspector] public Transform overrideSpot       = null;
 
     public Vector3 GetAimPosition() =>
         transform.position + Vector3.up * 1.2f;
 
     public void ResetBusy() => IsBusy = false;
 
-    Animator     anim;
-    NavMeshAgent agent;
-    bool         isSitting = false;
-    float        _shadowTimer = 0f;
+    public BehaviorItem[] GetBehaviorItems() => _allItems;
+
+    Animator       anim;
+    NavMeshAgent   agent;
+    bool           isSitting = false;
+    float          _shadowTimer = 0f;
     BehaviorItem[] _allItems;
 
     static readonly System.Globalization.CultureInfo Inv =
@@ -129,14 +128,14 @@ public class UserEntity : MonoBehaviour
         anim  = GetComponent<Animator>();
         agent = GetComponent<NavMeshAgent>();
 
-        agent.speed           = 0f;
-        agent.angularSpeed    = 0f;
-        agent.acceleration    = 0f;
-        agent.autoBraking     = false;
-        agent.updatePosition  = false;
-        agent.updateRotation  = false;
-        agent.updateUpAxis    = false;
-        agent.enabled         = true;
+        agent.speed          = 0f;
+        agent.angularSpeed   = 0f;
+        agent.acceleration   = 0f;
+        agent.autoBraking    = false;
+        agent.updatePosition = false;
+        agent.updateRotation = false;
+        agent.updateUpAxis   = false;
+        agent.enabled        = true;
         agent.Warp(transform.position);
 
         InitBehaviorItems();
@@ -146,13 +145,13 @@ public class UserEntity : MonoBehaviour
 
     void InitBehaviorItems()
     {
-        drinkItem.activity       = "Drinking";
+        drinkItem.activity        = "Drinking";
         sittingDrinkItem.activity = "SittingDrink";
-        eatItem.activity         = "Eating";
-        cookItem.activity        = "Cooking";
-        cleanItem.activity       = "Cleaning";
-        readItem.activity        = "Reading";
-        phoneItem.activity       = "PhoneUse";
+        eatItem.activity          = "Eating";
+        cookItem.activity         = "Cooking";
+        cleanItem.activity        = "Cleaning";
+        readItem.activity         = "Reading";
+        phoneItem.activity        = "PhoneUse";
 
         _allItems = new BehaviorItem[]
         {
@@ -261,17 +260,17 @@ public class UserEntity : MonoBehaviour
         yield return new WaitForSeconds(noddingDuration);
         PlayAnim(currentActivity switch
         {
-            "Drinking"    => stateDrink,
+            "Drinking"     => stateDrink,
             "SittingDrink" => stateSittingDrink,
-            "Laying"      => stateLaying,
-            "Reading"     => stateReading,
-            "Typing"      => stateTyping,
-            "Watching"    => stateWatching,
-            "PhoneUse"    => statePhone,
-            "Eating"      => stateEating,
-            "Cooking"     => stateCooking,
-            "Cleaning"    => stateCleaning,
-            _             => stateStanding,
+            "Laying"       => stateLaying,
+            "Reading"      => stateReading,
+            "Typing"       => stateTyping,
+            "Watching"     => stateWatching,
+            "PhoneUse"     => statePhone,
+            "Eating"       => stateEating,
+            "Cooking"      => stateCooking,
+            "Cleaning"     => stateCleaning,
+            _              => stateStanding,
         });
     }
 
@@ -352,13 +351,10 @@ public class UserEntity : MonoBehaviour
         float rotated = 0f;
         while (Mathf.Abs(rotated) < Mathf.Abs(totalAngle))
         {
-            float step = Mathf.Sign(totalAngle)
-                       * fridgeOpenSpeed * Time.deltaTime;
+            float step = Mathf.Sign(totalAngle) * fridgeOpenSpeed * Time.deltaTime;
             if (Mathf.Abs(rotated + step) > Mathf.Abs(totalAngle))
                 step = totalAngle - rotated;
-
-            Transform pivot = fridgeHingePoint != null
-                ? fridgeHingePoint : fridgeDoor;
+            Transform pivot = fridgeHingePoint != null ? fridgeHingePoint : fridgeDoor;
             fridgeDoor.RotateAround(pivot.position, Vector3.up, step);
             rotated += step;
             yield return null;
@@ -551,14 +547,13 @@ public class UserEntity : MonoBehaviour
             {
                 Vector3 cur  = new Vector3(
                     transform.position.x, 0f, transform.position.z);
-                float   dist = Vector3.Distance(cur, corner);
+                float dist = Vector3.Distance(cur, corner);
                 if (dist <= stop) break;
 
-                Vector3 dir  = (corner - cur).normalized;
-                Vector3 side = Vector3.Cross(dir, Vector3.up);
+                Vector3 dir    = (corner - cur).normalized;
+                Vector3 side   = Vector3.Cross(dir, Vector3.up);
                 float   jitter = Random.Range(-jitterRadius, jitterRadius);
-                Vector3 moveTgt = corner
-                    + side * jitter * Mathf.Min(dist, 0.5f);
+                Vector3 moveTgt = corner + side * jitter * Mathf.Min(dist, 0.5f);
 
                 transform.position = Vector3.MoveTowards(
                     cur, moveTgt, walkSpeed * Time.deltaTime);
@@ -612,8 +607,7 @@ public class UserEntity : MonoBehaviour
             + $"\"virtual_hour\":{hourStr}"
             + "}";
 
-        using var req = new UnityWebRequest(
-            $"{backendUrl}/track_position", "POST");
+        using var req = new UnityWebRequest($"{backendUrl}/track_position", "POST");
         byte[] body = System.Text.Encoding.UTF8.GetBytes(json);
         req.uploadHandler   = new UploadHandlerRaw(body);
         req.downloadHandler = new DownloadHandlerBuffer();
@@ -641,10 +635,8 @@ public class UserEntity : MonoBehaviour
                 System.StringComparison.OrdinalIgnoreCase);
             if (bi.item  != null) bi.item.SetActive(active);
             if (bi.item2 != null) bi.item2.SetActive(active);
-            if (bi.sceneCounterpart  != null)
-                bi.sceneCounterpart.SetActive(!active);
-            if (bi.sceneCounterpart2 != null)
-                bi.sceneCounterpart2.SetActive(!active);
+            if (bi.sceneCounterpart  != null) bi.sceneCounterpart.SetActive(!active);
+            if (bi.sceneCounterpart2 != null) bi.sceneCounterpart2.SetActive(!active);
         }
     }
 
@@ -690,8 +682,7 @@ public class UserEntity : MonoBehaviour
         Gizmos.DrawWireSphere(spot.position, 0.2f);
         Gizmos.DrawRay(spot.position, spot.forward * 0.8f);
 #if UNITY_EDITOR
-        UnityEditor.Handles.Label(
-            spot.position + Vector3.up * 0.35f, label);
+        UnityEditor.Handles.Label(spot.position + Vector3.up * 0.35f, label);
 #endif
     }
 }

@@ -187,7 +187,16 @@ public class StaticCameraManager : MonoBehaviour
         _isCapturing = true;
 
         List<CameraNode> ranked = ScoreCamerasRanked(user, cameras);
-        List<CameraNode> toUse  = ranked.Count > 0 ? ranked : cameras;
+        List<CameraNode> toUse  = new List<CameraNode>();
+
+        if (ranked != null && ranked.Count > 0)
+        {
+            toUse.Add(ranked[0]);
+        }
+        else
+        {
+            toUse.Add(cameras[0]);
+        }
 
         string names = string.Join(", ",
             toUse.ConvertAll(n => $"{n.nodeName}({n.lastScore:F2})"));
@@ -210,46 +219,49 @@ public class StaticCameraManager : MonoBehaviour
     List<CameraNode> ScoreCamerasRanked(
         UserEntity user, List<CameraNode> cameras)
     {
-        Vector3 aimPos = user.GetAimPosition();
-        var     scored = new List<CameraNode>();
+        Vector3 userPos = user.transform.position;
+        Vector3 userForward = user.transform.forward;
+        var     scoredList = new List<CameraNode>();
 
-        foreach (var cam in cameras)
+        foreach (var node in cameras)
         {
-            if (cam == null) continue;
+            if (node == null) continue;
 
-            Vector3 nodePos  = cam.transform.position;
-            Vector3 toTarget = (aimPos - nodePos).normalized;
-            float   angle    = Vector3.Angle(cam.transform.forward, toTarget);
-            float   halfFov  = cam.fieldOfView * 0.5f;
+            Vector3 toCamera = (node.transform.position - userPos).normalized;
+            float facingDot = Vector3.Dot(userForward, toCamera);
 
-            if (angle > halfFov)
+            if (facingDot < 0.0f)
             {
-                cam.lastScore = 0f;
-                scored.Add(cam);
+                node.lastScore = -1000f;
                 continue;
             }
 
-            float vis = 1f;
-            if (Physics.Linecast(nodePos, aimPos, out RaycastHit hit))
+            Vector3 targetUpperBody = userPos + Vector3.up * 1.2f;
+            Vector3 rayDirection = targetUpperBody - node.transform.position;
+            float distance = rayDirection.magnitude;
+
+            float visibilityScore = 50f;
+
+            if (Physics.Raycast(node.transform.position, rayDirection.normalized, out RaycastHit hit, distance))
             {
-                bool hitUser = hit.transform == user.transform
-                            || hit.transform.IsChildOf(user.transform);
-                if (!hitUser) vis = 0.3f;
+                if (hit.transform != user.transform && !hit.transform.IsChildOf(user.transform))
+                {
+                    visibilityScore = 0f;
+                }
             }
 
-            float angleFactor = Mathf.Clamp01(1f - angle / halfFov);
-            float dist        = Vector3.Distance(nodePos, aimPos);
-            float distFactor  = Mathf.Clamp01(1f - dist / 10f);
+            float distanceScore = Mathf.Max(0f, (25f - distance) * 2f);
 
-            cam.lastScore =
-                (vis * 0.5f + angleFactor * 0.3f + distFactor * 0.2f)
-                * cam.scoreMultiplier;
+            node.lastScore = (facingDot * 50f) + visibilityScore + distanceScore;
 
-            scored.Add(cam);
+            if (visibilityScore > 0f)
+            {
+                scoredList.Add(node);
+            }
         }
 
-        scored.Sort((a, b) => b.lastScore.CompareTo(a.lastScore));
-        return scored;
+        scoredList.Sort((a, b) => b.lastScore.CompareTo(a.lastScore));
+        return scoredList;
     }
 
     List<CameraNode> FindCamerasForUser(UserEntity user)
@@ -291,7 +303,7 @@ public class StaticCameraManager : MonoBehaviour
         "Reading"      => 2.0f,
         "Cleaning"     => 1.5f,
         "PhoneUse"     => 1.5f,
-        "Typing"       => 1.5f,
+        "Typ "        => 1.5f,
         _              => defaultSettleTime,
     };
 
@@ -303,8 +315,8 @@ public class StaticCameraManager : MonoBehaviour
             {
                 if (cam == null) continue;
                 Gizmos.color =
-                    cam.lastScore >= 0.6f ? Color.green
-                    : cam.lastScore >= 0.3f ? Color.yellow
+                    cam.lastScore >= 60f ? Color.green
+                    : cam.lastScore >= 30f ? Color.yellow
                     : cam.lastScore > 0f   ? Color.red
                     :                        Color.gray;
                 Gizmos.DrawWireSphere(cam.transform.position, 0.15f);
