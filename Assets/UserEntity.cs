@@ -34,6 +34,7 @@ public class UserEntity : MonoBehaviour
     public Transform readingSpot;
     public Transform cleanSpot;
     public Transform phoneSpot;
+    public Transform sittingSpot;
 
     [Header("DadRoom Spots")]
     public Transform typingSpot;
@@ -64,14 +65,16 @@ public class UserEntity : MonoBehaviour
     public string backendUrl = "http://localhost:5000";
 
     [Header("Action Durations (seconds)")]
-    public float noddingDuration = 1.5f;
-    public float drinkDuration = 2.0f;
-    public float eatDuration = 3.0f;
-    public float cookDuration = 3.0f;
-    public float openDuration = 2.0f;
-    public float cleanDuration = 3.0f;
-    public float pickUpDuration = 1.0f;
-    public float putDownDuration = 1.0f;
+    public float noddingDuration  = 1.5f;
+    public float drinkDuration    = 2.0f;
+    public float eatDuration      = 3.0f;
+    public float cookDuration     = 3.0f;
+    public float openDuration     = 2.0f;
+    public float cleanDuration    = 3.0f;
+    public float pickUpDuration   = 1.0f;
+    public float putDownDuration  = 1.0f;
+    public float sittingDuration  = 3.0f;
+    public float standUpDuration  = 0.8f;
 
     [Header("Held Items (drag only)")]
     public BehaviorItem drinkItem;
@@ -87,6 +90,8 @@ public class UserEntity : MonoBehaviour
     public string stateWalk         = "Walking";
     public string stateDrink        = "Drinking";
     public string stateSittingDrink = "SittingDrink";
+    public string stateSitting      = "Sitting";
+    public string stateStandUp      = "StandUp";
     public string stateLaying       = "Laying";
     public string stateReading      = "Reading";
     public string stateTyping       = "Typing";
@@ -197,6 +202,11 @@ public class UserEntity : MonoBehaviour
                 yield return StartCoroutine(DoDrink()); break;
             case "sittingdrink":
                 yield return StartCoroutine(DoSittingDrink()); break;
+            case "sitting":
+                yield return StartCoroutine(DoSitting()); break;
+            case "standup":
+            case "stand up":
+                yield return StartCoroutine(DoStandUp()); break;
             case "eat":
             case "eating":
                 yield return StartCoroutine(DoEat()); break;
@@ -262,6 +272,7 @@ public class UserEntity : MonoBehaviour
         {
             "Drinking"     => stateDrink,
             "SittingDrink" => stateSittingDrink,
+            "Sitting"      => stateSitting,
             "Laying"       => stateLaying,
             "Reading"      => stateReading,
             "Typing"       => stateTyping,
@@ -299,6 +310,33 @@ public class UserEntity : MonoBehaviour
         SetActivity("SittingDrink");
         PlayAnim(stateSittingDrink);
         yield return new WaitForSeconds(drinkDuration);
+    }
+
+    IEnumerator DoSitting()
+    {
+        Transform spot = ConsumeOverride(sittingSpot ?? sittingDrinkSpot);
+        if (spot == null) { Warn("sittingSpot"); yield break; }
+        SetActivity("Walking");
+        yield return StartCoroutine(NavWalkTo(spot.position, true));
+        yield return StartCoroutine(SmoothRotateTo(spot.forward));
+        TeleportToSeat(spot);
+        SetActivity("Sitting");
+        PlayAnim(stateSitting);
+        yield return new WaitForSeconds(sittingDuration);
+    }
+
+    IEnumerator DoStandUp()
+    {
+        SetActivity("StandUp");
+        PlayAnim(stateStandUp);
+        yield return new WaitForSeconds(standUpDuration);
+        isSitting = false;
+        Vector3 p = transform.position;
+        p.y = 0f;
+        transform.position = p;
+        agent.Warp(transform.position);
+        SetActivity("Standing");
+        PlayAnim(stateStanding);
     }
 
     IEnumerator DoEat()
@@ -659,6 +697,7 @@ public class UserEntity : MonoBehaviour
     {
         DrawSpot(drinkSpot,        Color.cyan,    "Drink");
         DrawSpot(sittingDrinkSpot, Color.blue,    "SitDrink");
+        DrawSpot(sittingSpot,      Color.blue,    "Sitting");
         DrawSpot(eatSpot,          Color.yellow,  "Eat");
         DrawSpot(cookSpot,         Color.red,     "Cook");
         DrawSpot(openSpot,         Color.white,   "Open");

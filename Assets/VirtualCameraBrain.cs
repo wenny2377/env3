@@ -59,8 +59,6 @@ public class VirtualCameraBrain : MonoBehaviour
             yield break;
         }
 
-        // t_capture: 這次事件的唯一時間戳記
-        // 所有 burst 幀共享同一個 t_capture
         string tCapture = System.DateTime.UtcNow
             .ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
 
@@ -70,7 +68,6 @@ public class VirtualCameraBrain : MonoBehaviour
         var nodeNames  = new List<string>();
         var nodeScores = new List<float>();
 
-        // 多角度採樣（空間多樣性）
         for (int i = 0; i < captureCount; i++)
         {
             CameraNode node   = sortedNodes[i];
@@ -85,7 +82,6 @@ public class VirtualCameraBrain : MonoBehaviour
 
             nodeCam.fieldOfView = node.fieldOfView;
 
-            // Burst 連拍（時間多樣性）
             for (int b = 0; b < burstCount; b++)
             {
                 if (b > 0)
@@ -169,6 +165,10 @@ public class VirtualCameraBrain : MonoBehaviour
         Vector3 pos = user.transform.position;
         Vector3 fwd = user.transform.forward;
 
+        // 骨架姿態（SkeletonHelper 掛在 UserEntity 同一個 GameObject）
+        var sk = user.GetComponent<SkeletonHelper>();
+        string skelJson = sk != null ? sk.ToJsonFragment() : "";
+
         string posJson =
             $"\"user_pos\":{{" +
             $"\"x\":{pos.x.ToString("F3", InvCulture)}," +
@@ -193,6 +193,7 @@ public class VirtualCameraBrain : MonoBehaviour
             + $"\"t_capture\":\"{tCapture}\","
             + virtualDayField
             + expModeField
+            + skelJson
             + $"\"image_count\":{imageList.Count},"
             + $"\"image_list\":{StrArrayJson(imageList)},"
             + $"\"source_nodes\":{StrArrayJson(nodeNames)},"
@@ -215,11 +216,12 @@ public class VirtualCameraBrain : MonoBehaviour
             string dayLog = ExperimentRunner.UseVirtualDay
                 ? $" day={VirtualDayToDateString(ExperimentRunner.CurrentVirtualDay)}"
                 : "";
+            string skelLog = sk != null
+                ? $" hip={sk.HipHeight():F2} arm={sk.ArmPose()} body={sk.BodyPosition()}"
+                : "";
             Debug.Log(
                 $"[VCB] POST ok | {user.userID} | {activity} | " +
-                $"{imageList.Count} img (burst={burstCount}) | " +
-                $"hour={hour}{dayLog} | t={tCapture} | " +
-                $"pos=({pos.x:F2},{pos.z:F2})");
+                $"{imageList.Count} img | hour={hour}{dayLog}{skelLog} | t={tCapture}");
         }
         else
         {

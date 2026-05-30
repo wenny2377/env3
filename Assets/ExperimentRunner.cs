@@ -40,28 +40,33 @@ public class ExperimentRunner : MonoBehaviour
 
     [Header("Backend URL")]
     public string backendUrl = "http://localhost:5000";
+
     [Header("Options")]
-        public bool runOnStart = true;
-    [Header("Mom Spots - Drinking")]    public Transform[] momDrinkingSpots    = new Transform[3];
+    public bool runOnStart = true;
+
+    [Header("Mom Spots - Drinking")]     public Transform[] momDrinkingSpots     = new Transform[3];
     [Header("Mom Spots - SittingDrink")] public Transform[] momSittingDrinkSpots = new Transform[3];
-    [Header("Mom Spots - Eating")]      public Transform[] momEatingSpots      = new Transform[3];
-    [Header("Mom Spots - Cooking")]     public Transform[] momCookingSpots     = new Transform[3];
-    [Header("Mom Spots - Opening")]     public Transform[] momOpeningSpots     = new Transform[3];
-    [Header("Mom Spots - Laying")]      public Transform[] momLayingSpots      = new Transform[3];
-    [Header("Mom Spots - Watching")]    public Transform[] momWatchingSpots    = new Transform[3];
-    [Header("Mom Spots - Reading")]     public Transform[] momReadingSpots     = new Transform[3];
-    [Header("Mom Spots - Cleaning")]    public Transform[] momCleaningSpots    = new Transform[3];
-    [Header("Mom Spots - PhoneUse")]    public Transform[] momPhoneSpots       = new Transform[3];
-    [Header("Dad Spots - Drinking")]    public Transform[] dadDrinkingSpots    = new Transform[3];
+    [Header("Mom Spots - Sitting")]      public Transform[] momSittingSpots      = new Transform[3];
+    [Header("Mom Spots - Eating")]       public Transform[] momEatingSpots       = new Transform[3];
+    [Header("Mom Spots - Cooking")]      public Transform[] momCookingSpots      = new Transform[3];
+    [Header("Mom Spots - Opening")]      public Transform[] momOpeningSpots      = new Transform[3];
+    [Header("Mom Spots - Laying")]       public Transform[] momLayingSpots       = new Transform[3];
+    [Header("Mom Spots - Watching")]     public Transform[] momWatchingSpots     = new Transform[3];
+    [Header("Mom Spots - Reading")]      public Transform[] momReadingSpots      = new Transform[3];
+    [Header("Mom Spots - Cleaning")]     public Transform[] momCleaningSpots     = new Transform[3];
+    [Header("Mom Spots - PhoneUse")]     public Transform[] momPhoneSpots        = new Transform[3];
+
+    [Header("Dad Spots - Drinking")]     public Transform[] dadDrinkingSpots     = new Transform[3];
     [Header("Dad Spots - SittingDrink")] public Transform[] dadSittingDrinkSpots = new Transform[3];
-    [Header("Dad Spots - Eating")]      public Transform[] dadEatingSpots      = new Transform[3];
-    [Header("Dad Spots - Cooking")]     public Transform[] dadCookingSpots     = new Transform[3];
-    [Header("Dad Spots - Opening")]     public Transform[] dadOpeningSpots     = new Transform[3];
-    [Header("Dad Spots - Laying")]      public Transform[] dadLayingSpots      = new Transform[3];
-    [Header("Dad Spots - Typing")]      public Transform[] dadTypingSpots      = new Transform[3];
-    [Header("Dad Spots - Reading")]     public Transform[] dadReadingSpots     = new Transform[3];
-    [Header("Dad Spots - Cleaning")]    public Transform[] dadCleaningSpots    = new Transform[3];
-    [Header("Dad Spots - PhoneUse")]    public Transform[] dadPhoneSpots       = new Transform[3];
+    [Header("Dad Spots - Sitting")]      public Transform[] dadSittingSpots      = new Transform[3];
+    [Header("Dad Spots - Eating")]       public Transform[] dadEatingSpots       = new Transform[3];
+    [Header("Dad Spots - Cooking")]      public Transform[] dadCookingSpots      = new Transform[3];
+    [Header("Dad Spots - Opening")]      public Transform[] dadOpeningSpots      = new Transform[3];
+    [Header("Dad Spots - Laying")]       public Transform[] dadLayingSpots       = new Transform[3];
+    [Header("Dad Spots - Typing")]       public Transform[] dadTypingSpots       = new Transform[3];
+    [Header("Dad Spots - Reading")]      public Transform[] dadReadingSpots      = new Transform[3];
+    [Header("Dad Spots - Cleaning")]     public Transform[] dadCleaningSpots     = new Transform[3];
+    [Header("Dad Spots - PhoneUse")]     public Transform[] dadPhoneSpots        = new Transform[3];
 
     public enum RunMode { Demo, RecognitionExp, HabitExp }
 
@@ -84,12 +89,13 @@ public class ExperimentRunner : MonoBehaviour
         public BehaviorSequence[] dadSequences;
     }
 
+    // Recognition 實驗行為列表（17 個行為，不含過渡動作 StandUp/PickingUp/PuttingDown）
     static readonly string[] MomBehaviors = {
-        "Drinking", "SittingDrink", "Eating", "Cooking", "Opening",
+        "Drinking", "SittingDrink", "Sitting", "Eating", "Cooking", "Opening",
         "Laying", "Watching", "Reading", "Cleaning", "PhoneUse",
     };
     static readonly string[] DadBehaviors = {
-        "Drinking", "SittingDrink", "Eating", "Cooking", "Opening",
+        "Drinking", "SittingDrink", "Sitting", "Eating", "Cooking", "Opening",
         "Laying", "Typing", "Reading", "Cleaning", "PhoneUse",
     };
     static readonly string[] NoiseActions = { "Standing" };
@@ -99,78 +105,84 @@ public class ExperimentRunner : MonoBehaviour
         new TimeSlot {
             name = "Morning", virtualHour = 7f,
             momSequences = new BehaviorSequence[] {
-                new BehaviorSequence { actions = new[]{ "Opening","Cooking","Eating","Drinking" }, groundTruth = "Eating",      weight = 3 },
-                new BehaviorSequence { actions = new[]{ "Drinking" },                              groundTruth = "Drinking",    weight = 4 },
-                new BehaviorSequence { actions = new[]{ "Opening","SittingDrink" },                groundTruth = "SittingDrink",weight = 2 },
-                new BehaviorSequence { actions = new[]{ "Cooking","Eating" },                      groundTruth = "Eating",      weight = 3 },
+                new BehaviorSequence { actions = new[]{ "Opening","Cooking","Eating","Drinking" }, groundTruth = "Eating",       weight = 3 },
+                new BehaviorSequence { actions = new[]{ "Drinking" },                              groundTruth = "Drinking",     weight = 4 },
+                new BehaviorSequence { actions = new[]{ "Opening","SittingDrink" },                groundTruth = "SittingDrink", weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Sitting" },                               groundTruth = "Sitting",      weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Cooking","Eating" },                      groundTruth = "Eating",       weight = 3 },
             },
             dadSequences = new BehaviorSequence[] {
-                new BehaviorSequence { actions = new[]{ "Opening","Cooking","Eating","Drinking" }, groundTruth = "Eating",      weight = 3 },
-                new BehaviorSequence { actions = new[]{ "Drinking" },                              groundTruth = "Drinking",    weight = 4 },
-                new BehaviorSequence { actions = new[]{ "Opening","Eating" },                      groundTruth = "Eating",      weight = 2 },
-                new BehaviorSequence { actions = new[]{ "SittingDrink" },                          groundTruth = "SittingDrink",weight = 1 },
+                new BehaviorSequence { actions = new[]{ "Opening","Cooking","Eating","Drinking" }, groundTruth = "Eating",       weight = 3 },
+                new BehaviorSequence { actions = new[]{ "Drinking" },                              groundTruth = "Drinking",     weight = 4 },
+                new BehaviorSequence { actions = new[]{ "Opening","Eating" },                      groundTruth = "Eating",       weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Sitting" },                               groundTruth = "Sitting",      weight = 2 },
+                new BehaviorSequence { actions = new[]{ "SittingDrink" },                          groundTruth = "SittingDrink", weight = 1 },
             },
         },
         new TimeSlot {
             name = "Noon", virtualHour = 12f,
             momSequences = new BehaviorSequence[] {
-                new BehaviorSequence { actions = new[]{ "Laying" },           groundTruth = "Laying",  weight = 4 },
-                new BehaviorSequence { actions = new[]{ "Watching","Laying" },groundTruth = "Laying",  weight = 2 },
-                new BehaviorSequence { actions = new[]{ "Eating" },           groundTruth = "Eating",  weight = 2 },
-                new BehaviorSequence { actions = new[]{ "Reading" },          groundTruth = "Reading", weight = 1 },
+                new BehaviorSequence { actions = new[]{ "Laying" },            groundTruth = "Laying",      weight = 4 },
+                new BehaviorSequence { actions = new[]{ "Watching","Laying" }, groundTruth = "Laying",      weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Eating" },            groundTruth = "Eating",      weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Sitting","Reading" }, groundTruth = "Reading",     weight = 1 },
+                new BehaviorSequence { actions = new[]{ "Sitting" },           groundTruth = "Sitting",     weight = 1 },
             },
             dadSequences = new BehaviorSequence[] {
-                new BehaviorSequence { actions = new[]{ "Laying" },            groundTruth = "Laying",   weight = 4 },
-                new BehaviorSequence { actions = new[]{ "PhoneUse","Laying" }, groundTruth = "Laying",   weight = 2 },
-                new BehaviorSequence { actions = new[]{ "Eating" },            groundTruth = "Eating",   weight = 2 },
-                new BehaviorSequence { actions = new[]{ "PhoneUse" },          groundTruth = "PhoneUse", weight = 1 },
+                new BehaviorSequence { actions = new[]{ "Laying" },             groundTruth = "Laying",     weight = 4 },
+                new BehaviorSequence { actions = new[]{ "PhoneUse","Laying" },  groundTruth = "Laying",     weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Eating" },             groundTruth = "Eating",     weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Sitting","PhoneUse" }, groundTruth = "PhoneUse",   weight = 1 },
+                new BehaviorSequence { actions = new[]{ "Sitting" },            groundTruth = "Sitting",    weight = 1 },
             },
         },
         new TimeSlot {
             name = "Afternoon", virtualHour = 15f,
             momSequences = new BehaviorSequence[] {
-                new BehaviorSequence { actions = new[]{ "Reading" },             groundTruth = "Reading",  weight = 4 },
-                new BehaviorSequence { actions = new[]{ "Reading","PhoneUse" },  groundTruth = "Reading",  weight = 2 },
-                new BehaviorSequence { actions = new[]{ "Cleaning" },            groundTruth = "Cleaning", weight = 2 },
-                new BehaviorSequence { actions = new[]{ "PhoneUse" },            groundTruth = "PhoneUse", weight = 1 },
+                new BehaviorSequence { actions = new[]{ "Sitting","Reading" },            groundTruth = "Reading",  weight = 4 },
+                new BehaviorSequence { actions = new[]{ "Sitting","Reading","PhoneUse" }, groundTruth = "Reading",  weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Cleaning" },                     groundTruth = "Cleaning", weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Sitting","PhoneUse" },           groundTruth = "PhoneUse", weight = 1 },
+                new BehaviorSequence { actions = new[]{ "Sitting" },                      groundTruth = "Sitting",  weight = 1 },
             },
             dadSequences = new BehaviorSequence[] {
-                new BehaviorSequence { actions = new[]{ "Typing" },              groundTruth = "Typing",   weight = 4 },
-                new BehaviorSequence { actions = new[]{ "Typing","PhoneUse" },   groundTruth = "Typing",   weight = 4 },
-                new BehaviorSequence { actions = new[]{ "PhoneUse" },            groundTruth = "PhoneUse", weight = 2 },
-                new BehaviorSequence { actions = new[]{ "Reading" },             groundTruth = "Reading",  weight = 1 },
+                new BehaviorSequence { actions = new[]{ "Typing" },                        groundTruth = "Typing",   weight = 4 },
+                new BehaviorSequence { actions = new[]{ "Typing","PhoneUse" },             groundTruth = "Typing",   weight = 4 },
+                new BehaviorSequence { actions = new[]{ "Sitting","PhoneUse" },            groundTruth = "PhoneUse", weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Sitting","Reading" },             groundTruth = "Reading",  weight = 1 },
+                new BehaviorSequence { actions = new[]{ "Sitting" },                       groundTruth = "Sitting",  weight = 1 },
             },
         },
         new TimeSlot {
             name = "Evening", virtualHour = 19f,
             momSequences = new BehaviorSequence[] {
-                new BehaviorSequence { actions = new[]{ "Cooking","Eating","Watching" }, groundTruth = "Watching", weight = 4 },
-                new BehaviorSequence { actions = new[]{ "Eating","Watching" },           groundTruth = "Watching", weight = 3 },
-                new BehaviorSequence { actions = new[]{ "Watching" },                    groundTruth = "Watching", weight = 2 },
-                new BehaviorSequence { actions = new[]{ "Cooking","Eating" },            groundTruth = "Eating",   weight = 2 },
-                new BehaviorSequence { actions = new[]{ "Drinking","Watching" },         groundTruth = "Watching", weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Cooking","Eating","Watching" },   groundTruth = "Watching", weight = 4 },
+                new BehaviorSequence { actions = new[]{ "Eating","Watching" },             groundTruth = "Watching", weight = 3 },
+                new BehaviorSequence { actions = new[]{ "Watching" },                      groundTruth = "Watching", weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Cooking","Eating" },              groundTruth = "Eating",   weight = 2 },
+                new BehaviorSequence { actions = new[]{ "SittingDrink","Watching" },       groundTruth = "Watching", weight = 2 },
             },
             dadSequences = new BehaviorSequence[] {
-                new BehaviorSequence { actions = new[]{ "Cooking","Eating","PhoneUse" }, groundTruth = "PhoneUse", weight = 4 },
-                new BehaviorSequence { actions = new[]{ "Eating","PhoneUse" },           groundTruth = "PhoneUse", weight = 3 },
-                new BehaviorSequence { actions = new[]{ "PhoneUse" },                   groundTruth = "PhoneUse", weight = 2 },
-                new BehaviorSequence { actions = new[]{ "Cooking","Eating" },            groundTruth = "Eating",   weight = 2 },
-                new BehaviorSequence { actions = new[]{ "Drinking","PhoneUse" },         groundTruth = "PhoneUse", weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Cooking","Eating","PhoneUse" },   groundTruth = "PhoneUse", weight = 4 },
+                new BehaviorSequence { actions = new[]{ "Eating","PhoneUse" },             groundTruth = "PhoneUse", weight = 3 },
+                new BehaviorSequence { actions = new[]{ "Sitting","PhoneUse" },            groundTruth = "PhoneUse", weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Cooking","Eating" },              groundTruth = "Eating",   weight = 2 },
+                new BehaviorSequence { actions = new[]{ "SittingDrink","PhoneUse" },       groundTruth = "PhoneUse", weight = 2 },
             },
         },
         new TimeSlot {
             name = "Night", virtualHour = 23f,
             momSequences = new BehaviorSequence[] {
-                new BehaviorSequence { actions = new[]{ "Reading","Laying" },  groundTruth = "Laying",   weight = 3 },
-                new BehaviorSequence { actions = new[]{ "Laying" },            groundTruth = "Laying",   weight = 4 },
-                new BehaviorSequence { actions = new[]{ "PhoneUse","Laying" }, groundTruth = "Laying",   weight = 2 },
-                new BehaviorSequence { actions = new[]{ "Watching" },          groundTruth = "Watching", weight = 1 },
+                new BehaviorSequence { actions = new[]{ "Sitting","Reading","Laying" },    groundTruth = "Laying",   weight = 3 },
+                new BehaviorSequence { actions = new[]{ "Laying" },                        groundTruth = "Laying",   weight = 4 },
+                new BehaviorSequence { actions = new[]{ "Sitting","PhoneUse","Laying" },   groundTruth = "Laying",   weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Watching" },                      groundTruth = "Watching", weight = 1 },
             },
             dadSequences = new BehaviorSequence[] {
-                new BehaviorSequence { actions = new[]{ "PhoneUse","Laying" }, groundTruth = "Laying",   weight = 3 },
-                new BehaviorSequence { actions = new[]{ "Laying" },            groundTruth = "Laying",   weight = 4 },
-                new BehaviorSequence { actions = new[]{ "Reading","Laying" },  groundTruth = "Laying",   weight = 2 },
-                new BehaviorSequence { actions = new[]{ "PhoneUse" },          groundTruth = "PhoneUse", weight = 1 },
+                new BehaviorSequence { actions = new[]{ "Sitting","PhoneUse","Laying" },   groundTruth = "Laying",   weight = 3 },
+                new BehaviorSequence { actions = new[]{ "Laying" },                        groundTruth = "Laying",   weight = 4 },
+                new BehaviorSequence { actions = new[]{ "Sitting","Reading","Laying" },    groundTruth = "Laying",   weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Sitting","PhoneUse" },            groundTruth = "PhoneUse", weight = 1 },
             },
         },
     };
@@ -372,6 +384,9 @@ public class ExperimentRunner : MonoBehaviour
                 currentVirtualHour = slot.virtualHour;
                 SetUsersVirtualHour(slot.virtualHour);
 
+                // 每個時間段開始時都送一次 virtual_hour 給 Flask
+                PostVirtualHourFireAndForget(slot.virtualHour);
+
                 var momQ   = BuildSequenceQueue(slot.momSequences, epPerSlot);
                 var dadQ   = BuildSequenceQueue(slot.dadSequences, epPerSlot);
                 int maxLen = Mathf.Max(momQ.Count, dadQ.Count);
@@ -387,8 +402,6 @@ public class ExperimentRunner : MonoBehaviour
                         }
                         else
                         {
-                            if (useVirtualHour)
-                                PostVirtualHourFireAndForget(slot.virtualHour);
                             yield return StartCoroutine(
                                 RunSequenceEpisode(
                                     userMom, momQ[i],
@@ -416,8 +429,6 @@ public class ExperimentRunner : MonoBehaviour
                         }
                         else
                         {
-                            if (useVirtualHour)
-                                PostVirtualHourFireAndForget(slot.virtualHour);
                             yield return StartCoroutine(
                                 RunSequenceEpisode(
                                     userDad, dadQ[i],
@@ -436,6 +447,10 @@ public class ExperimentRunner : MonoBehaviour
                         }
                     }
                 }
+
+                // 每個時間段結束後記錄 checkpoint（論文學習收斂曲線的數據來源）
+                yield return StartCoroutine(
+                    PostCheckpoint(day, slot.name, episodeCount));
             }
 
             Debug.Log($"[HabitExp] Day {day}/{totalDays} | "
@@ -491,6 +506,7 @@ public class ExperimentRunner : MonoBehaviour
         if (virtualCameraBrain != null && virtualHour >= 0f)
             virtualCameraBrain.SetVirtualHour(virtualHour);
         SetUsersVirtualHour(virtualHour);
+
         int lastIdx = seq.actions.Length - 1;
         for (int i = 0; i < lastIdx; i++)
         {
@@ -501,6 +517,7 @@ public class ExperimentRunner : MonoBehaviour
                 targetUser.SwitchActivity(midAction));
             yield return new WaitForSeconds(0.5f);
         }
+
         string finalAction = seq.actions[lastIdx];
         Transform spot = (targetUser == userMom)
             ? GetMomSpot(seq.groundTruth, episodeIndex)
@@ -515,7 +532,9 @@ public class ExperimentRunner : MonoBehaviour
         targetUser.lastAssignedActivity = seq.groundTruth;
         yield return new WaitForSeconds(waitAfterCapture);
         targetUser.lastAssignedActivity = "";
+
         yield return StartCoroutine(targetUser.ReturnToStanding());
+
         if (other != null)
         {
             WarpUserToSpot(other);
@@ -550,6 +569,27 @@ public class ExperimentRunner : MonoBehaviour
         yield return new WaitForSeconds(waitBetweenEpisodes);
     }
 
+    IEnumerator PostCheckpoint(int day, string slotName, int episodeCount)
+    {
+        string json = "{"
+            + $"\"episode\":{episodeCount},"
+            + $"\"user_id\":\"User_Mom\","
+            + $"\"action\":\"Watching\","
+            + $"\"day\":{day},"
+            + $"\"slot\":\"{slotName}\""
+            + "}";
+        using var req = new UnityWebRequest(
+            $"{backendUrl}/exp_checkpoint", "POST");
+        req.uploadHandler   = new UploadHandlerRaw(
+            System.Text.Encoding.UTF8.GetBytes(json));
+        req.downloadHandler = new DownloadHandlerBuffer();
+        req.SetRequestHeader("Content-Type", "application/json");
+        req.timeout = 5;
+        yield return req.SendWebRequest();
+        if (req.result == UnityWebRequest.Result.Success)
+            Debug.Log($"[Checkpoint] day={day} slot={slotName} ep={episodeCount}");
+    }
+
     void WarpUserToSpot(UserEntity user)
     {
         if (user == null || user.standingSpot == null) return;
@@ -581,8 +621,6 @@ public class ExperimentRunner : MonoBehaviour
         if (userDad != null) userDad.currentVirtualHour = hour;
     }
 
-    bool useVirtualHour => true;
-
     Transform GetSpot(Transform[] spots, int idx)
     {
         if (spots == null || spots.Length == 0) return null;
@@ -592,31 +630,33 @@ public class ExperimentRunner : MonoBehaviour
 
     Transform GetMomSpot(string behavior, int idx) => behavior switch
     {
-        "Drinking"     => GetSpot(momDrinkingSpots,    idx),
-        "SittingDrink" => GetSpot(momSittingDrinkSpots,idx),
-        "Eating"       => GetSpot(momEatingSpots,      idx),
-        "Cooking"      => GetSpot(momCookingSpots,     idx),
-        "Opening"      => GetSpot(momOpeningSpots,     idx),
-        "Laying"       => GetSpot(momLayingSpots,      idx),
-        "Watching"     => GetSpot(momWatchingSpots,    idx),
-        "Reading"      => GetSpot(momReadingSpots,     idx),
-        "Cleaning"     => GetSpot(momCleaningSpots,    idx),
-        "PhoneUse"     => GetSpot(momPhoneSpots,       idx),
+        "Drinking"     => GetSpot(momDrinkingSpots,     idx),
+        "SittingDrink" => GetSpot(momSittingDrinkSpots, idx),
+        "Sitting"      => GetSpot(momSittingSpots,      idx),
+        "Eating"       => GetSpot(momEatingSpots,       idx),
+        "Cooking"      => GetSpot(momCookingSpots,      idx),
+        "Opening"      => GetSpot(momOpeningSpots,      idx),
+        "Laying"       => GetSpot(momLayingSpots,       idx),
+        "Watching"     => GetSpot(momWatchingSpots,     idx),
+        "Reading"      => GetSpot(momReadingSpots,      idx),
+        "Cleaning"     => GetSpot(momCleaningSpots,     idx),
+        "PhoneUse"     => GetSpot(momPhoneSpots,        idx),
         _              => null,
     };
 
     Transform GetDadSpot(string behavior, int idx) => behavior switch
     {
-        "Drinking"     => GetSpot(dadDrinkingSpots,    idx),
-        "SittingDrink" => GetSpot(dadSittingDrinkSpots,idx),
-        "Eating"       => GetSpot(dadEatingSpots,      idx),
-        "Cooking"      => GetSpot(dadCookingSpots,     idx),
-        "Opening"      => GetSpot(dadOpeningSpots,     idx),
-        "Laying"       => GetSpot(dadLayingSpots,      idx),
-        "Typing"       => GetSpot(dadTypingSpots,      idx),
-        "Reading"      => GetSpot(dadReadingSpots,     idx),
-        "Cleaning"     => GetSpot(dadCleaningSpots,    idx),
-        "PhoneUse"     => GetSpot(dadPhoneSpots,       idx),
+        "Drinking"     => GetSpot(dadDrinkingSpots,     idx),
+        "SittingDrink" => GetSpot(dadSittingDrinkSpots, idx),
+        "Sitting"      => GetSpot(dadSittingSpots,      idx),
+        "Eating"       => GetSpot(dadEatingSpots,       idx),
+        "Cooking"      => GetSpot(dadCookingSpots,      idx),
+        "Opening"      => GetSpot(dadOpeningSpots,      idx),
+        "Laying"       => GetSpot(dadLayingSpots,       idx),
+        "Typing"       => GetSpot(dadTypingSpots,       idx),
+        "Reading"      => GetSpot(dadReadingSpots,      idx),
+        "Cleaning"     => GetSpot(dadCleaningSpots,     idx),
+        "PhoneUse"     => GetSpot(dadPhoneSpots,        idx),
         _              => null,
     };
 
@@ -681,7 +721,7 @@ public class ExperimentRunner : MonoBehaviour
     {
         if (mode == RunMode.Demo) return;
 
-        string status = isRunning ? "" : (flaskReady ? "[Ready] Press Space" : "[Waiting Flask...]");
+        string status  = isRunning ? "" : (flaskReady ? "[Ready] Press Space" : "[Waiting Flask...]");
         int    totalDays = exp3_totalObservations / episodesPerVirtualDay;
         string dayInfo   = UseVirtualDay
             ? $"  Day={CurrentVirtualDay}/{totalDays}" : "";

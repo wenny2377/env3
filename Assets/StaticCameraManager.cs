@@ -23,8 +23,8 @@ public class StaticCameraManager : MonoBehaviour
 
     [Header("Capture Target States")]
     public string captureStates =
-        "Drinking,SittingDrink,Eating,Cooking,Opening," +
-        "Laying,Watching,Reading,Cleaning,PhoneUse,Typing";
+        "Drinking,SittingDrink,Sitting,Eating,Cooking,Opening," +
+        "Laying,Watching,Reading,Cleaning,PhoneUse,Typing,StandUp";
 
     [Header("Capture Timing")]
     public float defaultSettleTime = 0.4f;
@@ -36,7 +36,13 @@ public class StaticCameraManager : MonoBehaviour
 
     HashSet<string>                      captureStateSet;
     Dictionary<string, List<CameraNode>> roomCameras = new();
-    bool _isCapturing = false;
+    Dictionary<string, bool>             _isCapturingDict = new();
+
+    bool IsCapturing(string userId) =>
+        _isCapturingDict.TryGetValue(userId, out bool v) && v;
+
+    void SetCapturing(string userId, bool val) =>
+        _isCapturingDict[userId] = val;
 
     void Start()
     {
@@ -89,18 +95,15 @@ public class StaticCameraManager : MonoBehaviour
             ? null : ScoreCamerasRanked(user, cams);
     }
 
-    public IEnumerator TriggerManualCapture(
-        UserEntity user, string activity)
+    public IEnumerator TriggerManualCapture(UserEntity user, string activity)
     {
         List<CameraNode> cams = GetScoredCamerasForUser(user);
         if (cams == null || cams.Count == 0)
         {
-            Debug.LogWarning(
-                $"[SCM] TriggerManualCapture: no cameras for {user.userID}");
+            Debug.LogWarning($"[SCM] TriggerManualCapture: no cameras for {user.userID}");
             yield break;
         }
-        yield return StartCoroutine(
-            CaptureWithBestNodes(user, activity, cams));
+        yield return StartCoroutine(CaptureWithBestNodes(user, activity, cams));
     }
 
     IEnumerator SmartScanRoutine(UserEntity user)
@@ -132,8 +135,7 @@ public class StaticCameraManager : MonoBehaviour
                 cooldown     = captureCooldown;
 
                 float settle = GetSettleTime(cur);
-                Debug.Log($"[SCM] {user.userID} | {cur} | " +
-                          $"settling {settle}s...");
+                Debug.Log($"[SCM] {user.userID} | {cur} | settling {settle}s...");
 
                 yield return new WaitForSeconds(settle);
                 for (int f = 0; f < settleFrames; f++)
@@ -147,15 +149,14 @@ public class StaticCameraManager : MonoBehaviour
                 }
 
                 float lockWait = 0f;
-                while (_isCapturing && lockWait < 15f)
+                while (IsCapturing(user.userID) && lockWait < 15f)
                 {
                     yield return new WaitForSeconds(0.1f);
                     lockWait += 0.1f;
                 }
-                if (_isCapturing)
+                if (IsCapturing(user.userID))
                 {
-                    Debug.LogWarning(
-                        $"[SCM] {user.userID} | lock timeout, skip.");
+                    Debug.LogWarning($"[SCM] {user.userID} | lock timeout, skip.");
                     yield return new WaitForSeconds(0.1f);
                     continue;
                 }
@@ -168,13 +169,11 @@ public class StaticCameraManager : MonoBehaviour
                     continue;
                 }
 
-                string label =
-                    !string.IsNullOrEmpty(user.lastAssignedActivity)
+                string label = !string.IsNullOrEmpty(user.lastAssignedActivity)
                     ? user.lastAssignedActivity : cur;
 
                 Debug.Log($"[SCM] {user.userID} | {label} | capturing");
-                yield return StartCoroutine(
-                    CaptureWithBestNodes(user, label, cams));
+                yield return StartCoroutine(CaptureWithBestNodes(user, label, cams));
             }
 
             yield return new WaitForSeconds(0.1f);
@@ -184,19 +183,15 @@ public class StaticCameraManager : MonoBehaviour
     public IEnumerator CaptureWithBestNodes(
         UserEntity user, string activity, List<CameraNode> cameras)
     {
-        _isCapturing = true;
+        SetCapturing(user.userID, true);
 
         List<CameraNode> ranked = ScoreCamerasRanked(user, cameras);
         List<CameraNode> toUse  = new List<CameraNode>();
 
         if (ranked != null && ranked.Count > 0)
-        {
             toUse.Add(ranked[0]);
-        }
         else
-        {
             toUse.Add(cameras[0]);
-        }
 
         string names = string.Join(", ",
             toUse.ConvertAll(n => $"{n.nodeName}({n.lastScore:F2})"));
@@ -205,7 +200,7 @@ public class StaticCameraManager : MonoBehaviour
         if (virtualCameraBrain == null)
         {
             Debug.LogError("[SCM] virtualCameraBrain is null!");
-            _isCapturing = false;
+            SetCapturing(user.userID, false);
             yield break;
         }
 
@@ -213,41 +208,46 @@ public class StaticCameraManager : MonoBehaviour
             virtualCameraBrain.ExecuteMultiCapture(user, toUse, activity));
 
         Debug.Log($"[SCM] done: {user.userID} | {activity}");
-        _isCapturing = false;
+        SetCapturing(user.userID, false);
     }
 
-    List<CameraNode> ScoreCamerasRanked(
-        UserEntity user, List<CameraNode> cameras)
+    List<CameraNode> ScoreCamerasRanked(UserEntity user, List<CameraNode> cameras)
     {
-        Vector3 userPos = user.transform.position;
+        Vector3 userPos     = user.transform.position;
         Vector3 userForward = user.transform.forward;
-        var     scoredList = new List<CameraNode>();
+        Vector3 chestPos    = userPos + Vector3.up * 1.3f;
+        var     scoredList  = new List<CameraNode>();
+
+        string act = user.currentActivity;
+        float facingThreshold = (act == "Laying"  || act == "SittingDrink" ||
+                                 act == "Sitting"  || act == "Watching"     ||
+                                 act == "Reading"  || act == "Typing")
+                                ? -0.3f : 0.0f;
 
         foreach (var node in cameras)
         {
             if (node == null) continue;
 
-            Vector3 toCamera = (node.transform.position - userPos).normalized;
-            float facingDot = Vector3.Dot(userForward, toCamera);
+            Vector3 toCamera  = (node.transform.position - userPos).normalized;
+            float   facingDot = Vector3.Dot(userForward, toCamera);
 
-            if (facingDot < 0.0f)
+            if (facingDot < facingThreshold)
             {
                 node.lastScore = -1000f;
                 continue;
             }
 
-            Vector3 targetUpperBody = userPos + Vector3.up * 1.2f;
-            Vector3 rayDirection = targetUpperBody - node.transform.position;
-            float distance = rayDirection.magnitude;
+            Vector3 rayDir   = chestPos - node.transform.position;
+            float   distance = rayDir.magnitude;
 
             float visibilityScore = 50f;
 
-            if (Physics.Raycast(node.transform.position, rayDirection.normalized, out RaycastHit hit, distance))
+            if (Physics.Raycast(node.transform.position,
+                rayDir.normalized, out RaycastHit hit, distance))
             {
-                if (hit.transform != user.transform && !hit.transform.IsChildOf(user.transform))
-                {
+                if (hit.transform != user.transform &&
+                    !hit.transform.IsChildOf(user.transform))
                     visibilityScore = 0f;
-                }
             }
 
             float distanceScore = Mathf.Max(0f, (25f - distance) * 2f);
@@ -255,9 +255,7 @@ public class StaticCameraManager : MonoBehaviour
             node.lastScore = (facingDot * 50f) + visibilityScore + distanceScore;
 
             if (visibilityScore > 0f)
-            {
                 scoredList.Add(node);
-            }
         }
 
         scoredList.Sort((a, b) => b.lastScore.CompareTo(a.lastScore));
@@ -296,6 +294,7 @@ public class StaticCameraManager : MonoBehaviour
     {
         "Drinking"     => 1.0f,
         "SittingDrink" => 1.5f,
+        "Sitting"      => 1.5f,
         "Eating"       => 2.0f,
         "Cooking"      => 1.5f,
         "Laying"       => 2.0f,
@@ -303,7 +302,8 @@ public class StaticCameraManager : MonoBehaviour
         "Reading"      => 2.0f,
         "Cleaning"     => 1.5f,
         "PhoneUse"     => 1.5f,
-        "Typ "        => 1.5f,
+        "Typing"       => 1.5f,
+        "StandUp"      => 0.5f,
         _              => defaultSettleTime,
     };
 
@@ -320,8 +320,7 @@ public class StaticCameraManager : MonoBehaviour
                     : cam.lastScore > 0f   ? Color.red
                     :                        Color.gray;
                 Gizmos.DrawWireSphere(cam.transform.position, 0.15f);
-                Gizmos.DrawRay(
-                    cam.transform.position, cam.transform.forward * 2f);
+                Gizmos.DrawRay(cam.transform.position, cam.transform.forward * 2f);
             }
     }
 }
