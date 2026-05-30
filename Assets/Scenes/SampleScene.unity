@@ -2628,8 +2628,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   lyingHipThreshold: 0.4
   sittingHipThreshold: 0.65
-  raisedArmAngle: 30
-  midArmAngle: 65
 --- !u!1 &452250936
 GameObject:
   m_ObjectHideFlags: 0
@@ -9401,8 +9399,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   lyingHipThreshold: 0.4
   sittingHipThreshold: 0.65
-  raisedArmAngle: 30
-  midArmAngle: 65
 --- !u!1 &1469460015
 GameObject:
   m_ObjectHideFlags: 0
@@ -11147,7 +11143,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1728084971
 Transform:
   m_ObjectHideFlags: 0
@@ -12249,7 +12245,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &1811659276
 Transform:
   m_ObjectHideFlags: 0

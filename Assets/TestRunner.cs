@@ -17,14 +17,14 @@ public class TestModeRunner : MonoBehaviour
 
     static readonly string[] MomSequence = {
         "PhoneUse","Opening","Eating", "Cleaning","Drinking", "SittingDrink",  "Cooking",
-         "Laying", "Watching", "Reading",
+         "Laying", "Watching", "Reading","StandUp", "Sitting",
          
     };
 
     static readonly string[] DadSequence = {
         "Drinking", "SittingDrink", "Laying", "Eating", "Cooking",
         "Opening", "Typing", "DadReading",
-        "DadPhone", "DadCleaning",
+        "DadPhone", "DadCleaning","StandUp", "Sitting",
     };
 
     bool _running = false;
