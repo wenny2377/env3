@@ -294,8 +294,9 @@ public class UserEntity : MonoBehaviour
         SetActivity("Walking");
         yield return StartCoroutine(NavWalkTo(spot.position, false));
         yield return StartCoroutine(SmoothRotateTo(spot.forward));
-        SetActivity("Drinking");
         PlayAnim(stateDrink);
+        yield return null;
+        SetActivity("Drinking");
         yield return new WaitForSeconds(drinkDuration);
     }
 
@@ -307,8 +308,9 @@ public class UserEntity : MonoBehaviour
         yield return StartCoroutine(NavWalkTo(spot.position, true));
         yield return StartCoroutine(SmoothRotateTo(spot.forward));
         TeleportToSeat(spot);
-        SetActivity("SittingDrink");
         PlayAnim(stateSittingDrink);
+        yield return null;
+        SetActivity("SittingDrink");
         yield return new WaitForSeconds(drinkDuration);
     }
 
@@ -320,8 +322,9 @@ public class UserEntity : MonoBehaviour
         yield return StartCoroutine(NavWalkTo(spot.position, true));
         yield return StartCoroutine(SmoothRotateTo(spot.forward));
         TeleportToSeat(spot);
-        SetActivity("Sitting");
         PlayAnim(stateSitting);
+        yield return null;
+        SetActivity("Sitting");
         yield return new WaitForSeconds(sittingDuration);
     }
 
@@ -347,8 +350,9 @@ public class UserEntity : MonoBehaviour
         yield return StartCoroutine(NavWalkTo(spot.position, true));
         yield return StartCoroutine(SmoothRotateTo(spot.forward));
         TeleportToSeat(spot);
-        SetActivity("Eating");
         PlayAnim(stateEating);
+        yield return null;
+        SetActivity("Eating");
         yield return new WaitForSeconds(eatDuration);
     }
 
@@ -359,8 +363,9 @@ public class UserEntity : MonoBehaviour
         SetActivity("Walking");
         yield return StartCoroutine(NavWalkTo(spot.position, false));
         yield return StartCoroutine(SmoothRotateTo(spot.forward));
-        SetActivity("Cooking");
         PlayAnim(stateCooking);
+        yield return null;
+        SetActivity("Cooking");
         yield return new WaitForSeconds(cookDuration);
     }
 
@@ -371,8 +376,9 @@ public class UserEntity : MonoBehaviour
         SetActivity("Walking");
         yield return StartCoroutine(NavWalkTo(spot.position, false));
         yield return StartCoroutine(SmoothRotateTo(spot.forward));
-        SetActivity("Opening");
         PlayAnim(stateOpening);
+        yield return null;
+        SetActivity("Opening");
         if (fridgeDoor != null)
             yield return StartCoroutine(RotateFridgeDoor(true));
         yield return new WaitForSeconds(openDuration);
@@ -407,8 +413,9 @@ public class UserEntity : MonoBehaviour
         yield return StartCoroutine(NavWalkTo(spot.position, true));
         yield return StartCoroutine(SmoothRotateTo(spot.forward));
         TeleportToSeat(spot);
-        SetActivity("Laying");
         PlayAnim(stateLaying);
+        yield return null;
+        SetActivity("Laying");
     }
 
     IEnumerator DoWatching()
@@ -419,8 +426,9 @@ public class UserEntity : MonoBehaviour
         yield return StartCoroutine(NavWalkTo(spot.position, true));
         yield return StartCoroutine(SmoothRotateTo(spot.forward));
         TeleportToSeat(spot);
-        SetActivity("Watching");
         PlayAnim(stateWatching);
+        yield return null;
+        SetActivity("Watching");
     }
 
     IEnumerator DoReading()
@@ -431,8 +439,9 @@ public class UserEntity : MonoBehaviour
         yield return StartCoroutine(NavWalkTo(spot.position, true));
         yield return StartCoroutine(SmoothRotateTo(spot.forward));
         TeleportToSeat(spot);
-        SetActivity("Reading");
         PlayAnim(stateReading);
+        yield return null;
+        SetActivity("Reading");
     }
 
     IEnumerator DoCleaning()
@@ -442,8 +451,9 @@ public class UserEntity : MonoBehaviour
         SetActivity("Walking");
         yield return StartCoroutine(NavWalkTo(spot.position, false));
         yield return StartCoroutine(SmoothRotateTo(spot.forward));
-        SetActivity("Cleaning");
         PlayAnim(stateCleaning);
+        yield return null;
+        SetActivity("Cleaning");
         yield return new WaitForSeconds(cleanDuration);
     }
 
@@ -454,8 +464,9 @@ public class UserEntity : MonoBehaviour
         SetActivity("Walking");
         yield return StartCoroutine(NavWalkTo(spot.position, false));
         yield return StartCoroutine(SmoothRotateTo(spot.forward));
-        SetActivity("PhoneUse");
         PlayAnim(statePhone);
+        yield return null;
+        SetActivity("PhoneUse");
     }
 
     IEnumerator DoTyping()
@@ -466,8 +477,9 @@ public class UserEntity : MonoBehaviour
         yield return StartCoroutine(NavWalkTo(spot.position, true));
         yield return StartCoroutine(SmoothRotateTo(spot.forward));
         TeleportToSeat(spot);
-        SetActivity("Typing");
         PlayAnim(stateTyping);
+        yield return null;
+        SetActivity("Typing");
     }
 
     IEnumerator DoDadReading()
@@ -479,8 +491,9 @@ public class UserEntity : MonoBehaviour
         yield return StartCoroutine(NavWalkTo(spot.position, true));
         yield return StartCoroutine(SmoothRotateTo(spot.forward));
         TeleportToSeat(spot);
-        SetActivity("Reading");
         PlayAnim(stateReading);
+        yield return null;
+        SetActivity("Reading");
     }
 
     IEnumerator DoDadPhone()
