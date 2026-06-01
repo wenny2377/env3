@@ -17,18 +17,12 @@ public class SkeletonHelper : MonoBehaviour
             Debug.LogError("[SkeletonHelper] Animator is not Humanoid on " + gameObject.name);
     }
 
-<<<<<<< HEAD
     public float HipHeight()
     {
         if (_anim == null) return -1f;
         var hips = _anim.GetBoneTransform(HumanBodyBones.Hips);
         return hips != null ? hips.position.y : -1f;
     }
-=======
-    // Returns -1 to simulate real deployment where hip_height is unavailable.
-    // In real deployment, body_position is inferred by VLM from camera image.
-    public float HipHeight() => -1f;
->>>>>>> 617704a1c011cdfddf6491439ce18ea51274cb48
 
     public float RightArmElevation()
     {
@@ -40,11 +34,6 @@ public class SkeletonHelper : MonoBehaviour
         return Vector3.Angle(armDir, Vector3.up);
     }
 
-<<<<<<< HEAD
-=======
-    // Returns head pitch with Gaussian noise (std=8 degrees) to simulate
-    // MediaPipe Face Mesh estimation error in real deployment.
->>>>>>> 617704a1c011cdfddf6491439ce18ea51274cb48
     public float HeadPitch()
     {
         if (_anim == null) return -999f;
@@ -52,11 +41,7 @@ public class SkeletonHelper : MonoBehaviour
         if (head == null) return -999f;
         float pitch = head.eulerAngles.x;
         if (pitch > 180f) pitch -= 360f;
-<<<<<<< HEAD
         float noise = SampleGaussian(0f, 5f);
-=======
-        float noise = SampleGaussian(0f, 8f);
->>>>>>> 617704a1c011cdfddf6491439ce18ea51274cb48
         return pitch + noise;
     }
 
@@ -69,7 +54,6 @@ public class SkeletonHelper : MonoBehaviour
         return Vector3.Distance(hand.position, head.position);
     }
 
-<<<<<<< HEAD
     // Simulates MediaPipe Pose normalized hip height (hip_y / body_height).
     // Gaussian noise (std=0.02) models MediaPipe landmark estimation error.
     // In real deployment, replace with:
@@ -85,39 +69,21 @@ public class SkeletonHelper : MonoBehaviour
 
     static float SampleGaussian(float mean, float std)
     {
-=======
-    // Samples Gaussian noise using Box-Muller transform.
-    static float SampleGaussian(float mean, float std)
-    {
->>>>>>> 617704a1c011cdfddf6491439ce18ea51274cb48
         float u1 = 1f - Random.value;
         float u2 = 1f - Random.value;
         float z  = Mathf.Sqrt(-2f * Mathf.Log(u1)) * Mathf.Sin(2f * Mathf.PI * u2);
         return mean + std * z;
     }
 
-<<<<<<< HEAD
     public string ToJsonFragment()
     {
         float h = NormalizedHipHeight();
-=======
-    // hip_height is omitted from the payload (sent as -1 implicitly via absence).
-    // Flask perception_engine receives hip_height=-1 and skips skeleton-based
-    // body_position inference, falling back to VLM body_position output.
-    // This matches real deployment where MediaPipe replaces the Unity Animator.
-    public string ToJsonFragment()
-    {
->>>>>>> 617704a1c011cdfddf6491439ce18ea51274cb48
         float a = RightArmElevation();
         float p = HeadPitch();
         float d = HandToHeadDistance();
 
         return
-<<<<<<< HEAD
             $"\"hip_height\":{h.ToString("F3", Inv)}," +
-=======
-            $"\"hip_height\":-1," +
->>>>>>> 617704a1c011cdfddf6491439ce18ea51274cb48
             $"\"arm_elevation\":{a.ToString("F3", Inv)}," +
             $"\"head_pitch\":{p.ToString("F3", Inv)}," +
             $"\"hand_to_head\":{d.ToString("F3", Inv)}," +
@@ -129,11 +95,11 @@ public class SkeletonHelper : MonoBehaviour
     {
         if (!Application.isPlaying || _anim == null) return;
 
-        var head     = _anim.GetBoneTransform(HumanBodyBones.Head);
-        var hand     = _anim.GetBoneTransform(HumanBodyBones.RightHand);
+        var hips = _anim.GetBoneTransform(HumanBodyBones.Hips);
+        var head = _anim.GetBoneTransform(HumanBodyBones.Head);
+        var hand = _anim.GetBoneTransform(HumanBodyBones.RightHand);
         var shoulder = _anim.GetBoneTransform(HumanBodyBones.RightUpperArm);
 
-<<<<<<< HEAD
         if (hips != null)
         {
             float h  = NormalizedHipHeight();
@@ -151,24 +117,16 @@ public class SkeletonHelper : MonoBehaviour
 #endif
         }
 
-=======
->>>>>>> 617704a1c011cdfddf6491439ce18ea51274cb48
         if (head != null)
         {
             Gizmos.color = Color.magenta;
             Gizmos.DrawWireSphere(head.position, 0.04f);
             float pitch = HeadPitch();
-<<<<<<< HEAD
 #if UNITY_EDITOR
             UnityEditor.Handles.Label(
                 head.position + Vector3.up * 0.12f,
                 $"pitch={pitch:F1}°");
 #endif
-=======
-            UnityEditor.Handles.Label(
-                head.position + Vector3.up * 0.12f,
-                $"HeadPitch: {pitch:F1}°");
->>>>>>> 617704a1c011cdfddf6491439ce18ea51274cb48
         }
 
         if (hand != null && head != null)
