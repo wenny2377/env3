@@ -160,6 +160,8 @@ public class DynamicSyncManager : MonoBehaviour
         yield return StartCoroutine(PostJson(backendUrl + "/dynamic_sync", json, "objects"));
     }
 
+    // 修正：sceneCounterpart 消失 且 item（手持版）是 active，才算持有
+    // 避免「手機本來就不在場景」被誤判為持有
     string FindHolderOf(GameObject obj)
     {
         foreach (var user in new UserEntity[] { userMom, userDad })
@@ -170,8 +172,13 @@ public class DynamicSyncManager : MonoBehaviour
             foreach (var bi in items)
             {
                 if (bi == null) continue;
-                if ((bi.sceneCounterpart  == obj && bi.sceneCounterpart  != null && !bi.sceneCounterpart.activeSelf) ||
-                    (bi.sceneCounterpart2 == obj && bi.sceneCounterpart2 != null && !bi.sceneCounterpart2.activeSelf))
+                bool sceneGone =
+                    (bi.sceneCounterpart  == obj && bi.sceneCounterpart  != null && !bi.sceneCounterpart.activeSelf) ||
+                    (bi.sceneCounterpart2 == obj && bi.sceneCounterpart2 != null && !bi.sceneCounterpart2.activeSelf);
+                bool itemHeld =
+                    (bi.item  != null && bi.item.activeSelf) ||
+                    (bi.item2 != null && bi.item2.activeSelf);
+                if (sceneGone && itemHeld)
                     return user.userID;
             }
         }
