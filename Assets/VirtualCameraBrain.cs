@@ -217,7 +217,7 @@ public class VirtualCameraBrain : MonoBehaviour
                 ? $" day={VirtualDayToDateString(ExperimentRunner.CurrentVirtualDay)}"
                 : "";
             string skelLog = sk != null
-                ? $" hip={sk.HipHeight():F2} body={sk.BodyPosition()} head={sk.HeadPitch():F1}°"
+                ? $" head={sk.HeadPitch():F1}°"
                 : "";
             Debug.Log(
                 $"[VCB] POST ok | {user.userID} | {activity} | " +
