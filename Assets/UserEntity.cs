@@ -45,6 +45,9 @@ public class UserEntity : MonoBehaviour
     [Header("Common")]
     public Transform standingSpot;
 
+    [Header("TV")]
+    public GameObject[] tvScreenObjects;
+
     [Header("Fridge Door")]
     public Transform fridgeDoor;
     public Transform fridgeHingePoint;
@@ -195,7 +198,14 @@ public class UserEntity : MonoBehaviour
         if (IsBusy) yield break;
         IsBusy = true;
 
-        switch (activity.ToLower().Trim())
+        string actLower = activity.ToLower().Trim();
+        if (actLower != "watch" && actLower != "watching")
+        {
+            SetTVActive(false);
+            StartCoroutine(PostDeviceState("tv", "off"));
+        }
+
+        switch (actLower)
         {
             case "drink":
             case "drinking":
@@ -429,6 +439,8 @@ public class UserEntity : MonoBehaviour
         PlayAnim(stateWatching);
         yield return null;
         SetActivity("Watching");
+        SetTVActive(true);
+        StartCoroutine(PostDeviceState("tv", "on"));
     }
 
     IEnumerator DoReading()
@@ -551,6 +563,8 @@ public class UserEntity : MonoBehaviour
             agent.Warp(transform.position);
             yield return null;
         }
+        SetTVActive(false);
+        StartCoroutine(PostDeviceState("tv", "off"));
 
         if (standingSpot != null)
         {
@@ -641,6 +655,22 @@ public class UserEntity : MonoBehaviour
         transform.rotation = tgt;
     }
 
+    IEnumerator PostDeviceState(string label, string state)
+    {
+        string json = "{"
+            + $"\"label\":\"{EscJson(label)}\","
+            + $"\"state\":\"{EscJson(state)}\","
+            + "\"source\":\"unity\""
+            + "}";
+        using var req = new UnityWebRequest($"{backendUrl}/device_state", "POST");
+        byte[] body = System.Text.Encoding.UTF8.GetBytes(json);
+        req.uploadHandler   = new UploadHandlerRaw(body);
+        req.downloadHandler = new DownloadHandlerBuffer();
+        req.SetRequestHeader("Content-Type", "application/json");
+        req.timeout = 2;
+        yield return req.SendWebRequest();
+    }
+
     IEnumerator PostShadowPoint()
     {
         string intent  = !string.IsNullOrEmpty(lastAssignedActivity)
@@ -649,10 +679,14 @@ public class UserEntity : MonoBehaviour
             ? currentVirtualHour.ToString("F1", Inv)
             : ((float)System.DateTime.Now.Hour).ToString("F1", Inv);
 
+        Vector3 fwd = transform.forward;
+
         string json = "{"
             + $"\"userID\":\"{EscJson(userID)}\","
             + $"\"x\":{transform.position.x.ToString("F3", Inv)},"
             + $"\"z\":{transform.position.z.ToString("F3", Inv)},"
+            + $"\"forward_x\":{fwd.x.ToString("F3", Inv)},"
+            + $"\"forward_z\":{fwd.z.ToString("F3", Inv)},"
             + $"\"room_name\":\"\","
             + $"\"intent_action\":\"{EscJson(intent)}\","
             + $"\"virtual_hour\":{hourStr}"
@@ -672,6 +706,14 @@ public class UserEntity : MonoBehaviour
         transform.position = spot.position;
         transform.rotation = spot.rotation;
         isSitting          = true;
+        StartCoroutine(PostShadowPoint());
+    }
+
+    void SetTVActive(bool isOn)
+    {
+        foreach (var obj in tvScreenObjects)
+            if (obj != null)
+                obj.SetActive(isOn);
     }
 
     void SetActivity(string a)

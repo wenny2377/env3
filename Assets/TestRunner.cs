@@ -16,13 +16,13 @@ public class TestModeRunner : MonoBehaviour
     public float betweenActionTime = 0.5f;
 
     static readonly string[] MomSequence = {
-        "SittingDrink","Cleaning","PhoneUse","Opening","Eating", "Drinking","Cooking",
-         "Laying", "Watching", "Reading","StandUp", "Sitting",
+        "Watching","SittingDrink","Cleaning","PhoneUse","Opening","Eating", "Drinking","Cooking",
+        "Laying",  "Reading","StandUp", "Sitting",
          
     };
 
     static readonly string[] DadSequence = {
-        "SittingDrink","Drinking",  "Laying", "Eating", "Cooking",
+        "Watching","SittingDrink","Drinking",  "Laying", "Eating", "Cooking",
         "Opening", "Typing", "DadReading",
         "DadPhone", "DadCleaning","StandUp", "Sitting",
     };
