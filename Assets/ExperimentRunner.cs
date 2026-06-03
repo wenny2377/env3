@@ -22,19 +22,16 @@ public class ExperimentRunner : MonoBehaviour
     [Header("Run Mode")]
     public RunMode mode = RunMode.Demo;
 
-    [Header("Recognition Experiment Settings")]
-    public int rec_samplesPerBehavior = 20;
-
-    [Header("Habit Experiment Settings")]
-    public int   exp3_totalObservations = 300;
-    public int   episodesPerVirtualDay  = 10;
-    public bool  addNoiseEpisodes       = true;
-    public int   noiseInterval          = 10;
+    [Header("Experiment Settings")]
+    public int   exp_totalObservations = 300;
+    public int   episodesPerVirtualDay = 10;
+    public bool  addNoiseEpisodes      = true;
+    public int   noiseInterval         = 10;
     [Range(0f, 1f)]
-    public float skipProbability        = 0.2f;
+    public float skipProbability       = 0.2f;
 
     [Header("Timing Settings")]
-    public float waitAfterCapture    = 8.0f;
+    public float waitAfterCapture    = 3.0f;
     public float waitBetweenEpisodes = 2.0f;
     public float minIntervalInSlot   = 1.5f;
 
@@ -68,7 +65,7 @@ public class ExperimentRunner : MonoBehaviour
     [Header("Dad Spots - Cleaning")]     public Transform[] dadCleaningSpots     = new Transform[3];
     [Header("Dad Spots - PhoneUse")]     public Transform[] dadPhoneSpots        = new Transform[3];
 
-    public enum RunMode { Demo, RecognitionExp, HabitExp }
+    public enum RunMode { Demo, Experiment }
 
     public static int    CurrentVirtualDay     = 1;
     public static bool   UseVirtualDay         = false;
@@ -89,25 +86,14 @@ public class ExperimentRunner : MonoBehaviour
         public BehaviorSequence[] dadSequences;
     }
 
-    // Recognition 實驗行為列表（17 個行為，不含過渡動作 StandUp/PickingUp/PuttingDown）
-    static readonly string[] MomBehaviors = {
-        "Drinking", "SittingDrink", "Sitting", "Eating", "Cooking", "Opening",
-        "Laying", "Watching", "Reading", "Cleaning", "PhoneUse",
-    };
-    static readonly string[] DadBehaviors = {
-        "Drinking", "SittingDrink", "Sitting", "Eating", "Cooking", "Opening",
-        "Laying", "Typing", "Reading", "Cleaning", "PhoneUse",
-    };
     static readonly string[] NoiseActions = { "Standing" };
 
     static readonly TimeSlot[] TimeSlots = new TimeSlot[]
     {
-        // ── Morning 07:00 ──────────────────────────────────────────
-        // Mom：廚房導向（Cooking/Cleaning/Eating）
-        // Dad：臥室工作導向（Opening→Eating→Typing）
         new TimeSlot {
             name = "Morning", virtualHour = 7f,
             momSequences = new BehaviorSequence[] {
+                new BehaviorSequence { actions = new[]{ "Opening","Drinking" },                  groundTruth = "Drinking",     weight = 3 },
                 new BehaviorSequence { actions = new[]{ "Opening","Cooking","Eating" },          groundTruth = "Eating",       weight = 4 },
                 new BehaviorSequence { actions = new[]{ "Cooking","Eating","Cleaning" },         groundTruth = "Cleaning",     weight = 3 },
                 new BehaviorSequence { actions = new[]{ "Cooking","Eating" },                    groundTruth = "Eating",       weight = 3 },
@@ -115,6 +101,7 @@ public class ExperimentRunner : MonoBehaviour
                 new BehaviorSequence { actions = new[]{ "Cleaning" },                            groundTruth = "Cleaning",     weight = 2 },
             },
             dadSequences = new BehaviorSequence[] {
+                new BehaviorSequence { actions = new[]{ "Drinking" },                            groundTruth = "Drinking",     weight = 3 },
                 new BehaviorSequence { actions = new[]{ "Opening","Eating","Typing" },           groundTruth = "Typing",       weight = 4 },
                 new BehaviorSequence { actions = new[]{ "Opening","Eating" },                    groundTruth = "Eating",       weight = 3 },
                 new BehaviorSequence { actions = new[]{ "Eating","Typing" },                     groundTruth = "Typing",       weight = 3 },
@@ -122,9 +109,6 @@ public class ExperimentRunner : MonoBehaviour
                 new BehaviorSequence { actions = new[]{ "SittingDrink" },                        groundTruth = "SittingDrink", weight = 2 },
             },
         },
-        // ── Noon 12:00 ─────────────────────────────────────────────
-        // Mom：閱讀休息（Reading→SittingDrink→Laying）
-        // Dad：午休看電視（Laying→Watching）
         new TimeSlot {
             name = "Noon", virtualHour = 12f,
             momSequences = new BehaviorSequence[] {
@@ -142,9 +126,6 @@ public class ExperimentRunner : MonoBehaviour
                 new BehaviorSequence { actions = new[]{ "Watching" },                            groundTruth = "Watching",     weight = 2 },
             },
         },
-        // ── Afternoon 15:00 ────────────────────────────────────────
-        // Mom：家務+閱讀閉環（Cleaning→Reading→SittingDrink）
-        // Dad：工作+手機開環（Typing→PhoneUse→Typing）
         new TimeSlot {
             name = "Afternoon", virtualHour = 15f,
             momSequences = new BehaviorSequence[] {
@@ -162,9 +143,6 @@ public class ExperimentRunner : MonoBehaviour
                 new BehaviorSequence { actions = new[]{ "Typing","PhoneUse" },                   groundTruth = "PhoneUse",     weight = 2 },
             },
         },
-        // ── Evening 19:00 ──────────────────────────────────────────
-        // Mom：煮飯→吃飯→看電視（廚房→客廳流動）
-        // Dad：吃飯→手機→飲料（數位導向）
         new TimeSlot {
             name = "Evening", virtualHour = 19f,
             momSequences = new BehaviorSequence[] {
@@ -182,9 +160,6 @@ public class ExperimentRunner : MonoBehaviour
                 new BehaviorSequence { actions = new[]{ "Sitting","PhoneUse" },                  groundTruth = "PhoneUse",     weight = 2 },
             },
         },
-        // ── Night 23:00 ────────────────────────────────────────────
-        // Mom：閱讀入睡（Reading→Laying）
-        // Dad：手機→電視→入睡（PhoneUse→Watching→Laying）
         new TimeSlot {
             name = "Night", virtualHour = 23f,
             momSequences = new BehaviorSequence[] {
@@ -243,9 +218,7 @@ public class ExperimentRunner : MonoBehaviour
         if (mode == RunMode.Demo) return;
         if (flaskReady && !runOnStart && !isRunning
             && Input.GetKeyDown(KeyCode.Space))
-        {
             StartExperiment();
-        }
 
         if (Input.GetKeyDown(KeyCode.Escape) && isRunning)
         {
@@ -268,12 +241,10 @@ public class ExperimentRunner : MonoBehaviour
             if (req.result == UnityWebRequest.Result.Success)
             {
                 var data = req.downloadHandler.text;
-                if (data.Contains("\"ready\": true") ||
-                    data.Contains("\"ready\":true"))
+                if (data.Contains("\"ready\": true") || data.Contains("\"ready\":true"))
                 {
                     Debug.Log("[ExperimentRunner] Flask ready! " + data);
                     flaskReady = true;
-
                     if (runOnStart)
                     {
                         yield return new WaitForSeconds(2f);
@@ -285,14 +256,6 @@ public class ExperimentRunner : MonoBehaviour
                     }
                     yield break;
                 }
-                else
-                {
-                    Debug.Log("[ExperimentRunner] Not ready: " + data);
-                }
-            }
-            else
-            {
-                Debug.Log("[ExperimentRunner] /ready error: " + req.error);
             }
             yield return new WaitForSeconds(3f);
         }
@@ -308,87 +271,36 @@ public class ExperimentRunner : MonoBehaviour
     IEnumerator RunExperiment()
     {
         isRunning = true;
-        switch (mode)
-        {
-            case RunMode.RecognitionExp:
-                yield return StartCoroutine(RunRecognitionExp()); break;
-            case RunMode.HabitExp:
-                yield return StartCoroutine(RunHabitExp()); break;
-        }
+        yield return StartCoroutine(RunObservationExp());
         CurrentExperimentMode = "";
         isRunning             = false;
-        Debug.Log($"[ExperimentRunner] Done. "
-                + $"Regular={successRuns} Skipped={skippedRuns} "
-                + $"Noise={noiseRuns} Total={totalRuns}");
+        Debug.Log($"[ExperimentRunner] Done. Regular={successRuns} Skipped={skippedRuns} Noise={noiseRuns} Total={totalRuns}");
         StartCoroutine(PostExperimentDone());
     }
 
     IEnumerator PostExperimentDone()
     {
-        string json = "{\"mode\":\"" + mode.ToString() + "\"}";
-        using var req = new UnityWebRequest(
-            $"{backendUrl}/experiment_done", "POST");
-        req.uploadHandler   = new UploadHandlerRaw(
-            System.Text.Encoding.UTF8.GetBytes(json));
+        string json = "{\"mode\":\"Experiment\"}";
+        using var req = new UnityWebRequest($"{backendUrl}/experiment_done", "POST");
+        req.uploadHandler   = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(json));
         req.downloadHandler = new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
         req.timeout = 10;
         yield return req.SendWebRequest();
-        Debug.Log("[ExperimentRunner] /experiment_done: " +
-                  req.downloadHandler.text);
+        Debug.Log("[ExperimentRunner] /experiment_done: " + req.downloadHandler.text);
     }
 
-    IEnumerator RunRecognitionExp()
-    {
-        UseVirtualDay         = false;
-        CurrentExperimentMode = "recognition";
-        cameraManager.captureMode = StaticCameraManager.CaptureMode.Manual;
-
-        Debug.Log($"[RecognitionExp] Mom: {MomBehaviors.Length} behaviors "
-                + $"x {rec_samplesPerBehavior} samples");
-
-        for (int i = 0; i < MomBehaviors.Length; i++)
-        {
-            string behavior = MomBehaviors[i];
-            for (int s = 0; s < rec_samplesPerBehavior; s++)
-            {
-                Transform spot = GetMomSpot(behavior, s);
-                yield return StartCoroutine(
-                    RunSingleActionEpisode(userMom, behavior, spot, -1f));
-                totalRuns++;
-                successRuns++;
-            }
-        }
-
-        Debug.Log($"[RecognitionExp] Dad: {DadBehaviors.Length} behaviors "
-                + $"x {rec_samplesPerBehavior} samples");
-
-        for (int i = 0; i < DadBehaviors.Length; i++)
-        {
-            string behavior = DadBehaviors[i];
-            for (int s = 0; s < rec_samplesPerBehavior; s++)
-            {
-                Transform spot = GetDadSpot(behavior, s);
-                yield return StartCoroutine(
-                    RunSingleActionEpisode(userDad, behavior, spot, -1f));
-                totalRuns++;
-                successRuns++;
-            }
-        }
-    }
-
-    IEnumerator RunHabitExp()
+    IEnumerator RunObservationExp()
     {
         UseVirtualDay         = true;
-        CurrentExperimentMode = "habit";
+        CurrentExperimentMode = "experiment";
         CurrentVirtualDay     = 1;
         cameraManager.captureMode = StaticCameraManager.CaptureMode.EventDriven;
 
-        int totalDays = exp3_totalObservations / episodesPerVirtualDay;
+        int totalDays = exp_totalObservations / episodesPerVirtualDay;
         int epPerSlot = Mathf.Max(1, episodesPerVirtualDay / TimeSlots.Length);
 
-        Debug.Log($"[HabitExp] {totalDays} days | {epPerSlot} ep/slot | "
-                + $"skip={skipProbability:P0} | noise every {noiseInterval} ep");
+        Debug.Log($"[Experiment] {totalDays} days | {epPerSlot} ep/slot | skip={skipProbability:P0} | noise every {noiseInterval} ep");
 
         int episodeCount = 0;
 
@@ -400,8 +312,6 @@ public class ExperimentRunner : MonoBehaviour
             {
                 currentVirtualHour = slot.virtualHour;
                 SetUsersVirtualHour(slot.virtualHour);
-
-                // 每個時間段開始時都送一次 virtual_hour 給 Flask
                 PostVirtualHourFireAndForget(slot.virtualHour);
 
                 var momQ   = BuildSequenceQueue(slot.momSequences, epPerSlot);
@@ -419,20 +329,15 @@ public class ExperimentRunner : MonoBehaviour
                         }
                         else
                         {
-                            yield return StartCoroutine(
-                                RunSequenceEpisode(
-                                    userMom, momQ[i],
-                                    slot.virtualHour, episodeCount));
+                            yield return StartCoroutine(RunSequenceEpisode(userMom, momQ[i], slot.virtualHour, episodeCount));
                             yield return new WaitForSeconds(minIntervalInSlot);
                             successRuns++;
                             episodeCount++;
                         }
 
-                        if (addNoiseEpisodes && episodeCount > 0
-                            && episodeCount % noiseInterval == 0)
+                        if (addNoiseEpisodes && episodeCount > 0 && episodeCount % noiseInterval == 0)
                         {
-                            yield return StartCoroutine(
-                                RunNoiseEpisode(userMom, slot.virtualHour));
+                            yield return StartCoroutine(RunNoiseEpisode(userMom, slot.virtualHour));
                             noiseRuns++;
                         }
                     }
@@ -446,75 +351,28 @@ public class ExperimentRunner : MonoBehaviour
                         }
                         else
                         {
-                            yield return StartCoroutine(
-                                RunSequenceEpisode(
-                                    userDad, dadQ[i],
-                                    slot.virtualHour, episodeCount));
+                            yield return StartCoroutine(RunSequenceEpisode(userDad, dadQ[i], slot.virtualHour, episodeCount));
                             yield return new WaitForSeconds(minIntervalInSlot);
                             successRuns++;
                             episodeCount++;
                         }
 
-                        if (addNoiseEpisodes && episodeCount > 0
-                            && episodeCount % noiseInterval == 0)
+                        if (addNoiseEpisodes && episodeCount > 0 && episodeCount % noiseInterval == 0)
                         {
-                            yield return StartCoroutine(
-                                RunNoiseEpisode(userDad, slot.virtualHour));
+                            yield return StartCoroutine(RunNoiseEpisode(userDad, slot.virtualHour));
                             noiseRuns++;
                         }
                     }
                 }
 
-                // 每個時間段結束後記錄 checkpoint（論文學習收斂曲線的數據來源）
-                yield return StartCoroutine(
-                    PostCheckpoint(day, slot.name, episodeCount));
+                yield return StartCoroutine(PostCheckpoint(day, slot.name, episodeCount));
             }
 
-            Debug.Log($"[HabitExp] Day {day}/{totalDays} | "
-                    + $"success={successRuns} skip={skippedRuns} "
-                    + $"noise={noiseRuns}");
+            Debug.Log($"[Experiment] Day {day}/{totalDays} | success={successRuns} skip={skippedRuns} noise={noiseRuns}");
         }
     }
 
-    IEnumerator RunSingleActionEpisode(
-        UserEntity targetUser, string action,
-        Transform spot, float virtualHour)
-    {
-        UserEntity other = (targetUser == userMom) ? userDad : userMom;
-        if (other      != null) other.gameObject.SetActive(false);
-        if (targetUser != null) targetUser.gameObject.SetActive(true);
-
-        if (virtualCameraBrain != null && virtualHour >= 0f)
-            virtualCameraBrain.SetVirtualHour(virtualHour);
-        SetUsersVirtualHour(virtualHour);
-
-        WarpUserToSpot(targetUser);
-        yield return null;
-
-        if (spot != null) targetUser.overrideSpot = spot;
-
-        targetUser.lastAssignedActivity = action;
-        targetUser.ResetBusy();
-        yield return StartCoroutine(targetUser.SwitchActivity(action));
-        yield return new WaitForSeconds(waitAfterCapture);
-
-        yield return StartCoroutine(
-            cameraManager.TriggerManualCapture(targetUser, action));
-
-        yield return StartCoroutine(targetUser.ReturnToStanding());
-        targetUser.lastAssignedActivity = "";
-
-        if (other != null)
-        {
-            WarpUserToSpot(other);
-            other.gameObject.SetActive(true);
-        }
-        yield return new WaitForSeconds(waitBetweenEpisodes);
-    }
-
-    IEnumerator RunSequenceEpisode(
-        UserEntity targetUser, BehaviorSequence seq,
-        float virtualHour, int episodeIndex = 0)
+    IEnumerator RunSequenceEpisode(UserEntity targetUser, BehaviorSequence seq, float virtualHour, int episodeIndex = 0)
     {
         UserEntity other = (targetUser == userMom) ? userDad : userMom;
         if (other      != null) other.gameObject.SetActive(false);
@@ -530,8 +388,7 @@ public class ExperimentRunner : MonoBehaviour
             string midAction = seq.actions[i];
             targetUser.lastAssignedActivity = midAction;
             targetUser.ResetBusy();
-            yield return StartCoroutine(
-                targetUser.SwitchActivity(midAction));
+            yield return StartCoroutine(targetUser.SwitchActivity(midAction));
             yield return new WaitForSeconds(0.5f);
         }
 
@@ -543,8 +400,7 @@ public class ExperimentRunner : MonoBehaviour
 
         targetUser.lastAssignedActivity = finalAction;
         targetUser.ResetBusy();
-        yield return StartCoroutine(
-            targetUser.SwitchActivity(finalAction));
+        yield return StartCoroutine(targetUser.SwitchActivity(finalAction));
 
         targetUser.lastAssignedActivity = seq.groundTruth;
         yield return new WaitForSeconds(waitAfterCapture);
@@ -589,7 +445,7 @@ public class ExperimentRunner : MonoBehaviour
     IEnumerator PostCheckpoint(int day, string slotName, int episodeCount)
     {
         string[] checkUsers   = { "User_Mom", "User_Dad" };
-        string[] checkActions = { "Watching", "Eating", "Sitting" };
+        string[] checkActions = { "Watching", "Eating", "Sitting", "Drinking", "Reading", "Typing" };
 
         foreach (string uid in checkUsers)
         {
@@ -602,10 +458,8 @@ public class ExperimentRunner : MonoBehaviour
                     + $"\"day\":{day},"
                     + $"\"slot\":\"{slotName}\""
                     + "}";
-                using var req = new UnityWebRequest(
-                    $"{backendUrl}/exp_checkpoint", "POST");
-                req.uploadHandler   = new UploadHandlerRaw(
-                    System.Text.Encoding.UTF8.GetBytes(json));
+                using var req = new UnityWebRequest($"{backendUrl}/exp_checkpoint", "POST");
+                req.uploadHandler   = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(json));
                 req.downloadHandler = new DownloadHandlerBuffer();
                 req.SetRequestHeader("Content-Type", "application/json");
                 req.timeout = 5;
@@ -627,17 +481,12 @@ public class ExperimentRunner : MonoBehaviour
     void InitCamera()
     {
         if (cameraManager == null)
-            cameraManager = StaticCameraManager.Instance
-                            ?? FindObjectOfType<StaticCameraManager>();
+            cameraManager = StaticCameraManager.Instance ?? FindObjectOfType<StaticCameraManager>();
         if (cameraManager == null) return;
-        if (kitchenNodes?.Count    > 0)
-            cameraManager.RegisterRoomCameras("Kitchen",    kitchenNodes);
-        if (livingRoomNodes?.Count > 0)
-            cameraManager.RegisterRoomCameras("LivingRoom", livingRoomNodes);
-        if (dadRoomNodes?.Count    > 0)
-            cameraManager.RegisterRoomCameras("DadRoom",    dadRoomNodes);
-        if (virtualCameraBrain != null)
-            cameraManager.virtualCameraBrain = virtualCameraBrain;
+        if (kitchenNodes?.Count    > 0) cameraManager.RegisterRoomCameras("Kitchen",    kitchenNodes);
+        if (livingRoomNodes?.Count > 0) cameraManager.RegisterRoomCameras("LivingRoom", livingRoomNodes);
+        if (dadRoomNodes?.Count    > 0) cameraManager.RegisterRoomCameras("DadRoom",    dadRoomNodes);
+        if (virtualCameraBrain != null) cameraManager.virtualCameraBrain = virtualCameraBrain;
     }
 
     void SetUsersVirtualHour(float hour)
@@ -685,8 +534,7 @@ public class ExperimentRunner : MonoBehaviour
         _              => null,
     };
 
-    List<BehaviorSequence> BuildSequenceQueue(
-        BehaviorSequence[] sequences, int totalCount)
+    List<BehaviorSequence> BuildSequenceQueue(BehaviorSequence[] sequences, int totalCount)
     {
         int totalWeight = 0;
         foreach (var s in sequences) totalWeight += s.weight;
@@ -697,8 +545,7 @@ public class ExperimentRunner : MonoBehaviour
         {
             int count = (i == sequences.Length - 1)
                 ? Mathf.Max(0, totalCount - allocated)
-                : Mathf.Max(0, Mathf.RoundToInt(
-                    (float)sequences[i].weight / totalWeight * totalCount));
+                : Mathf.Max(0, Mathf.RoundToInt((float)sequences[i].weight / totalWeight * totalCount));
             for (int j = 0; j < count; j++)
                 result.Add(sequences[i]);
             allocated += count;
@@ -718,10 +565,8 @@ public class ExperimentRunner : MonoBehaviour
     IEnumerator PostVirtualHourRoutine(float hour)
     {
         string json = $"{{\"virtual_hour\":{hour.ToString("F1", InvCulture)}}}";
-        using var req = new UnityWebRequest(
-            $"{backendUrl}/set_virtual_hour", "POST");
-        req.uploadHandler   = new UploadHandlerRaw(
-            System.Text.Encoding.UTF8.GetBytes(json));
+        using var req = new UnityWebRequest($"{backendUrl}/set_virtual_hour", "POST");
+        req.uploadHandler   = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(json));
         req.downloadHandler = new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
         req.timeout = 3;
@@ -734,30 +579,18 @@ public class ExperimentRunner : MonoBehaviour
         hour >= 14f ? "Afternoon" :
         hour >= 11f ? "Noon"      : "Morning";
 
-    int GetTargetTotal() => mode switch
-    {
-        RunMode.RecognitionExp =>
-            (MomBehaviors.Length + DadBehaviors.Length) * rec_samplesPerBehavior,
-        RunMode.HabitExp => exp3_totalObservations,
-        _                => 0,
-    };
-
     void OnGUI()
     {
         if (mode == RunMode.Demo) return;
 
-        string status  = isRunning ? "" : (flaskReady ? "[Ready] Press Space" : "[Waiting Flask...]");
-        int    totalDays = exp3_totalObservations / episodesPerVirtualDay;
-        string dayInfo   = UseVirtualDay
-            ? $"  Day={CurrentVirtualDay}/{totalDays}" : "";
+        int    totalDays = exp_totalObservations / episodesPerVirtualDay;
+        string dayInfo   = $"  Day={CurrentVirtualDay}/{totalDays}";
+        string status    = isRunning ? "" : (flaskReady ? "[Ready] Press Space" : "[Waiting Flask...]");
 
         GUI.Label(
             new Rect(10, 10, 1200, 22),
-            $"[{mode}] {GetSlotName(currentVirtualHour)} "
-          + $"{currentVirtualHour:F0}:00{dayInfo}  "
-          + $"Skip={skippedRuns}  Noise={noiseRuns}  "
-          + $"Regular={successRuns}  "
-          + $"Total={totalRuns}/{GetTargetTotal()}  "
-          + status);
+            $"[Experiment] {GetSlotName(currentVirtualHour)} {currentVirtualHour:F0}:00{dayInfo}  "
+          + $"Skip={skippedRuns}  Noise={noiseRuns}  Regular={successRuns}  "
+          + $"Total={totalRuns}/{exp_totalObservations}  {status}");
     }
 }
