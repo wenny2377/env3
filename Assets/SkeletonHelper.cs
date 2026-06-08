@@ -17,21 +17,56 @@ public class SkeletonHelper : MonoBehaviour
             Debug.LogError("[SkeletonHelper] Animator is not Humanoid on " + gameObject.name);
     }
 
-    public float HipHeight()
+    float BodyHeight()
     {
-        if (_anim == null) return -1f;
-        var hips = _anim.GetBoneTransform(HumanBodyBones.Hips);
-        return hips != null ? hips.position.y : -1f;
+        var head      = _anim.GetBoneTransform(HumanBodyBones.Head);
+        var leftFoot  = _anim.GetBoneTransform(HumanBodyBones.LeftFoot);
+        var rightFoot = _anim.GetBoneTransform(HumanBodyBones.RightFoot);
+        if (head == null || leftFoot == null || rightFoot == null) return -1f;
+        float ankleY = (leftFoot.position.y + rightFoot.position.y) / 2f;
+        float h = head.position.y - ankleY;
+        return h < 0.3f ? -1f : h;
     }
 
-    public float RightArmElevation()
+    float AnkleY()
+    {
+        var leftFoot  = _anim.GetBoneTransform(HumanBodyBones.LeftFoot);
+        var rightFoot = _anim.GetBoneTransform(HumanBodyBones.RightFoot);
+        if (leftFoot == null || rightFoot == null) return -1f;
+        return (leftFoot.position.y + rightFoot.position.y) / 2f;
+    }
+
+    public float NormalizedHipHeight()
     {
         if (_anim == null) return -1f;
-        var shoulder = _anim.GetBoneTransform(HumanBodyBones.RightUpperArm);
-        var wrist    = _anim.GetBoneTransform(HumanBodyBones.RightHand);
-        if (shoulder == null || wrist == null) return -1f;
-        Vector3 armDir = (wrist.position - shoulder.position).normalized;
-        return Vector3.Angle(armDir, Vector3.up);
+        var hip = _anim.GetBoneTransform(HumanBodyBones.Hips);
+        if (hip == null) return -1f;
+        float bh     = BodyHeight();
+        float ankleY = AnkleY();
+        if (bh < 0f || ankleY < 0f) return -1f;
+        float normalized = (hip.position.y - ankleY) / bh;
+        float noise      = SampleGaussian(0f, 0.015f);
+        return Mathf.Clamp(normalized + noise, 0f, 1f);
+    }
+
+    public float NormalizedKneeHeight()
+    {
+        if (_anim == null) return -1f;
+        var leftUpperLeg  = _anim.GetBoneTransform(HumanBodyBones.LeftUpperLeg);
+        var leftLowerLeg  = _anim.GetBoneTransform(HumanBodyBones.LeftLowerLeg);
+        var rightUpperLeg = _anim.GetBoneTransform(HumanBodyBones.RightUpperLeg);
+        var rightLowerLeg = _anim.GetBoneTransform(HumanBodyBones.RightLowerLeg);
+        if (leftUpperLeg == null || leftLowerLeg == null) return -1f;
+        if (rightUpperLeg == null || rightLowerLeg == null) return -1f;
+        float bh     = BodyHeight();
+        float ankleY = AnkleY();
+        if (bh < 0f || ankleY < 0f) return -1f;
+        float leftKneeY  = (leftUpperLeg.position.y  + leftLowerLeg.position.y)  / 2f;
+        float rightKneeY = (rightUpperLeg.position.y + rightLowerLeg.position.y) / 2f;
+        float kneeY      = (leftKneeY + rightKneeY) / 2f;
+        float normalized = (kneeY - ankleY) / bh;
+        float noise      = SampleGaussian(0f, 0.015f);
+        return Mathf.Clamp(normalized + noise, 0f, 1f);
     }
 
     public float HeadPitch()
@@ -41,30 +76,88 @@ public class SkeletonHelper : MonoBehaviour
         if (head == null) return -999f;
         float pitch = head.eulerAngles.x;
         if (pitch > 180f) pitch -= 360f;
-        float noise = SampleGaussian(0f, 5f);
+        float noise = SampleGaussian(0f, 4f);
         return pitch + noise;
     }
 
-    public float HandToHeadDistance()
+    public float SpineAngle()
     {
         if (_anim == null) return -1f;
-        var hand = _anim.GetBoneTransform(HumanBodyBones.RightHand);
-        var head = _anim.GetBoneTransform(HumanBodyBones.Head);
-        if (hand == null || head == null) return -1f;
-        return Vector3.Distance(hand.position, head.position);
+        var hip   = _anim.GetBoneTransform(HumanBodyBones.Hips);
+        var chest = _anim.GetBoneTransform(HumanBodyBones.Chest);
+        if (hip == null || chest == null) return -1f;
+        Vector3 spineDir = (chest.position - hip.position).normalized;
+        float angle = Vector3.Angle(spineDir, Vector3.up);
+        float noise = SampleGaussian(0f, 2.5f);
+        return Mathf.Clamp(angle + noise, 0f, 90f);
     }
 
-    // Simulates MediaPipe Pose normalized hip height (hip_y / body_height).
-    // Gaussian noise (std=0.02) models MediaPipe landmark estimation error.
-    // In real deployment, replace with:
-    //   (landmark[23].y + landmark[24].y) / 2 / body_height
-    // where body_height = distance(landmark[0], landmark[27+28 avg])
-    public float NormalizedHipHeight()
+    public float RightArmElevation()
     {
-        float raw = HipHeight();
-        if (raw < 0f) return -1f;
-        float noise = SampleGaussian(0f, 0.02f);
-        return Mathf.Clamp(raw + noise, 0f, 2f);
+        if (_anim == null) return -1f;
+        var shoulder = _anim.GetBoneTransform(HumanBodyBones.RightUpperArm);
+        var wrist    = _anim.GetBoneTransform(HumanBodyBones.RightHand);
+        if (shoulder == null || wrist == null) return -1f;
+        Vector3 armDir = (wrist.position - shoulder.position).normalized;
+        float angle = Vector3.Angle(armDir, Vector3.up);
+        float noise = SampleGaussian(0f, 3f);
+        return Mathf.Clamp(angle + noise, 0f, 180f);
+    }
+
+    public float NormalizedHandToHead(bool useLeft = false)
+    {
+        if (_anim == null) return -1f;
+        var hand = _anim.GetBoneTransform(
+            useLeft ? HumanBodyBones.LeftHand : HumanBodyBones.RightHand);
+        var head = _anim.GetBoneTransform(HumanBodyBones.Head);
+        if (hand == null || head == null) return -1f;
+        float bh = BodyHeight();
+        if (bh < 0f) return -1f;
+        float dist  = Vector3.Distance(hand.position, head.position);
+        float noise = SampleGaussian(0f, 0.015f);
+        return Mathf.Clamp((dist + noise) / bh, 0f, 1.5f);
+    }
+
+    public float NormalizedWristHeight(bool useLeft = false)
+    {
+        if (_anim == null) return -999f;
+        var hip   = _anim.GetBoneTransform(HumanBodyBones.Hips);
+        var wrist = _anim.GetBoneTransform(
+            useLeft ? HumanBodyBones.LeftHand : HumanBodyBones.RightHand);
+        if (hip == null || wrist == null) return -999f;
+        float bh = BodyHeight();
+        if (bh < 0f) return -999f;
+        float diff  = wrist.position.y - hip.position.y;
+        float noise = SampleGaussian(0f, 0.015f);
+        return Mathf.Clamp((diff + noise) / bh, -1f, 1f);
+    }
+
+    public float NormalizedWristRelativeX(bool useLeft = false)
+    {
+        if (_anim == null) return -999f;
+        var hip   = _anim.GetBoneTransform(HumanBodyBones.Hips);
+        var wrist = _anim.GetBoneTransform(
+            useLeft ? HumanBodyBones.LeftHand : HumanBodyBones.RightHand);
+        if (hip == null || wrist == null) return -999f;
+        float bh = BodyHeight();
+        if (bh < 0f) return -999f;
+        float diff  = wrist.position.x - hip.position.x;
+        float noise = SampleGaussian(0f, 0.015f);
+        return Mathf.Clamp((diff + noise) / bh, -1f, 1f);
+    }
+
+    public float NormalizedWristRelativeZ(bool useLeft = false)
+    {
+        if (_anim == null) return -999f;
+        var hip   = _anim.GetBoneTransform(HumanBodyBones.Hips);
+        var wrist = _anim.GetBoneTransform(
+            useLeft ? HumanBodyBones.LeftHand : HumanBodyBones.RightHand);
+        if (hip == null || wrist == null) return -999f;
+        float bh = BodyHeight();
+        if (bh < 0f) return -999f;
+        float diff  = wrist.position.z - hip.position.z;
+        float noise = SampleGaussian(0f, 0.015f);
+        return Mathf.Clamp((diff + noise) / bh, -1f, 1f);
     }
 
     static float SampleGaussian(float mean, float std)
@@ -77,43 +170,65 @@ public class SkeletonHelper : MonoBehaviour
 
     public string ToJsonFragment()
     {
-        float h = NormalizedHipHeight();
-        float a = RightArmElevation();
-        float p = HeadPitch();
-        float d = HandToHeadDistance();
+        float hip       = NormalizedHipHeight();
+        float knee      = NormalizedKneeHeight();
+        float pitch     = HeadPitch();
+        float spine     = SpineAngle();
+        float arm       = RightArmElevation();
+        float r_h2h     = NormalizedHandToHead(useLeft: false);
+        float l_h2h     = NormalizedHandToHead(useLeft: true);
+        float r_wrist   = NormalizedWristHeight(useLeft: false);
+        float l_wrist   = NormalizedWristHeight(useLeft: true);
+        float r_wrist_x = NormalizedWristRelativeX(useLeft: false);
+        float r_wrist_z = NormalizedWristRelativeZ(useLeft: false);
+        float l_wrist_x = NormalizedWristRelativeX(useLeft: true);
+        float l_wrist_z = NormalizedWristRelativeZ(useLeft: true);
 
         return
-            $"\"hip_height\":{h.ToString("F3", Inv)}," +
-            $"\"arm_elevation\":{a.ToString("F3", Inv)}," +
-            $"\"head_pitch\":{p.ToString("F3", Inv)}," +
-            $"\"hand_to_head\":{d.ToString("F3", Inv)}," +
-            $"\"body_pos\":\"unknown\"," +
-            $"\"arm_pose\":\"unknown\",";
+            $"\"hip_height\":{hip.ToString("F3", Inv)},"       +
+            $"\"knee_height\":{knee.ToString("F3", Inv)},"     +
+            $"\"head_pitch\":{pitch.ToString("F3", Inv)},"     +
+            $"\"spine_angle\":{spine.ToString("F3", Inv)},"    +
+            $"\"arm_elevation\":{arm.ToString("F3", Inv)},"    +
+            $"\"hand_to_head\":{r_h2h.ToString("F3", Inv)},"   +
+            $"\"left_hand_to_head\":{l_h2h.ToString("F3", Inv)},"   +
+            $"\"wrist_height\":{r_wrist.ToString("F3", Inv)}," +
+            $"\"left_wrist_height\":{l_wrist.ToString("F3", Inv)}," +
+            $"\"wrist_x\":{r_wrist_x.ToString("F3", Inv)},"    +
+            $"\"wrist_z\":{r_wrist_z.ToString("F3", Inv)},"    +
+            $"\"left_wrist_x\":{l_wrist_x.ToString("F3", Inv)}," +
+            $"\"left_wrist_z\":{l_wrist_z.ToString("F3", Inv)},";
     }
 
     void OnDrawGizmos()
     {
         if (!Application.isPlaying || _anim == null) return;
 
-        var hips = _anim.GetBoneTransform(HumanBodyBones.Hips);
-        var head = _anim.GetBoneTransform(HumanBodyBones.Head);
-        var hand = _anim.GetBoneTransform(HumanBodyBones.RightHand);
+        var hips     = _anim.GetBoneTransform(HumanBodyBones.Hips);
+        var head     = _anim.GetBoneTransform(HumanBodyBones.Head);
+        var rhand    = _anim.GetBoneTransform(HumanBodyBones.RightHand);
+        var lhand    = _anim.GetBoneTransform(HumanBodyBones.LeftHand);
+        var chest    = _anim.GetBoneTransform(HumanBodyBones.Chest);
         var shoulder = _anim.GetBoneTransform(HumanBodyBones.RightUpperArm);
+        var leftLow  = _anim.GetBoneTransform(HumanBodyBones.LeftLowerLeg);
+        var leftUp   = _anim.GetBoneTransform(HumanBodyBones.LeftUpperLeg);
 
         if (hips != null)
         {
-            float h  = NormalizedHipHeight();
-            string bp = h < 0f      ? "unknown"  :
-                        h < 0.860f  ? "lying"    :
-                        h < 0.900f  ? "sitting"  : "standing";
-            Gizmos.color = bp == "lying"    ? Color.green  :
+            float nh    = NormalizedHipHeight();
+            float nk    = NormalizedKneeHeight();
+            float ratio = (nh > 0f && nk >= 0f) ? nk / nh : -1f;
+            string bp   = nh < 0f    ? "unknown"  :
+                          nh < 0.20f ? "lying"    :
+                          ratio >= 0f && ratio <= 0.52f ? "sitting" : "standing";
+            Gizmos.color = bp == "standing" ? Color.cyan   :
                            bp == "sitting"  ? Color.yellow :
-                           bp == "standing" ? Color.cyan   : Color.gray;
+                           bp == "lying"    ? Color.green  : Color.gray;
             Gizmos.DrawWireSphere(hips.position, 0.06f);
 #if UNITY_EDITOR
             UnityEditor.Handles.Label(
                 hips.position + Vector3.up * 0.1f,
-                $"hip={h:F3} [{bp}]");
+                $"hip={nh:F2} knee={nk:F2} ratio={ratio:F2} [{bp}]");
 #endif
         }
 
@@ -121,25 +236,69 @@ public class SkeletonHelper : MonoBehaviour
         {
             Gizmos.color = Color.magenta;
             Gizmos.DrawWireSphere(head.position, 0.04f);
-            float pitch = HeadPitch();
 #if UNITY_EDITOR
             UnityEditor.Handles.Label(
                 head.position + Vector3.up * 0.12f,
-                $"pitch={pitch:F1}°");
+                $"pitch={HeadPitch():F1}°");
 #endif
         }
 
-        if (hand != null && head != null)
+        if (rhand != null && head != null)
         {
-            float dist = HandToHeadDistance();
-            Gizmos.color = dist >= 0 && dist < 0.25f ? Color.red : Color.gray;
-            Gizmos.DrawLine(hand.position, head.position);
+            float h2h = NormalizedHandToHead(false);
+            Gizmos.color = h2h >= 0 && h2h < 0.38f ? Color.red : Color.gray;
+            Gizmos.DrawLine(rhand.position, head.position);
+#if UNITY_EDITOR
+            UnityEditor.Handles.Label(
+                (rhand.position + head.position) * 0.5f,
+                $"R_h2h={h2h:F2}");
+#endif
         }
 
-        if (shoulder != null && hand != null)
+        if (lhand != null && head != null)
+        {
+            float lh2h = NormalizedHandToHead(true);
+            Gizmos.color = lh2h >= 0 && lh2h < 0.38f ? Color.red : Color.blue;
+            Gizmos.DrawLine(lhand.position, head.position);
+#if UNITY_EDITOR
+            UnityEditor.Handles.Label(
+                (lhand.position + head.position) * 0.5f,
+                $"L_h2h={lh2h:F2}");
+#endif
+        }
+
+        if (shoulder != null && rhand != null)
         {
             Gizmos.color = Color.white;
-            Gizmos.DrawLine(shoulder.position, hand.position);
+            Gizmos.DrawLine(shoulder.position, rhand.position);
+#if UNITY_EDITOR
+            UnityEditor.Handles.Label(
+                shoulder.position,
+                $"arm={RightArmElevation():F1}°");
+#endif
+        }
+
+        if (hips != null && chest != null)
+        {
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawLine(hips.position, chest.position);
+#if UNITY_EDITOR
+            UnityEditor.Handles.Label(
+                (hips.position + chest.position) * 0.5f,
+                $"spine={SpineAngle():F1}°");
+#endif
+        }
+
+        if (leftUp != null && leftLow != null)
+        {
+            Vector3 kneePos = (leftUp.position + leftLow.position) / 2f;
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawWireSphere(kneePos, 0.04f);
+#if UNITY_EDITOR
+            UnityEditor.Handles.Label(
+                kneePos + Vector3.up * 0.08f,
+                $"knee={NormalizedKneeHeight():F2}");
+#endif
         }
     }
 }

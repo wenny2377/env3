@@ -110,8 +110,7 @@ public class DynamicSyncManager : MonoBehaviour
     {
         if (dynamicObjects == null || dynamicObjects.Count == 0) yield break;
 
-        var entries   = new List<string>();
-        var allLabels = new List<string>();
+        var entries = new List<string>();
 
         foreach (var obj in dynamicObjects)
         {
@@ -132,9 +131,9 @@ public class DynamicSyncManager : MonoBehaviour
                 pos = obj.transform.position;
             }
 
-            string key = obj.name;
-            bool moved = !lastObjPos.ContainsKey(key) ||
-                         Vector3.Distance(pos, lastObjPos[key]) > moveTolerance;
+            string key   = obj.name;
+            bool   moved = !lastObjPos.ContainsKey(key) ||
+                           Vector3.Distance(pos, lastObjPos[key]) > moveTolerance;
             if (moved) lastObjPos[key] = pos;
 
             string room  = DetectRoom(pos);
@@ -151,7 +150,6 @@ public class DynamicSyncManager : MonoBehaviour
                 extra:  extra
             );
             entries.Add(entry);
-            allLabels.Add(obj.name.ToLower());
         }
 
         if (entries.Count == 0) yield break;
@@ -160,8 +158,6 @@ public class DynamicSyncManager : MonoBehaviour
         yield return StartCoroutine(PostJson(backendUrl + "/dynamic_sync", json, "objects"));
     }
 
-    // 修正：sceneCounterpart 消失 且 item（手持版）是 active，才算持有
-    // 避免「手機本來就不在場景」被誤判為持有
     string FindHolderOf(GameObject obj)
     {
         foreach (var user in new UserEntity[] { userMom, userDad })
@@ -169,16 +165,26 @@ public class DynamicSyncManager : MonoBehaviour
             if (user == null) continue;
             var items = user.GetBehaviorItems();
             if (items == null) continue;
+
             foreach (var bi in items)
             {
                 if (bi == null) continue;
-                bool sceneGone =
-                    (bi.sceneCounterpart  == obj && bi.sceneCounterpart  != null && !bi.sceneCounterpart.activeSelf) ||
-                    (bi.sceneCounterpart2 == obj && bi.sceneCounterpart2 != null && !bi.sceneCounterpart2.activeSelf);
-                bool itemHeld =
+
+                bool isCounterpart =
+                    (bi.sceneCounterpart  != null && bi.sceneCounterpart  == obj) ||
+                    (bi.sceneCounterpart2 != null && bi.sceneCounterpart2 == obj);
+
+                if (!isCounterpart) continue;
+
+                bool counterpartHidden =
+                    (bi.sceneCounterpart  != null && !bi.sceneCounterpart.activeSelf) ||
+                    (bi.sceneCounterpart2 != null && !bi.sceneCounterpart2.activeSelf);
+
+                bool itemActive =
                     (bi.item  != null && bi.item.activeSelf) ||
                     (bi.item2 != null && bi.item2.activeSelf);
-                if (sceneGone && itemHeld)
+
+                if (counterpartHidden && itemActive)
                     return user.userID;
             }
         }

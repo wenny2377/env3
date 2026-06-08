@@ -41,6 +41,10 @@ public class ExperimentRunner : MonoBehaviour
     [Header("Options")]
     public bool runOnStart = true;
 
+    [Header("Demo Mode Settings")]
+    public float demoSettleTime = 2.5f;
+    public float demoHoldTime   = 1.0f;
+
     [Header("Mom Spots - Drinking")]     public Transform[] momDrinkingSpots     = new Transform[3];
     [Header("Mom Spots - SittingDrink")] public Transform[] momSittingDrinkSpots = new Transform[3];
     [Header("Mom Spots - Sitting")]      public Transform[] momSittingSpots      = new Transform[3];
@@ -70,6 +74,25 @@ public class ExperimentRunner : MonoBehaviour
     public static int    CurrentVirtualDay     = 1;
     public static bool   UseVirtualDay         = false;
     public static string CurrentExperimentMode = "";
+
+    static readonly HashSet<string> TV_ON_BEHAVIORS = new HashSet<string>
+    {
+        "Watching"
+    };
+
+    static readonly string[] MomDemoActions = new[]
+    {
+        "Drinking", "SittingDrink", "Sitting", "Eating",
+        "Cooking",  "Opening",      "Laying",  "Watching",
+        "Reading",  "Cleaning",     "PhoneUse"
+    };
+
+    static readonly string[] DadDemoActions = new[]
+    {
+        "Drinking", "SittingDrink", "Sitting", "Eating",
+        "Cooking",  "Opening",      "Laying",  "Typing",
+        "Reading",  "Cleaning",     "PhoneUse"
+    };
 
     struct BehaviorSequence
     {
@@ -200,6 +223,7 @@ public class ExperimentRunner : MonoBehaviour
             if (userMom != null) userMom.gameObject.SetActive(true);
             if (userDad != null) userDad.gameObject.SetActive(true);
             InitCamera();
+            StartCoroutine(RunDemoScan());
             return;
         }
 
@@ -216,6 +240,7 @@ public class ExperimentRunner : MonoBehaviour
     void Update()
     {
         if (mode == RunMode.Demo) return;
+
         if (flaskReady && !runOnStart && !isRunning
             && Input.GetKeyDown(KeyCode.Space))
             StartExperiment();
@@ -227,6 +252,101 @@ public class ExperimentRunner : MonoBehaviour
             isRunning             = false;
             Debug.Log("[ExperimentRunner] Stopped by user.");
         }
+    }
+
+    IEnumerator RunDemoScan()
+    {
+        yield return new WaitForSeconds(0.5f);
+
+        Debug.Log("================================================================");
+        Debug.Log("[Demo] Skeleton scan started");
+        Debug.Log("[Demo] Action | NormHip | HeadPitch | H2H | ArmElev | BodyGuess");
+        Debug.Log("================================================================");
+
+        userDad.gameObject.SetActive(false);
+        userMom.gameObject.SetActive(true);
+        Debug.Log("\n[Demo] USER MOM ------------------------------------------------");
+        PrintTableHeader();
+        yield return StartCoroutine(DemoScanUser(userMom, MomDemoActions, isMom: true));
+        yield return StartCoroutine(userMom.ReturnToStanding());
+
+        yield return new WaitForSeconds(1f);
+
+        userMom.gameObject.SetActive(false);
+        userDad.gameObject.SetActive(true);
+        Debug.Log("\n[Demo] USER DAD ------------------------------------------------");
+        PrintTableHeader();
+        yield return StartCoroutine(DemoScanUser(userDad, DadDemoActions, isMom: false));
+        yield return StartCoroutine(userDad.ReturnToStanding());
+
+        userMom.gameObject.SetActive(true);
+        userDad.gameObject.SetActive(true);
+
+        Debug.Log("\n================================================================");
+        Debug.Log("[Demo] Scan complete.");
+        Debug.Log("================================================================");
+    }
+
+    IEnumerator DemoScanUser(UserEntity user, string[] actions, bool isMom)
+    {
+        var sk = user.GetComponent<SkeletonHelper>();
+        if (sk == null)
+            Debug.LogWarning($"[Demo] No SkeletonHelper on {user.userID}");
+
+        foreach (string action in actions)
+        {
+            Transform spot = isMom ? GetMomSpot(action, 0) : GetDadSpot(action, 0);
+
+            if (spot == null)
+            {
+                Debug.LogWarning($"[Demo] No spot for {user.userID} / {action} — skipping");
+                continue;
+            }
+
+            user.overrideSpot         = spot;
+            user.lastAssignedActivity = action;
+            user.ResetBusy();
+            yield return StartCoroutine(user.SwitchActivity(action));
+            yield return new WaitForSeconds(demoSettleTime);
+
+            if (sk != null)
+                PrintSkeletonRow(action, sk);
+            else
+                Debug.Log($"{action,-16} | SkeletonHelper missing");
+
+            yield return new WaitForSeconds(demoHoldTime);
+        }
+    }
+
+    static void PrintTableHeader()
+    {
+        Debug.Log(
+            $"{"Action",-16} | {"NormHip",-9} | {"HeadPitch",-11} | {"H2H",-8} | {"ArmElev",-9} | BodyGuess");
+        Debug.Log(new string('-', 80));
+    }
+
+    static void PrintSkeletonRow(string action, SkeletonHelper sk)
+    {
+        float normHip = sk.NormalizedHipHeight();
+        float pitch   = sk.HeadPitch();
+        float h2h     = sk.NormalizedHandToHead();
+        float arm     = sk.RightArmElevation();
+
+        string bodyGuess =
+            pitch > -999f && pitch < -55f                           ? "LYING"          :
+            pitch > -999f && pitch < -18f && h2h >= 0f && h2h < 0.35f ? "SITTING(drink)" :
+            pitch > -999f && pitch > 65f                            ? "SITTING(read)"  :
+            arm   >= 0f   && arm   > 165f                          ? "STANDING(open)" :
+            "AMBIGUOUS->LLM";
+
+        string normStr  = normHip >= 0   ? normHip.ToString("F3") : "N/A";
+        string pitchStr = pitch   > -999 ? pitch.ToString("F1")   : "N/A";
+        string h2hStr   = h2h     >= 0   ? h2h.ToString("F3")     : "N/A";
+        string armStr   = arm     >= 0   ? arm.ToString("F1")     : "N/A";
+
+        Debug.Log(
+            $"{action,-16} | {normStr,-9} | {pitchStr,-11} | {h2hStr,-8} | {armStr,-9} | {bodyGuess}");
+        Debug.Log($"  JSON: {sk.ToJsonFragment()}");
     }
 
     IEnumerator PollUntilReady()
@@ -382,6 +502,9 @@ public class ExperimentRunner : MonoBehaviour
             virtualCameraBrain.SetVirtualHour(virtualHour);
         SetUsersVirtualHour(virtualHour);
 
+        bool tvOn = TV_ON_BEHAVIORS.Contains(seq.groundTruth);
+        yield return StartCoroutine(SetDeviceState("tv", tvOn ? "on" : "off"));
+
         int lastIdx = seq.actions.Length - 1;
         for (int i = 0; i < lastIdx; i++)
         {
@@ -406,6 +529,8 @@ public class ExperimentRunner : MonoBehaviour
         yield return new WaitForSeconds(waitAfterCapture);
         targetUser.lastAssignedActivity = "";
 
+        yield return StartCoroutine(SetDeviceState("tv", "off"));
+
         yield return StartCoroutine(targetUser.ReturnToStanding());
 
         if (other != null)
@@ -418,7 +543,7 @@ public class ExperimentRunner : MonoBehaviour
 
     IEnumerator RunNoiseEpisode(UserEntity user, float virtualHour)
     {
-        string noise = NoiseActions[Random.Range(0, NoiseActions.Length)];
+        string     noise = NoiseActions[Random.Range(0, NoiseActions.Length)];
         UserEntity other = (user == userMom) ? userDad : userMom;
         if (other != null) other.gameObject.SetActive(false);
         if (user  != null) user.gameObject.SetActive(true);
@@ -440,6 +565,17 @@ public class ExperimentRunner : MonoBehaviour
             other.gameObject.SetActive(true);
         }
         yield return new WaitForSeconds(waitBetweenEpisodes);
+    }
+
+    IEnumerator SetDeviceState(string label, string state)
+    {
+        string json = $"{{\"label\":\"{label}\",\"state\":\"{state}\"}}";
+        using var req = new UnityWebRequest($"{backendUrl}/set_device_state", "POST");
+        req.uploadHandler   = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(json));
+        req.downloadHandler = new DownloadHandlerBuffer();
+        req.SetRequestHeader("Content-Type", "application/json");
+        req.timeout = 3;
+        yield return req.SendWebRequest();
     }
 
     IEnumerator PostCheckpoint(int day, string slotName, int episodeCount)
@@ -581,7 +717,12 @@ public class ExperimentRunner : MonoBehaviour
 
     void OnGUI()
     {
-        if (mode == RunMode.Demo) return;
+        if (mode == RunMode.Demo)
+        {
+            GUI.Label(new Rect(10, 10, 600, 22),
+                "[Demo] Skeleton scan running — check Console for values");
+            return;
+        }
 
         int    totalDays = exp_totalObservations / episodesPerVirtualDay;
         string dayInfo   = $"  Day={CurrentVirtualDay}/{totalDays}";

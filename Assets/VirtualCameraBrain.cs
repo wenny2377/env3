@@ -165,9 +165,24 @@ public class VirtualCameraBrain : MonoBehaviour
         Vector3 pos = user.transform.position;
         Vector3 fwd = user.transform.forward;
 
-        // 骨架姿態（SkeletonHelper 掛在 UserEntity 同一個 GameObject）
         var sk = user.GetComponent<SkeletonHelper>();
         string skelJson = sk != null ? sk.ToJsonFragment() : "";
+
+        if (sk != null)
+        {
+            Debug.Log(
+                $"[SKEL] {user.userID} | {activity} | " +
+                $"hip={sk.NormalizedHipHeight():F3} | " +
+                $"pitch={sk.HeadPitch():F1} | " +
+                $"spine={sk.SpineAngle():F1} | " +
+                $"h2h={sk.NormalizedHandToHead():F3} | " +
+                $"arm={sk.RightArmElevation():F1} | " +
+                $"wrist={sk.NormalizedWristHeight():F3}");
+        }
+        else
+        {
+            Debug.LogWarning($"[SKEL] {user.userID} | {activity} | SkeletonHelper NOT FOUND");
+        }
 
         string posJson =
             $"\"user_pos\":{{" +
@@ -208,7 +223,7 @@ public class VirtualCameraBrain : MonoBehaviour
         req.downloadHandler = new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
         req.timeout = 120;
-
+        Debug.Log($"[JSON] {json.Substring(0, Mathf.Min(300, json.Length))}");
         yield return req.SendWebRequest();
 
         if (req.result == UnityWebRequest.Result.Success)
@@ -218,7 +233,7 @@ public class VirtualCameraBrain : MonoBehaviour
                 : "";
             string skelLog = sk != null
                 ? $" head={sk.HeadPitch():F1}°"
-                : "";
+                : " [NO SKELETON]";
             Debug.Log(
                 $"[VCB] POST ok | {user.userID} | {activity} | " +
                 $"{imageList.Count} img | hour={hour}{dayLog}{skelLog} | t={tCapture}");

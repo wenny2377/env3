@@ -418,7 +418,7 @@ GameObject:
   - component: {fileID: 44392367}
   - component: {fileID: 44392366}
   m_Layer: 3
-  m_Name: BedRoom(dad)
+  m_Name: DadRoom
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -436,7 +436,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3a6920d60e0c7bb4f9c954e45d1f3834, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  roomName: BedRoom(dad)
+  roomName: DadRoom
   autoFetchByRoomName: 1
   cameraPivots:
   - {fileID: 1798282031}
@@ -11133,6 +11133,9 @@ MonoBehaviour:
   waitAfterCapture: 8
   waitBetweenEpisodes: 2
   minIntervalInSlot: 1.5
+  testUser: {fileID: 1464156698}
+  testWaitPerAction: 3
+  testBothUsers: 1
   backendUrl: http://localhost:5000
   runOnStart: 1
   momDrinkingSpots:
