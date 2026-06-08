@@ -185,7 +185,24 @@ public class DynamicSyncManager : MonoBehaviour
                     (bi.item2 != null && bi.item2.activeSelf);
 
                 if (counterpartHidden && itemActive)
+                {
+                    Debug.Log($"[FindHolderOf] HIT: {obj.name} held by {user.userID} " +
+                              $"activity={bi.activity}");
                     return user.userID;
+                }
+
+                string objNameLower = obj.name.ToLower();
+                if ((objNameLower == "broom" || objNameLower == "book") && isCounterpart)
+                {
+                    Debug.Log($"[FindHolderOf] {obj.name} FAIL: " +
+                              $"counterpartHidden={counterpartHidden} " +
+                              $"itemActive={itemActive} " +
+                              $"sceneCP.activeSelf={bi.sceneCounterpart?.activeSelf} " +
+                              $"item.activeSelf={bi.item?.activeSelf} " +
+                              $"sceneCP.name={bi.sceneCounterpart?.name} " +
+                              $"item.name={bi.item?.name} " +
+                              $"sceneCP=={obj.name}:{bi.sceneCounterpart == obj}");
+                }
             }
         }
         return "";

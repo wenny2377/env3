@@ -674,7 +674,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 8106b170e9a41d64db62c58b6cd38c39, type: 3}
       propertyPath: m_Name
-      value: 'book '
+      value: book
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -4622,16 +4622,13 @@ MonoBehaviour:
   - {fileID: 152798265}
   - {fileID: 5365863323977446416}
   - {fileID: 1567211996}
-  - {fileID: 5365863323977446416}
   - {fileID: 6783464644354978126}
-  - {fileID: 1567211996}
   - {fileID: 2070972303}
   - {fileID: 594814267}
-  - {fileID: 139778050}
   - {fileID: 1644722504}
   backendUrl: http://localhost:5000
   positionInterval: 0.5
-  objectSyncInterval: 5
+  objectSyncInterval: 1
   moveTolerance: 0.02
   verboseLog: 0
 --- !u!1 &828247090
@@ -10544,7 +10541,7 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: 1db71a166fadb3982b4330cad09b1ced, type: 2}
     - target: {fileID: 919132149155446097, guid: 2a11933bf3470f08a8589af5460676bd, type: 3}
       propertyPath: m_Name
-      value: 'phone  '
+      value: phone
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -11133,11 +11130,10 @@ MonoBehaviour:
   waitAfterCapture: 8
   waitBetweenEpisodes: 2
   minIntervalInSlot: 1.5
-  testUser: {fileID: 1464156698}
-  testWaitPerAction: 3
-  testBothUsers: 1
   backendUrl: http://localhost:5000
   runOnStart: 1
+  demoSettleTime: 2.5
+  demoHoldTime: 1
   momDrinkingSpots:
   - {fileID: 836976212}
   - {fileID: 1710019823}
@@ -12277,7 +12273,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3a6920d60e0c7bb4f9c954e45d1f3834, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  roomName: 'Kitchen '
+  roomName: Kitchen
   autoFetchByRoomName: 1
   cameraPivots:
   - {fileID: 1203532555}
@@ -13784,7 +13780,7 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: 313b612f9e9aedd2b8556999340eeab6, type: 2}
     - target: {fileID: 919132149155446097, guid: 6a26a8189ff45e2f396995417da6dfe9, type: 3}
       propertyPath: m_Name
-      value: 'remote '
+      value: remote
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

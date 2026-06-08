@@ -726,12 +726,12 @@ public class ExperimentRunner : MonoBehaviour
 
         int    totalDays = exp_totalObservations / episodesPerVirtualDay;
         string dayInfo   = $"  Day={CurrentVirtualDay}/{totalDays}";
-        string status    = isRunning ? "" : (flaskReady ? "[Ready] Press Space" : "[Waiting Flask...]");
+        string statusMsg = isRunning ? "" : (flaskReady ? "[Ready] Press Space" : "[Waiting Flask...]");
 
         GUI.Label(
             new Rect(10, 10, 1200, 22),
             $"[Experiment] {GetSlotName(currentVirtualHour)} {currentVirtualHour:F0}:00{dayInfo}  "
           + $"Skip={skippedRuns}  Noise={noiseRuns}  Regular={successRuns}  "
-          + $"Total={totalRuns}/{exp_totalObservations}  {status}");
+          + $"Total={totalRuns}/{exp_totalObservations}  {statusMsg}");
     }
 }

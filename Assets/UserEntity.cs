@@ -122,11 +122,12 @@ public class UserEntity : MonoBehaviour
 
     public BehaviorItem[] GetBehaviorItems() => _allItems;
 
-    Animator       anim;
-    NavMeshAgent   agent;
-    bool           isSitting = false;
-    float          _shadowTimer = 0f;
-    BehaviorItem[] _allItems;
+    Animator            anim;
+    NavMeshAgent        agent;
+    bool                isSitting = false;
+    float               _shadowTimer = 0f;
+    BehaviorItem[]      _allItems;
+    DynamicSyncManager  _dsm;
 
     static readonly System.Globalization.CultureInfo Inv =
         System.Globalization.CultureInfo.InvariantCulture;
@@ -145,6 +146,8 @@ public class UserEntity : MonoBehaviour
         agent.updateUpAxis   = false;
         agent.enabled        = true;
         agent.Warp(transform.position);
+
+        _dsm = FindObjectOfType<DynamicSyncManager>();
 
         InitBehaviorItems();
         ResetAllItems();
@@ -304,9 +307,9 @@ public class UserEntity : MonoBehaviour
         SetActivity("Walking");
         yield return StartCoroutine(NavWalkTo(spot.position, false));
         yield return StartCoroutine(SmoothRotateTo(spot.forward));
-        PlayAnim(stateDrink);
-        yield return null;
         SetActivity("Drinking");
+        yield return null;
+        PlayAnim(stateDrink);
         yield return new WaitForSeconds(drinkDuration);
     }
 
@@ -318,9 +321,9 @@ public class UserEntity : MonoBehaviour
         yield return StartCoroutine(NavWalkTo(spot.position, true));
         yield return StartCoroutine(SmoothRotateTo(spot.forward));
         TeleportToSeat(spot);
-        PlayAnim(stateSittingDrink);
-        yield return null;
         SetActivity("SittingDrink");
+        yield return null;
+        PlayAnim(stateSittingDrink);
         yield return new WaitForSeconds(drinkDuration);
     }
 
@@ -360,9 +363,9 @@ public class UserEntity : MonoBehaviour
         yield return StartCoroutine(NavWalkTo(spot.position, true));
         yield return StartCoroutine(SmoothRotateTo(spot.forward));
         TeleportToSeat(spot);
-        PlayAnim(stateEating);
-        yield return null;
         SetActivity("Eating");
+        yield return null;
+        PlayAnim(stateEating);
         yield return new WaitForSeconds(eatDuration);
     }
 
@@ -373,9 +376,9 @@ public class UserEntity : MonoBehaviour
         SetActivity("Walking");
         yield return StartCoroutine(NavWalkTo(spot.position, false));
         yield return StartCoroutine(SmoothRotateTo(spot.forward));
-        PlayAnim(stateCooking);
-        yield return null;
         SetActivity("Cooking");
+        yield return null;
+        PlayAnim(stateCooking);
         yield return new WaitForSeconds(cookDuration);
     }
 
@@ -451,9 +454,9 @@ public class UserEntity : MonoBehaviour
         yield return StartCoroutine(NavWalkTo(spot.position, true));
         yield return StartCoroutine(SmoothRotateTo(spot.forward));
         TeleportToSeat(spot);
-        PlayAnim(stateReading);
-        yield return null;
         SetActivity("Reading");
+        yield return null;
+        PlayAnim(stateReading);
     }
 
     IEnumerator DoCleaning()
@@ -463,9 +466,9 @@ public class UserEntity : MonoBehaviour
         SetActivity("Walking");
         yield return StartCoroutine(NavWalkTo(spot.position, false));
         yield return StartCoroutine(SmoothRotateTo(spot.forward));
-        PlayAnim(stateCleaning);
-        yield return null;
         SetActivity("Cleaning");
+        yield return null;
+        PlayAnim(stateCleaning);
         yield return new WaitForSeconds(cleanDuration);
     }
 
@@ -476,9 +479,9 @@ public class UserEntity : MonoBehaviour
         SetActivity("Walking");
         yield return StartCoroutine(NavWalkTo(spot.position, false));
         yield return StartCoroutine(SmoothRotateTo(spot.forward));
-        PlayAnim(statePhone);
-        yield return null;
         SetActivity("PhoneUse");
+        yield return null;
+        PlayAnim(statePhone);
     }
 
     IEnumerator DoTyping()
@@ -503,9 +506,9 @@ public class UserEntity : MonoBehaviour
         yield return StartCoroutine(NavWalkTo(spot.position, true));
         yield return StartCoroutine(SmoothRotateTo(spot.forward));
         TeleportToSeat(spot);
-        PlayAnim(stateReading);
-        yield return null;
         SetActivity("Reading");
+        yield return null;
+        PlayAnim(stateReading);
     }
 
     IEnumerator DoDadPhone()
@@ -517,6 +520,7 @@ public class UserEntity : MonoBehaviour
         yield return StartCoroutine(NavWalkTo(spot.position, false));
         yield return StartCoroutine(SmoothRotateTo(spot.forward));
         SetActivity("PhoneUse");
+        yield return null;
         PlayAnim(statePhone);
     }
 
@@ -529,6 +533,7 @@ public class UserEntity : MonoBehaviour
         yield return StartCoroutine(NavWalkTo(spot.position, false));
         yield return StartCoroutine(SmoothRotateTo(spot.forward));
         SetActivity("Cleaning");
+        yield return null;
         PlayAnim(stateCleaning);
         yield return new WaitForSeconds(cleanDuration);
     }
@@ -731,6 +736,17 @@ public class UserEntity : MonoBehaviour
             if (bi.sceneCounterpart  != null) bi.sceneCounterpart.SetActive(!active);
             if (bi.sceneCounterpart2 != null) bi.sceneCounterpart2.SetActive(!active);
         }
+
+        // Walking and transition states do NOT sync — they reset all items
+        // which would overwrite a valid held_by written by the previous action.
+        // Only sync when entering a held-object activity or returning to Standing.
+        bool isTransition = a == "Walking"    ||
+                            a == "StandUp"    ||
+                            a == "PickingUp"  ||
+                            a == "PuttingDown";
+
+        if (!isTransition && _dsm != null)
+            _dsm.ForceObjectSync();
     }
 
     void PlayAnim(string s)
