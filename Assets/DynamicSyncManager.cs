@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -50,6 +51,7 @@ public class DynamicSyncManager : MonoBehaviour
     IEnumerator SendPositions()
     {
         var entries = new List<string>();
+        string timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fff");
 
         foreach (var user in new UserEntity[] { userMom, userDad })
         {
@@ -81,12 +83,13 @@ public class DynamicSyncManager : MonoBehaviour
                 + fwdJson;
 
             string entry = BuildObjectJson(
-                label:  user.userID.ToLower(),
-                room:   "",
-                x:      pos.x,
-                z:      pos.z,
-                source: "unity_user",
-                extra:  extra
+                label:     user.userID.ToLower(),
+                room:      "",
+                x:         pos.x,
+                z:         pos.z,
+                source:    "unity_user",
+                timestamp: timestamp,
+                extra:     extra
             );
             entries.Add(entry);
         }
@@ -111,6 +114,7 @@ public class DynamicSyncManager : MonoBehaviour
         if (dynamicObjects == null || dynamicObjects.Count == 0) yield break;
 
         var entries = new List<string>();
+        string timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fff");
 
         foreach (var obj in dynamicObjects)
         {
@@ -142,12 +146,13 @@ public class DynamicSyncManager : MonoBehaviour
                 : "\"held_by\":\"" + EscStr(heldBy) + "\"";
 
             string entry = BuildObjectJson(
-                label:  obj.name.ToLower(),
-                room:   room,
-                x:      pos.x,
-                z:      pos.z,
-                source: "unity",
-                extra:  extra
+                label:     obj.name.ToLower(),
+                room:      room,
+                x:         pos.x,
+                z:         pos.z,
+                source:    "unity",
+                timestamp: timestamp,
+                extra:     extra
             );
             entries.Add(entry);
         }
@@ -186,22 +191,14 @@ public class DynamicSyncManager : MonoBehaviour
 
                 if (counterpartHidden && itemActive)
                 {
-                    Debug.Log($"[FindHolderOf] HIT: {obj.name} held by {user.userID} " +
-                              $"activity={bi.activity}");
+                    Debug.Log($"[FindHolderOf] HIT: {obj.name} held by {user.userID} activity={bi.activity}");
                     return user.userID;
                 }
 
                 string objNameLower = obj.name.ToLower();
                 if ((objNameLower == "broom" || objNameLower == "book") && isCounterpart)
                 {
-                    Debug.Log($"[FindHolderOf] {obj.name} FAIL: " +
-                              $"counterpartHidden={counterpartHidden} " +
-                              $"itemActive={itemActive} " +
-                              $"sceneCP.activeSelf={bi.sceneCounterpart?.activeSelf} " +
-                              $"item.activeSelf={bi.item?.activeSelf} " +
-                              $"sceneCP.name={bi.sceneCounterpart?.name} " +
-                              $"item.name={bi.item?.name} " +
-                              $"sceneCP=={obj.name}:{bi.sceneCounterpart == obj}");
+                    Debug.Log($"[FindHolderOf] {obj.name} FAIL: counterpartHidden={counterpartHidden} itemActive={itemActive} sceneCP.activeSelf={bi.sceneCounterpart?.activeSelf} item.activeSelf={bi.item?.activeSelf} sceneCP.name={bi.sceneCounterpart?.name} item.name={bi.item?.name} sceneCP=={obj.name}:{bi.sceneCounterpart == obj}");
                 }
             }
         }
@@ -235,14 +232,15 @@ public class DynamicSyncManager : MonoBehaviour
     }
 
     string BuildObjectJson(string label, string room, float x, float z,
-                           string source, string extra)
+                           string source, string timestamp, string extra)
     {
         string xs   = x.ToString("F3", Inv);
         string zs   = z.ToString("F3", Inv);
         string json = "{\"label\":\""  + EscStr(label)  + "\","
                     + "\"room\":\""    + EscStr(room)   + "\","
                     + "\"position\":[" + xs + "," + zs  + "],"
-                    + "\"source\":\""  + EscStr(source) + "\"";
+                    + "\"source\":\""  + EscStr(source) + "\","
+                    + "\"timestamp\":\"" + timestamp + "\"";
 
         if (!string.IsNullOrEmpty(extra))
             json += "," + extra;

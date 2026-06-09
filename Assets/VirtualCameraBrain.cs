@@ -60,7 +60,7 @@ public class VirtualCameraBrain : MonoBehaviour
         }
 
         string tCapture = System.DateTime.UtcNow
-            .ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+            .ToString("yyyy-MM-ddTHH:mm:ss.fff");
 
         int captureCount = Mathf.Min(topN, sortedNodes.Count);
 
