@@ -23,8 +23,22 @@ public class DynamicSyncManager : MonoBehaviour
     [Header("Movement Threshold")]
     public float moveTolerance = 0.02f;
 
+    [Header("Corruption Model")]
+    [Range(0f, 1f)]
+    public float objectConfusionRate = 0.0f;
+
     [Header("Debug")]
     public bool verboseLog = false;
+
+    static readonly Dictionary<string, string> ConfusionMap = new Dictionary<string, string>
+    {
+        { "cola",   "bottle" },
+        { "bottle", "cola"   },
+        { "remote", "phone"  },
+        { "phone",  "remote" },
+        { "bowl",   "cup"    },
+        { "cup",    "bowl"   },
+    };
 
     Dictionary<string, Vector3>    lastPos    = new Dictionary<string, Vector3>();
     Dictionary<string, Quaternion> lastRot    = new Dictionary<string, Quaternion>();
@@ -39,7 +53,17 @@ public class DynamicSyncManager : MonoBehaviour
         StartCoroutine(ObjectLoop());
     }
 
-    // ── Position sync loop ────────────────────────────────────────────────────
+    string ApplyConfusion(string label)
+    {
+        if (objectConfusionRate <= 0f) return label;
+        if (ConfusionMap.TryGetValue(label, out string confused))
+            if (UnityEngine.Random.value < objectConfusionRate)
+            {
+                Debug.Log($"[Confusion] {label} -> {confused}");
+                return confused;
+            }
+        return label;
+    }
 
     IEnumerator PositionLoop()
     {
@@ -73,16 +97,12 @@ public class DynamicSyncManager : MonoBehaviour
             lastRot[user.userID] = rot;
 
             Vector3 fwd = user.transform.forward;
-
-            string fwdJson =
-                "\"forward\":["
+            string fwdJson = "\"forward\":["
                 + fwd.x.ToString("F3", Inv) + ","
                 + fwd.y.ToString("F3", Inv) + ","
                 + fwd.z.ToString("F3", Inv) + "]";
 
-            string extra =
-                "\"activity\":\"" + EscStr(user.currentActivity) + "\","
-                + fwdJson;
+            string extra = "\"activity\":\"" + EscStr(user.currentActivity) + "\"," + fwdJson;
 
             entries.Add(BuildObjectJson(
                 label:     user.userID.ToLower(),
@@ -96,12 +116,9 @@ public class DynamicSyncManager : MonoBehaviour
         }
 
         if (entries.Count == 0) yield break;
-
         string json = "{\"objects\":[" + string.Join(",", entries) + "]}";
         yield return StartCoroutine(PostJson(backendUrl + "/dynamic_sync", json, "position"));
     }
-
-    // ── Object sync loop ──────────────────────────────────────────────────────
 
     IEnumerator ObjectLoop()
     {
@@ -144,12 +161,13 @@ public class DynamicSyncManager : MonoBehaviour
             if (moved) lastObjPos[key] = pos;
 
             string room  = DetectRoom(pos);
+            string label = ApplyConfusion(obj.name.ToLower());
             string extra = string.IsNullOrEmpty(heldBy)
                 ? ""
                 : "\"held_by\":\"" + EscStr(heldBy) + "\"";
 
             entries.Add(BuildObjectJson(
-                label:     obj.name.ToLower(),
+                label:     label,
                 room:      room,
                 x:         pos.x,
                 z:         pos.z,
@@ -160,12 +178,9 @@ public class DynamicSyncManager : MonoBehaviour
         }
 
         if (entries.Count == 0) yield break;
-
         string json = "{\"objects\":[" + string.Join(",", entries) + "]}";
         yield return StartCoroutine(PostJson(backendUrl + "/dynamic_sync", json, "objects"));
     }
-
-    // ── Held object detection ─────────────────────────────────────────────────
 
     string FindHolderOf(GameObject obj)
     {
@@ -178,27 +193,20 @@ public class DynamicSyncManager : MonoBehaviour
             foreach (var bi in items)
             {
                 if (bi == null) continue;
-
                 bool isCounterpart =
                     (bi.sceneCounterpart  != null && bi.sceneCounterpart  == obj) ||
                     (bi.sceneCounterpart2 != null && bi.sceneCounterpart2 == obj);
-
                 if (!isCounterpart) continue;
 
                 bool counterpartHidden =
                     (bi.sceneCounterpart  != null && !bi.sceneCounterpart.activeSelf) ||
                     (bi.sceneCounterpart2 != null && !bi.sceneCounterpart2.activeSelf);
-
                 bool itemActive =
                     (bi.item  != null && bi.item.activeSelf) ||
                     (bi.item2 != null && bi.item2.activeSelf);
 
                 if (counterpartHidden && itemActive)
-                {
-                    Debug.Log($"[FindHolderOf] HIT: {obj.name} held by " +
-                              $"{user.userID} activity={bi.activity}");
                     return user.userID;
-                }
             }
         }
         return "";
@@ -211,43 +219,29 @@ public class DynamicSyncManager : MonoBehaviour
         return null;
     }
 
-    // ── HTTP helper ───────────────────────────────────────────────────────────
-
     IEnumerator PostJson(string url, string json, string label)
     {
-        if (verboseLog)
-            Debug.Log($"[DynamicSync] POST /{label} -> {json}");
-
+        if (verboseLog) Debug.Log($"[DynamicSync] POST /{label}");
         byte[] body = System.Text.Encoding.UTF8.GetBytes(json);
-
         using var req = new UnityWebRequest(url, "POST");
         req.uploadHandler   = new UploadHandlerRaw(body);
         req.downloadHandler = new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
         req.timeout = 5;
-
         yield return req.SendWebRequest();
-
         if (req.result != UnityWebRequest.Result.Success)
             Debug.LogWarning($"[DynamicSync] /{label} POST failed: {req.error}");
     }
 
-    // ── JSON builders ─────────────────────────────────────────────────────────
-
     string BuildObjectJson(string label, string room, float x, float z,
                            string source, string timestamp, string extra)
     {
-        string xs   = x.ToString("F3", Inv);
-        string zs   = z.ToString("F3", Inv);
-        string json = "{\"label\":\""     + EscStr(label)     + "\","
-                    + "\"room\":\""       + EscStr(room)      + "\","
-                    + "\"position\":["    + xs + "," + zs     + "],"
-                    + "\"source\":\""     + EscStr(source)    + "\","
-                    + "\"timestamp\":\"" + timestamp          + "\"";
-
-        if (!string.IsNullOrEmpty(extra))
-            json += "," + extra;
-
+        string json = "{\"label\":\""    + EscStr(label)  + "\","
+                    + "\"room\":\""      + EscStr(room)   + "\","
+                    + "\"position\":["   + x.ToString("F3", Inv) + "," + z.ToString("F3", Inv) + "],"
+                    + "\"source\":\""    + EscStr(source) + "\","
+                    + "\"timestamp\":\"" + timestamp      + "\"";
+        if (!string.IsNullOrEmpty(extra)) json += "," + extra;
         json += "}";
         return json;
     }
@@ -255,19 +249,14 @@ public class DynamicSyncManager : MonoBehaviour
     string EscStr(string s)
     {
         if (string.IsNullOrEmpty(s)) return "";
-        return s.Replace("\\", "\\\\")
-                .Replace("\"", "\\\"")
-                .Replace("\n", "\\n")
-                .Replace("\r", "\\r");
+        return s.Replace("\\", "\\\\").Replace("\"", "\\\"")
+                .Replace("\n", "\\n").Replace("\r", "\\r");
     }
-
-    // ── Room detection ────────────────────────────────────────────────────────
 
     string DetectRoom(Vector3 pos)
     {
         Collider[] hits = Physics.OverlapSphere(pos, 0.5f,
             Physics.AllLayers, QueryTriggerInteraction.Collide);
-
         foreach (var hit in hits)
         {
             RoomArea ra = hit.GetComponent<RoomArea>();
@@ -275,8 +264,6 @@ public class DynamicSyncManager : MonoBehaviour
         }
         return "";
     }
-
-    // ── Public force-sync API ─────────────────────────────────────────────────
 
     public void ForcePositionSync() => StartCoroutine(SendPositions());
     public void ForceObjectSync()   => StartCoroutine(SendObjects());

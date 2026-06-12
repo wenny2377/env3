@@ -83,16 +83,16 @@ public class UserEntity : MonoBehaviour
     public string backendUrl = "http://localhost:5000";
 
     [Header("Action Durations (seconds)")]
-    public float noddingDuration = 1.5f;
-    public float drinkDuration = 2.0f;
-    public float eatDuration = 3.0f;
-    public float cookDuration = 3.0f;
-    public float openDuration = 2.0f;
-    public float cleanDuration = 3.0f;
-    public float pickUpDuration = 1.0f;
-    public float putDownDuration = 1.0f;
-    public float sittingDuration = 3.0f;
-    public float standUpDuration = 0.8f;
+    public float noddingDuration  = 1.5f;
+    public float drinkDuration    = 2.0f;
+    public float eatDuration      = 3.0f;
+    public float cookDuration     = 3.0f;
+    public float openDuration     = 2.0f;
+    public float cleanDuration    = 3.0f;
+    public float pickUpDuration   = 1.0f;
+    public float putDownDuration  = 1.0f;
+    public float sittingDuration  = 3.0f;
+    public float standUpDuration  = 0.8f;
 
     [Header("Held Items (drag only)")]
     public BehaviorItem drinkItem;
@@ -103,45 +103,44 @@ public class UserEntity : MonoBehaviour
     public BehaviorItem readItem;
     public BehaviorItem phoneItem;
 
-    [Header("Corruption Model (0=disabled for baseline)")]
-    [Tooltip("Pickup miss rate: 0.15 = EPIC-KITCHENS recall ~85%")]
+    [Header("Corruption Model")]
+    [Tooltip("Pickup miss rate (EPIC-KITCHENS). Set by ExperimentRunner.")]
     [Range(0f, 1f)]
     public float pickupMissRate  = 0.0f;
-    [Tooltip("Putdown miss rate: object stays 'held' without being released")]
+    [Tooltip("Putdown miss rate. Set by ExperimentRunner.")]
     [Range(0f, 1f)]
     public float putdownMissRate = 0.0f;
 
     [Header("Animator state names")]
-    public string stateStanding = "Standing";
-    public string stateWalk = "Walking";
-    public string stateDrink = "Drinking";
-    public string stateSittingDrink = "SittingDrink";
-    public string stateSitting = "Sitting";
-    public string stateStandUp = "StandUp";
-    public string stateLaying = "Laying";
-    public string stateReading = "Reading";
-    public string stateTyping = "Typing";
-    public string stateWatching = "Watching";
-    public string statePhone = "PhoneUse";
-    public string stateNodding = "Nodding";
-    public string stateEating = "Eating";
-    public string stateCooking = "Cooking";
-    public string stateCleaning = "Cleaning";
-    public string stateOpening = "Opening";
-    public string statePickingUp = "PickingUp";
+    public string stateStanding    = "Standing";
+    public string stateWalk        = "Walking";
+    public string stateDrink       = "Drinking";
+    public string stateSittingDrink= "SittingDrink";
+    public string stateSitting     = "Sitting";
+    public string stateStandUp     = "StandUp";
+    public string stateLaying      = "Laying";
+    public string stateReading     = "Reading";
+    public string stateTyping      = "Typing";
+    public string stateWatching    = "Watching";
+    public string statePhone       = "PhoneUse";
+    public string stateNodding     = "Nodding";
+    public string stateEating      = "Eating";
+    public string stateCooking     = "Cooking";
+    public string stateCleaning    = "Cleaning";
+    public string stateOpening     = "Opening";
+    public string statePickingUp   = "PickingUp";
     public string statePuttingDown = "PuttingDown";
 
-    public string currentActivity { get; private set; } = "Standing";
-    public bool IsBusy { get; private set; } = false;
+    public string currentActivity      { get; private set; } = "Standing";
+    public bool   IsBusy               { get; private set; } = false;
     public string lastAssignedActivity = "";
 
-    [HideInInspector] public float currentVirtualHour = -1f;
-    [HideInInspector] public Transform overrideSpot = null;
+    [HideInInspector] public float     currentVirtualHour = -1f;
+    [HideInInspector] public Transform overrideSpot       = null;
 
-    public Vector3 GetAimPosition() =>
-        transform.position + Vector3.up * 1.2f;
-
-    public void ResetBusy() => IsBusy = false;
+    public Vector3       GetAimPosition()    => transform.position + Vector3.up * 1.2f;
+    public void          ResetBusy()         => IsBusy = false;
+    public BehaviorItem[] GetBehaviorItems() => _allItems;
 
     public void SetSkeletonNoise(bool enabled)
     {
@@ -149,35 +148,33 @@ public class UserEntity : MonoBehaviour
             _skeletonHelper.skeletonNoiseEnabled = enabled;
     }
 
-    public BehaviorItem[] GetBehaviorItems() => _allItems;
-
-    Animator anim;
-    NavMeshAgent agent;
-    bool isSitting = false;
-    float _shadowTimer = 0f;
-    BehaviorItem[] _allItems;
+    Animator          anim;
+    NavMeshAgent      agent;
+    bool              isSitting = false;
+    float             _shadowTimer = 0f;
+    BehaviorItem[]    _allItems;
     DynamicSyncManager _dsm;
-    SkeletonHelper _skeletonHelper;
+    SkeletonHelper    _skeletonHelper;
 
     static readonly System.Globalization.CultureInfo Inv =
         System.Globalization.CultureInfo.InvariantCulture;
 
     void Start()
     {
-        anim = GetComponent<Animator>();
+        anim  = GetComponent<Animator>();
         agent = GetComponent<NavMeshAgent>();
 
-        agent.speed = 0f;
-        agent.angularSpeed = 0f;
-        agent.acceleration = 0f;
-        agent.autoBraking = false;
-        agent.updatePosition = false;
-        agent.updateRotation = false;
-        agent.updateUpAxis = false;
-        agent.enabled = true;
+        agent.speed           = 0f;
+        agent.angularSpeed    = 0f;
+        agent.acceleration    = 0f;
+        agent.autoBraking     = false;
+        agent.updatePosition  = false;
+        agent.updateRotation  = false;
+        agent.updateUpAxis    = false;
+        agent.enabled         = true;
         agent.Warp(transform.position);
 
-        _dsm = FindObjectOfType<DynamicSyncManager>();
+        _dsm            = FindObjectOfType<DynamicSyncManager>();
         _skeletonHelper = GetComponent<SkeletonHelper>();
 
         InitBehaviorItems();
@@ -342,18 +339,15 @@ public class UserEntity : MonoBehaviour
             PreActivateHeldObject("Drinking");
             yield return new WaitForSeconds(0.5f);
         }
-
         Transform spot = ConsumeOverride(drinkSpot);
         if (spot != null)
         {
             yield return StartCoroutine(NavWalkTo(spot.position, false));
             yield return StartCoroutine(SmoothRotateTo(spot.forward));
         }
-
         SetActivity("Drinking");
         PlayAnim(stateDrink);
         yield return new WaitForSeconds(drinkDuration);
-
         if (drinkingPutdownSpot != null)
         {
             SetActivity("Walking");
@@ -362,7 +356,6 @@ public class UserEntity : MonoBehaviour
             yield return ClearHeldObject();
             yield return new WaitForSeconds(0.5f);
         }
-
         if (standingSpot != null)
             yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
     }
@@ -377,7 +370,6 @@ public class UserEntity : MonoBehaviour
             PreActivateHeldObject("SittingDrink");
             yield return new WaitForSeconds(0.5f);
         }
-
         Transform spot = ConsumeOverride(sittingDrinkSpot);
         if (spot != null)
         {
@@ -385,11 +377,9 @@ public class UserEntity : MonoBehaviour
             yield return StartCoroutine(SmoothRotateTo(spot.forward));
             TeleportToSeat(spot);
         }
-
         SetActivity("SittingDrink");
         PlayAnim(stateSittingDrink);
         yield return new WaitForSeconds(drinkDuration);
-
         if (drinkingPutdownSpot != null)
         {
             yield return StartCoroutine(DoStandUp());
@@ -399,7 +389,6 @@ public class UserEntity : MonoBehaviour
             yield return ClearHeldObject();
             yield return new WaitForSeconds(0.5f);
         }
-
         if (standingSpot != null)
             yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
     }
@@ -442,7 +431,6 @@ public class UserEntity : MonoBehaviour
             PreActivateHeldObject("Eating");
             yield return new WaitForSeconds(0.5f);
         }
-
         Transform spot = ConsumeOverride(eatSpot);
         if (spot != null)
         {
@@ -450,11 +438,9 @@ public class UserEntity : MonoBehaviour
             yield return StartCoroutine(SmoothRotateTo(spot.forward));
             TeleportToSeat(spot);
         }
-
         SetActivity("Eating");
         PlayAnim(stateEating);
         yield return new WaitForSeconds(eatDuration);
-
         if (eatingPutdownSpot != null)
         {
             yield return StartCoroutine(DoStandUp());
@@ -464,7 +450,6 @@ public class UserEntity : MonoBehaviour
             yield return ClearHeldObject();
             yield return new WaitForSeconds(0.5f);
         }
-
         if (standingSpot != null)
             yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
     }
@@ -479,18 +464,15 @@ public class UserEntity : MonoBehaviour
             PreActivateHeldObject("Cooking");
             yield return new WaitForSeconds(0.5f);
         }
-
         Transform spot = ConsumeOverride(cookSpot);
         if (spot != null)
         {
             yield return StartCoroutine(NavWalkTo(spot.position, false));
             yield return StartCoroutine(SmoothRotateTo(spot.forward));
         }
-
         SetActivity("Cooking");
         PlayAnim(stateCooking);
         yield return new WaitForSeconds(cookDuration);
-
         if (cookingPutdownSpot != null)
         {
             SetActivity("Walking");
@@ -499,7 +481,6 @@ public class UserEntity : MonoBehaviour
             yield return ClearHeldObject();
             yield return new WaitForSeconds(0.5f);
         }
-
         if (standingSpot != null)
             yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
     }
@@ -524,9 +505,8 @@ public class UserEntity : MonoBehaviour
     IEnumerator RotateFridgeDoor(bool opening)
     {
         float totalAngle = opening ? fridgeOpenAngle : -fridgeOpenAngle;
-        float duration = Mathf.Abs(totalAngle) / fridgeOpenSpeed;
+        float duration   = Mathf.Abs(totalAngle) / fridgeOpenSpeed;
         if (duration < 0.01f) yield break;
-
         float rotated = 0f;
         while (Mathf.Abs(rotated) < Mathf.Abs(totalAngle))
         {
@@ -555,7 +535,6 @@ public class UserEntity : MonoBehaviour
 
     IEnumerator DoWatching()
     {
-        // Watching: no pickup/putdown - TV state handled by VirtualCameraBrain.SetTVState
         Transform spot = ConsumeOverride(watchingSpot);
         if (spot == null) { Warn("watchingSpot"); yield break; }
         SetActivity("Walking");
@@ -579,7 +558,6 @@ public class UserEntity : MonoBehaviour
             PreActivateHeldObject("Reading");
             yield return new WaitForSeconds(0.5f);
         }
-
         Transform spot = ConsumeOverride(readingSpot);
         if (spot != null)
         {
@@ -587,11 +565,9 @@ public class UserEntity : MonoBehaviour
             yield return StartCoroutine(SmoothRotateTo(spot.forward));
             TeleportToSeat(spot);
         }
-
         SetActivity("Reading");
         PlayAnim(stateReading);
         yield return null;
-
         if (readingPutdownSpot != null)
         {
             yield return StartCoroutine(DoStandUp());
@@ -601,7 +577,6 @@ public class UserEntity : MonoBehaviour
             yield return ClearHeldObject();
             yield return new WaitForSeconds(0.5f);
         }
-
         if (standingSpot != null)
             yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
     }
@@ -616,18 +591,15 @@ public class UserEntity : MonoBehaviour
             PreActivateHeldObject("Cleaning");
             yield return new WaitForSeconds(0.5f);
         }
-
         Transform spot = ConsumeOverride(cleanSpot);
         if (spot != null)
         {
             yield return StartCoroutine(NavWalkTo(spot.position, false));
             yield return StartCoroutine(SmoothRotateTo(spot.forward));
         }
-
         SetActivity("Cleaning");
         PlayAnim(stateCleaning);
         yield return new WaitForSeconds(cleanDuration);
-
         if (cleaningPutdownSpot != null)
         {
             SetActivity("Walking");
@@ -636,7 +608,6 @@ public class UserEntity : MonoBehaviour
             yield return ClearHeldObject();
             yield return new WaitForSeconds(0.5f);
         }
-
         if (standingSpot != null)
             yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
     }
@@ -651,18 +622,15 @@ public class UserEntity : MonoBehaviour
             PreActivateHeldObject("PhoneUse");
             yield return new WaitForSeconds(0.5f);
         }
-
         Transform spot = ConsumeOverride(phoneSpot);
         if (spot != null)
         {
             yield return StartCoroutine(NavWalkTo(spot.position, false));
             yield return StartCoroutine(SmoothRotateTo(spot.forward));
         }
-
         SetActivity("PhoneUse");
         PlayAnim(statePhone);
         yield return null;
-
         if (phonePutdownSpot != null)
         {
             SetActivity("Walking");
@@ -671,18 +639,14 @@ public class UserEntity : MonoBehaviour
             yield return ClearHeldObject();
             yield return new WaitForSeconds(0.5f);
         }
-
         if (standingSpot != null)
             yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
     }
 
     IEnumerator DoTyping()
     {
-        // Typing uses keyboard (fixed object) - no pickup/putdown needed
-        // Detection relies on skeleton wrist_z and zone (desk area)
         Transform spot = ConsumeOverride(typingSpot);
         if (spot == null) { Warn("typingSpot"); yield break; }
-
         SetActivity("Walking");
         yield return StartCoroutine(NavWalkTo(spot.position, true));
         yield return StartCoroutine(SmoothRotateTo(spot.forward));
@@ -693,8 +657,7 @@ public class UserEntity : MonoBehaviour
 
     IEnumerator DoDadReading()
     {
-        Transform fallback = dadReadingSpot ?? readingSpot;
-        Transform spot = ConsumeOverride(fallback);
+        Transform spot = ConsumeOverride(dadReadingSpot ?? readingSpot);
         if (spot == null) { Warn("dadReadingSpot"); yield break; }
         SetActivity("Walking");
         yield return StartCoroutine(NavWalkTo(spot.position, true));
@@ -707,8 +670,7 @@ public class UserEntity : MonoBehaviour
 
     IEnumerator DoDadPhone()
     {
-        Transform fallback = dadPhoneSpot ?? phoneSpot;
-        Transform spot = ConsumeOverride(fallback);
+        Transform spot = ConsumeOverride(dadPhoneSpot ?? phoneSpot);
         if (spot == null) { Warn("dadPhoneSpot"); yield break; }
         SetActivity("Walking");
         yield return StartCoroutine(NavWalkTo(spot.position, false));
@@ -720,8 +682,7 @@ public class UserEntity : MonoBehaviour
 
     IEnumerator DoDadCleaning()
     {
-        Transform fallback = dadCleanSpot ?? cleanSpot;
-        Transform spot = ConsumeOverride(fallback);
+        Transform spot = ConsumeOverride(dadCleanSpot ?? cleanSpot);
         if (spot == null) { Warn("dadCleanSpot"); yield break; }
         SetActivity("Walking");
         yield return StartCoroutine(NavWalkTo(spot.position, false));
@@ -764,23 +725,19 @@ public class UserEntity : MonoBehaviour
         }
         SetTVActive(false);
         StartCoroutine(PostDeviceState("tv", "off"));
-
         if (standingSpot != null)
         {
             SetActivity("Walking");
             yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
         }
-
         SetActivity("Standing");
         PlayAnim(stateStanding);
-
         yield return ClearHeldObject();
     }
 
     IEnumerator NavWalkTo(Vector3 spotPos, bool useSeatTarget)
     {
         agent.Warp(transform.position);
-
         float radius = useSeatTarget ? navSampleRadius : 1.5f;
         NavMeshHit nmHit;
         if (!NavMesh.SamplePosition(spotPos, out nmHit, radius, NavMesh.AllAreas))
@@ -788,9 +745,7 @@ public class UserEntity : MonoBehaviour
             Debug.LogWarning($"[{userID}] No NavMesh within {radius}m of {spotPos}.");
             yield break;
         }
-
         Vector3 walkTarget = new Vector3(nmHit.position.x, 0f, nmHit.position.z);
-
         NavMeshPath path = new NavMeshPath();
         if (!agent.CalculatePath(walkTarget, path) ||
             path.status == NavMeshPathStatus.PathInvalid)
@@ -798,36 +753,28 @@ public class UserEntity : MonoBehaviour
             Debug.LogWarning($"[{userID}] Path invalid to {walkTarget}.");
             yield break;
         }
-
         PlayAnim(stateWalk);
         _shadowTimer = 0f;
-
         Vector3[] corners = path.corners;
         for (int ci = 0; ci < corners.Length; ci++)
         {
             Vector3 corner = new Vector3(corners[ci].x, 0f, corners[ci].z);
             bool isLast = ci == corners.Length - 1;
-            float stop = isLast ? arrivalThreshold : 0.08f;
-
+            float stop  = isLast ? arrivalThreshold : 0.08f;
             while (true)
             {
-                Vector3 cur = new Vector3(
-                    transform.position.x, 0f, transform.position.z);
-                float dist = Vector3.Distance(cur, corner);
+                Vector3 cur  = new Vector3(transform.position.x, 0f, transform.position.z);
+                float dist   = Vector3.Distance(cur, corner);
                 if (dist <= stop) break;
-
-                Vector3 dir = (corner - cur).normalized;
+                Vector3 dir  = (corner - cur).normalized;
                 Vector3 side = Vector3.Cross(dir, Vector3.up);
                 float jitter = UnityEngine.Random.Range(-jitterRadius, jitterRadius);
                 Vector3 moveTgt = corner + side * jitter * Mathf.Min(dist, 0.5f);
-
-                transform.position = Vector3.MoveTowards(
-                    cur, moveTgt, walkSpeed * Time.deltaTime);
+                transform.position = Vector3.MoveTowards(cur, moveTgt, walkSpeed * Time.deltaTime);
                 transform.rotation = Quaternion.Slerp(
                     transform.rotation,
                     Quaternion.LookRotation(dir),
                     Time.deltaTime * rotationSpeed);
-
                 _shadowTimer += Time.deltaTime;
                 if (_shadowTimer >= shadowInterval)
                 {
@@ -837,7 +784,6 @@ public class UserEntity : MonoBehaviour
                 yield return null;
             }
         }
-
         transform.position = new Vector3(walkTarget.x, 0f, walkTarget.z);
     }
 
@@ -849,8 +795,7 @@ public class UserEntity : MonoBehaviour
         while (Quaternion.Angle(transform.rotation, tgt) > 0.5f)
         {
             transform.rotation = Quaternion.Slerp(
-                transform.rotation, tgt,
-                Time.deltaTime * rotationSpeed);
+                transform.rotation, tgt, Time.deltaTime * rotationSpeed);
             yield return null;
         }
         transform.rotation = tgt;
@@ -876,15 +821,12 @@ public class UserEntity : MonoBehaviour
 
     IEnumerator PostShadowPoint()
     {
-        string intent = !string.IsNullOrEmpty(lastAssignedActivity)
-            ? lastAssignedActivity : "Walking";
-        string hourStr = currentVirtualHour >= 0f
+        string intent    = !string.IsNullOrEmpty(lastAssignedActivity) ? lastAssignedActivity : "Walking";
+        string hourStr   = currentVirtualHour >= 0f
             ? currentVirtualHour.ToString("F1", Inv)
             : ((float)DateTime.Now.Hour).ToString("F1", Inv);
-
-        Vector3 fwd = transform.forward;
+        Vector3 fwd      = transform.forward;
         string timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fff");
-
         string json = "{"
             + $"\"userID\":\"{EscJson(userID)}\","
             + $"\"x\":{transform.position.x.ToString("F3", Inv)},"
@@ -896,7 +838,6 @@ public class UserEntity : MonoBehaviour
             + $"\"virtual_hour\":{hourStr},"
             + $"\"timestamp\":\"{timestamp}\""
             + "}";
-
         using var req = new UnityWebRequest($"{backendUrl}/track_position", "POST");
         byte[] body = System.Text.Encoding.UTF8.GetBytes(json);
         req.uploadHandler   = new UploadHandlerRaw(body);
@@ -929,46 +870,34 @@ public class UserEntity : MonoBehaviour
             if (bi == null) continue;
             if (!string.Equals(bi.activity, activityName,
                 System.StringComparison.OrdinalIgnoreCase)) continue;
-
             if (bi.item == null)
             {
                 Debug.LogError($"[ERROR] bi.item is NULL for {activityName}");
                 return;
             }
-
             if (bi.item  != null) bi.item.SetActive(true);
             if (bi.item2 != null) bi.item2.SetActive(true);
             if (bi.sceneCounterpart  != null) bi.sceneCounterpart.SetActive(false);
             if (bi.sceneCounterpart2 != null) bi.sceneCounterpart2.SetActive(false);
-
             StartCoroutine(PostPickupEvent(bi.item.name));
-
             if (_dsm != null) _dsm.ForceObjectSync();
             Debug.Log($"[PreActivate] {userID} | {activityName} | held object activated");
             return;
         }
     }
 
-    public IEnumerator ClearHeldObject()
-    {
-        return PostPutdownEvent();
-    }
+    public IEnumerator ClearHeldObject() => PostPutdownEvent();
 
     IEnumerator PostPickupEvent(string objectName)
     {
-        // Corruption model: simulate pickup miss (EPIC-KITCHENS recall ~85%)
-        // Set pickupMissRate = 0.15 in Inspector to enable for robustness study
         if (pickupMissRate > 0f && UnityEngine.Random.value < pickupMissRate)
         {
-            Debug.Log($"[PickupEvent] SIMULATED MISS ({pickupMissRate:P0}): {objectName}");
+            Debug.Log($"[PickupEvent] MISS ({pickupMissRate:P0}): {objectName}");
             yield break;
         }
-
         string eventTime = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fff");
         string json = $"{{\"user_id\":\"{userID}\",\"object\":\"{objectName}\",\"pickup_time\":\"{eventTime}\"}}";
-
-        Debug.Log($"[PickupEvent] Sending: {objectName} at {eventTime}");
-
+        Debug.Log($"[PickupEvent] {objectName} at {eventTime}");
         using var req = new UnityWebRequest($"{backendUrl}/object_event", "POST");
         byte[] body = System.Text.Encoding.UTF8.GetBytes(json);
         req.uploadHandler   = new UploadHandlerRaw(body);
@@ -976,29 +905,23 @@ public class UserEntity : MonoBehaviour
         req.SetRequestHeader("Content-Type", "application/json");
         req.timeout = 2;
         yield return req.SendWebRequest();
-
         if (req.result == UnityWebRequest.Result.Success)
-            Debug.Log($"[PickupEvent] SUCCESS: {userID} picked up {objectName}");
+            Debug.Log($"[PickupEvent] OK: {userID} picked up {objectName}");
         else
-            Debug.LogError($"[PickupEvent] FAILED: {req.error} for {objectName}");
+            Debug.LogError($"[PickupEvent] FAILED: {req.error}");
     }
 
     IEnumerator PostPutdownEvent()
     {
-        // Corruption model: simulate putdown miss (EPIC-KITCHENS motivated)
-        // Models occlusion where camera doesn't see the object being put down
         if (putdownMissRate > 0f && UnityEngine.Random.value < putdownMissRate)
         {
-            Debug.Log($"[PutdownEvent] SIMULATED MISS ({putdownMissRate:P0}): not recorded");
+            Debug.Log($"[PutdownEvent] MISS ({putdownMissRate:P0})");
             if (_dsm != null) _dsm.ForceObjectSync();
             yield break;
         }
-
         string eventTime = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fff");
         string json = $"{{\"user_id\":\"{userID}\",\"putdown_time\":\"{eventTime}\"}}";
-
-        Debug.Log($"[PutdownEvent] Sending at {eventTime}");
-
+        Debug.Log($"[PutdownEvent] at {eventTime}");
         using var req = new UnityWebRequest($"{backendUrl}/object_event", "POST");
         byte[] body = System.Text.Encoding.UTF8.GetBytes(json);
         req.uploadHandler   = new UploadHandlerRaw(body);
@@ -1006,12 +929,10 @@ public class UserEntity : MonoBehaviour
         req.SetRequestHeader("Content-Type", "application/json");
         req.timeout = 2;
         yield return req.SendWebRequest();
-
         if (req.result == UnityWebRequest.Result.Success)
-            Debug.Log($"[PutdownEvent] SUCCESS: {userID} put down at {eventTime}");
+            Debug.Log($"[PutdownEvent] OK: {userID} put down");
         else
             Debug.LogError($"[PutdownEvent] FAILED: {req.error}");
-
         if (_dsm != null) _dsm.ForceObjectSync();
     }
 
@@ -1019,27 +940,19 @@ public class UserEntity : MonoBehaviour
     {
         currentActivity = a;
         if (_allItems == null) return;
-
         bool isTransition = a == "Walking"    ||
                             a == "StandUp"    ||
                             a == "PickingUp"  ||
                             a == "PuttingDown";
-
         if (isTransition) return;
-
-        // Notify SkeletonHelper to resample per-episode intra-class offsets
         if (_skeletonHelper != null)
             _skeletonHelper.OnActivityChanged(a);
-
         bool stateChanged = false;
-
         foreach (var bi in _allItems)
         {
             if (bi == null) continue;
-            bool active = string.Equals(
-                bi.activity, a,
+            bool active = string.Equals(bi.activity, a,
                 System.StringComparison.OrdinalIgnoreCase);
-
             if (bi.item  != null && bi.item.activeSelf  != active)
             { bi.item.SetActive(active);  stateChanged = true; }
             if (bi.item2 != null && bi.item2.activeSelf != active)
@@ -1049,7 +962,6 @@ public class UserEntity : MonoBehaviour
             if (bi.sceneCounterpart2 != null && bi.sceneCounterpart2.activeSelf == active)
             { bi.sceneCounterpart2.SetActive(!active); stateChanged = true; }
         }
-
         if (stateChanged && _dsm != null)
             _dsm.ForceObjectSync();
     }
@@ -1063,27 +975,25 @@ public class UserEntity : MonoBehaviour
             Debug.LogWarning($"[{userID}] Animator state '{s}' NOT FOUND");
     }
 
-    void Warn(string s) =>
-        Debug.LogWarning($"[{userID}] {s} not set");
+    void Warn(string s) => Debug.LogWarning($"[{userID}] {s} not set");
 
     static string EscJson(string s) =>
         s.Replace("\\", "\\\\").Replace("\"", "\\\"");
 
     void OnDrawGizmos()
     {
-        DrawSpot(drinkSpot,         Color.cyan,    "Drink");
-        DrawSpot(sittingDrinkSpot,  Color.blue,    "SitDrink");
-        DrawSpot(sittingSpot,       Color.blue,    "Sitting");
-        DrawSpot(eatSpot,           Color.yellow,  "Eat");
-        DrawSpot(cookSpot,          Color.red,     "Cook");
-        DrawSpot(openSpot,          Color.white,   "Open");
-        DrawSpot(layingSpot,        Color.green,   "Laying");
-        DrawSpot(watchingSpot,      Color.magenta, "Watch");
-        DrawSpot(readingSpot,       Color.blue,    "Read");
-        DrawSpot(cleanSpot,         Color.gray,    "Clean");
-        DrawSpot(phoneSpot,         Color.magenta, "Phone");
-        DrawSpot(typingSpot,        Color.red,     "Type");
-
+        DrawSpot(drinkSpot,          Color.cyan,    "Drink");
+        DrawSpot(sittingDrinkSpot,   Color.blue,    "SitDrink");
+        DrawSpot(sittingSpot,        Color.blue,    "Sitting");
+        DrawSpot(eatSpot,            Color.yellow,  "Eat");
+        DrawSpot(cookSpot,           Color.red,     "Cook");
+        DrawSpot(openSpot,           Color.white,   "Open");
+        DrawSpot(layingSpot,         Color.green,   "Laying");
+        DrawSpot(watchingSpot,       Color.magenta, "Watch");
+        DrawSpot(readingSpot,        Color.blue,    "Read");
+        DrawSpot(cleanSpot,          Color.gray,    "Clean");
+        DrawSpot(phoneSpot,          Color.magenta, "Phone");
+        DrawSpot(typingSpot,         Color.red,     "Type");
         DrawSpot(cleaningPickupSpot,  Color.cyan,    "CleanPickup");
         DrawSpot(cleaningPutdownSpot, Color.magenta, "CleanPutdown");
         DrawSpot(cookingPickupSpot,   Color.cyan,    "CookPickup");
@@ -1096,7 +1006,6 @@ public class UserEntity : MonoBehaviour
         DrawSpot(readingPutdownSpot,  Color.magenta, "ReadPutdown");
         DrawSpot(phonePickupSpot,     Color.cyan,    "PhonePickup");
         DrawSpot(phonePutdownSpot,    Color.magenta, "PhonePutdown");
-
         if (standingSpot != null)
         {
             Gizmos.color = Color.white;

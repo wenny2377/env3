@@ -2678,8 +2678,6 @@ MonoBehaviour:
   readingPutdownSpot: {fileID: 1564223320}
   phonePickupSpot: {fileID: 324119082}
   phonePutdownSpot: {fileID: 324119082}
-  typingPickupSpot: {fileID: 944537172}
-  typingPutdownSpot: {fileID: 944537172}
   tvScreenObjects:
   - {fileID: 1099480908}
   fridgeDoor: {fileID: 1209049926581996757}
@@ -2745,6 +2743,8 @@ MonoBehaviour:
     item2: {fileID: 0}
     sceneCounterpart: {fileID: 1644722504}
     sceneCounterpart2: {fileID: 0}
+  pickupMissRate: 0
+  putdownMissRate: 0
   stateStanding: Standing
   stateWalk: Walking
   stateDrink: Drinking
@@ -2821,6 +2821,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fc891ae869bd48bf8af8f9043422d461, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  skeletonNoiseEnabled: 0
 --- !u!1 &452250936
 GameObject:
   m_ObjectHideFlags: 0
@@ -4180,23 +4181,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e12e08efb3ddaac52b50ef38a4b964a4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  userMom: {fileID: 1464156698}
-  userDad: {fileID: 426001001}
-  robotStartPosition: {fileID: 0}
-  navBrain: {fileID: 0}
-  userBubble: {fileID: 134478560}
-  robotBubble: {fileID: 0}
-  typewriterSpeed: 0.04
-  afterUserBubble: 1.5
-  afterChatResponse: 18
-  afterArrival: 2.5
-  navPollInterval: 0.5
-  navTimeout: 20
-  observeWaitPerAction: 2.5
-  observeActionsCount: 5
-  afterObserveWait: 10
-  betweenPhasePause: 3
-  backendUrl: http://localhost:5000
 --- !u!1 &693778578
 GameObject:
   m_ObjectHideFlags: 0
@@ -4832,6 +4816,7 @@ MonoBehaviour:
   positionInterval: 0.5
   objectSyncInterval: 1
   moveTolerance: 0.02
+  objectConfusionRate: 0
   verboseLog: 0
 --- !u!1 &828247090
 GameObject:
@@ -9522,8 +9507,6 @@ MonoBehaviour:
   readingPutdownSpot: {fileID: 1986729717}
   phonePickupSpot: {fileID: 249711984}
   phonePutdownSpot: {fileID: 249711984}
-  typingPickupSpot: {fileID: 1562301719}
-  typingPutdownSpot: {fileID: 1562301719}
   tvScreenObjects:
   - {fileID: 1099480908}
   fridgeDoor: {fileID: 1209049926581996757}
@@ -9589,6 +9572,8 @@ MonoBehaviour:
     item2: {fileID: 0}
     sceneCounterpart: {fileID: 1644722504}
     sceneCounterpart2: {fileID: 0}
+  pickupMissRate: 0.134
+  putdownMissRate: 0.308
   stateStanding: Standing
   stateWalk: Walking
   stateDrink: Drinking
@@ -9665,6 +9650,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fc891ae869bd48bf8af8f9043422d461, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  skeletonNoiseEnabled: 0
 --- !u!1 &1469460015
 GameObject:
   m_ObjectHideFlags: 0
@@ -11627,6 +11613,7 @@ MonoBehaviour:
   - {fileID: 267607256}
   - {fileID: 1074887085}
   mode: 1
+  experimentType: 0
   exp_totalObservations: 300
   episodesPerVirtualDay: 10
   addNoiseEpisodes: 1
@@ -11639,7 +11626,6 @@ MonoBehaviour:
   runOnStart: 1
   demoSettleTime: 2.5
   demoHoldTime: 1
-  habitSeedRepeats: 25
   momDrinkingSpots:
   - {fileID: 836976212}
   - {fileID: 1710019823}
