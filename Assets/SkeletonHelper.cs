@@ -1,9 +1,54 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 [RequireComponent(typeof(Animator))]
 public class SkeletonHelper : MonoBehaviour
 {
     Animator _anim;
+
+    // ── Corruption Model ─────────────────────────────────────────────────────
+    // Controlled by ExperimentRunner via UserEntity.SetSkeletonNoise()
+    // Disabled by default for baseline runs
+    [HideInInspector] public bool skeletonNoiseEnabled = false;
+
+    // Per-episode base offsets (resampled each time OnActivityChanged is called)
+    // Index: 0=pitch, 1=spine, 2=arm, 3=h2h, 4=wrist_h, 5=wrist_z, 6=hip, 7=knee
+    float[] _episodeOffsets = new float[8];
+    string  _currentActivity = "";
+
+    // ── Intra-class variation std from NTU RGB+D (Shahroudy et al., 2016) ────
+    // Format: { activity: [pitch, spine, arm, h2h, wrist_h, wrist_z, hip, knee] }
+    // TODO: Fill in actual values after running NTU analysis script
+    // Placeholder zeros = no intra-class variation until NTU data is processed
+    static readonly Dictionary<string, float[]> INTRA_CLASS_STD =
+        new Dictionary<string, float[]>
+    {
+        // action       pitch  spine   arm    h2h   wrist_h wrist_z  hip   knee
+        { "Eating",     new float[]{ 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f } },
+        { "Drinking",   new float[]{ 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f } },
+        { "SittingDrink",new float[]{ 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f } },
+        { "Reading",    new float[]{ 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f } },
+        { "PhoneUse",   new float[]{ 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f } },
+        { "Typing",     new float[]{ 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f } },
+        { "Cleaning",   new float[]{ 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f } },
+        { "Cooking",    new float[]{ 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f } },
+        { "Watching",   new float[]{ 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f } },
+        { "Laying",     new float[]{ 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f } },
+        { "Sitting",    new float[]{ 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f } },
+        { "Opening",    new float[]{ 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f } },
+        { "Standing",   new float[]{ 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f } },
+    };
+
+    // Sensor noise std (MediaPipe Pose, Bazarevsky et al. 2020)
+    // These are always applied regardless of skeletonNoiseEnabled
+    const float SENSOR_STD_PITCH    = 4.0f;
+    const float SENSOR_STD_SPINE    = 2.5f;
+    const float SENSOR_STD_ARM      = 3.0f;
+    const float SENSOR_STD_H2H      = 0.015f;
+    const float SENSOR_STD_WRIST_H  = 0.015f;
+    const float SENSOR_STD_WRIST_Z  = 0.015f;
+    const float SENSOR_STD_HIP      = 0.015f;
+    const float SENSOR_STD_KNEE     = 0.015f;
 
     static readonly System.Globalization.CultureInfo Inv =
         System.Globalization.CultureInfo.InvariantCulture;
@@ -15,7 +60,49 @@ public class SkeletonHelper : MonoBehaviour
             Debug.LogError("[SkeletonHelper] Animator not found on " + gameObject.name);
         else if (!_anim.isHuman)
             Debug.LogError("[SkeletonHelper] Animator is not Humanoid on " + gameObject.name);
+
+        ResetEpisodeOffsets();
     }
+
+    // ── Called by UserEntity.SetActivity() on every non-transition activity ──
+    public void OnActivityChanged(string activity)
+    {
+        _currentActivity = activity;
+        ResampleEpisodeOffsets(activity);
+    }
+
+    void ResetEpisodeOffsets()
+    {
+        for (int i = 0; i < _episodeOffsets.Length; i++)
+            _episodeOffsets[i] = 0f;
+    }
+
+    void ResampleEpisodeOffsets(string activity)
+    {
+        // If noise disabled or no NTU data for this activity, use zeros
+        if (!skeletonNoiseEnabled)
+        {
+            ResetEpisodeOffsets();
+            return;
+        }
+
+        float[] std = null;
+        if (INTRA_CLASS_STD.TryGetValue(activity, out std))
+        {
+            for (int i = 0; i < _episodeOffsets.Length; i++)
+                _episodeOffsets[i] = SampleGaussian(0f, std[i]);
+        }
+        else
+        {
+            ResetEpisodeOffsets();
+        }
+
+        Debug.Log($"[SkeletonHelper] Episode offsets for {activity}: " +
+                  $"pitch={_episodeOffsets[0]:F2} arm={_episodeOffsets[2]:F2} " +
+                  $"h2h={_episodeOffsets[3]:F3}");
+    }
+
+    // ── Bone helpers ─────────────────────────────────────────────────────────
 
     float BodyHeight()
     {
@@ -36,6 +123,8 @@ public class SkeletonHelper : MonoBehaviour
         return (leftFoot.position.y + rightFoot.position.y) / 2f;
     }
 
+    // ── Feature methods (sensor noise always on, episode offset only if enabled) ──
+
     public float NormalizedHipHeight()
     {
         if (_anim == null) return -1f;
@@ -45,7 +134,7 @@ public class SkeletonHelper : MonoBehaviour
         float ankleY = AnkleY();
         if (bh < 0f || ankleY < 0f) return -1f;
         float normalized = (hip.position.y - ankleY) / bh;
-        float noise      = SampleGaussian(0f, 0.015f);
+        float noise      = SampleGaussian(0f, SENSOR_STD_HIP) + _episodeOffsets[6];
         return Mathf.Clamp(normalized + noise, 0f, 1f);
     }
 
@@ -65,7 +154,7 @@ public class SkeletonHelper : MonoBehaviour
         float rightKneeY = (rightUpperLeg.position.y + rightLowerLeg.position.y) / 2f;
         float kneeY      = (leftKneeY + rightKneeY) / 2f;
         float normalized = (kneeY - ankleY) / bh;
-        float noise      = SampleGaussian(0f, 0.015f);
+        float noise      = SampleGaussian(0f, SENSOR_STD_KNEE) + _episodeOffsets[7];
         return Mathf.Clamp(normalized + noise, 0f, 1f);
     }
 
@@ -76,7 +165,7 @@ public class SkeletonHelper : MonoBehaviour
         if (head == null) return -999f;
         float pitch = head.eulerAngles.x;
         if (pitch > 180f) pitch -= 360f;
-        float noise = SampleGaussian(0f, 4f);
+        float noise = SampleGaussian(0f, SENSOR_STD_PITCH) + _episodeOffsets[0];
         return pitch + noise;
     }
 
@@ -88,7 +177,7 @@ public class SkeletonHelper : MonoBehaviour
         if (hip == null || chest == null) return -1f;
         Vector3 spineDir = (chest.position - hip.position).normalized;
         float angle = Vector3.Angle(spineDir, Vector3.up);
-        float noise = SampleGaussian(0f, 2.5f);
+        float noise = SampleGaussian(0f, SENSOR_STD_SPINE) + _episodeOffsets[1];
         return Mathf.Clamp(angle + noise, 0f, 90f);
     }
 
@@ -100,7 +189,7 @@ public class SkeletonHelper : MonoBehaviour
         if (shoulder == null || wrist == null) return -1f;
         Vector3 armDir = (wrist.position - shoulder.position).normalized;
         float angle = Vector3.Angle(armDir, Vector3.up);
-        float noise = SampleGaussian(0f, 3f);
+        float noise = SampleGaussian(0f, SENSOR_STD_ARM) + _episodeOffsets[2];
         return Mathf.Clamp(angle + noise, 0f, 180f);
     }
 
@@ -114,7 +203,7 @@ public class SkeletonHelper : MonoBehaviour
         float bh = BodyHeight();
         if (bh < 0f) return -1f;
         float dist  = Vector3.Distance(hand.position, head.position);
-        float noise = SampleGaussian(0f, 0.015f);
+        float noise = SampleGaussian(0f, SENSOR_STD_H2H) + _episodeOffsets[3];
         return Mathf.Clamp((dist + noise) / bh, 0f, 1.5f);
     }
 
@@ -128,7 +217,7 @@ public class SkeletonHelper : MonoBehaviour
         float bh = BodyHeight();
         if (bh < 0f) return -999f;
         float diff  = wrist.position.y - hip.position.y;
-        float noise = SampleGaussian(0f, 0.015f);
+        float noise = SampleGaussian(0f, SENSOR_STD_WRIST_H) + _episodeOffsets[4];
         return Mathf.Clamp((diff + noise) / bh, -1f, 1f);
     }
 
@@ -142,7 +231,7 @@ public class SkeletonHelper : MonoBehaviour
         float bh = BodyHeight();
         if (bh < 0f) return -999f;
         float diff  = wrist.position.x - hip.position.x;
-        float noise = SampleGaussian(0f, 0.015f);
+        float noise = SampleGaussian(0f, SENSOR_STD_WRIST_Z);
         return Mathf.Clamp((diff + noise) / bh, -1f, 1f);
     }
 
@@ -156,12 +245,13 @@ public class SkeletonHelper : MonoBehaviour
         float bh = BodyHeight();
         if (bh < 0f) return -999f;
         float diff  = wrist.position.z - hip.position.z;
-        float noise = SampleGaussian(0f, 0.015f);
+        float noise = SampleGaussian(0f, SENSOR_STD_WRIST_Z) + _episodeOffsets[5];
         return Mathf.Clamp((diff + noise) / bh, -1f, 1f);
     }
 
     static float SampleGaussian(float mean, float std)
     {
+        if (std <= 0f) return mean;
         float u1 = 1f - Random.value;
         float u2 = 1f - Random.value;
         float z  = Mathf.Sqrt(-2f * Mathf.Log(u1)) * Mathf.Sin(2f * Mathf.PI * u2);
@@ -185,18 +275,18 @@ public class SkeletonHelper : MonoBehaviour
         float l_wrist_z = NormalizedWristRelativeZ(useLeft: true);
 
         return
-            $"\"hip_height\":{hip.ToString("F3", Inv)},"       +
-            $"\"knee_height\":{knee.ToString("F3", Inv)},"     +
-            $"\"head_pitch\":{pitch.ToString("F3", Inv)},"     +
-            $"\"spine_angle\":{spine.ToString("F3", Inv)},"    +
-            $"\"arm_elevation\":{arm.ToString("F3", Inv)},"    +
-            $"\"hand_to_head\":{r_h2h.ToString("F3", Inv)},"   +
+            $"\"hip_height\":{hip.ToString("F3", Inv)},"            +
+            $"\"knee_height\":{knee.ToString("F3", Inv)},"          +
+            $"\"head_pitch\":{pitch.ToString("F3", Inv)},"          +
+            $"\"spine_angle\":{spine.ToString("F3", Inv)},"         +
+            $"\"arm_elevation\":{arm.ToString("F3", Inv)},"         +
+            $"\"hand_to_head\":{r_h2h.ToString("F3", Inv)},"        +
             $"\"left_hand_to_head\":{l_h2h.ToString("F3", Inv)},"   +
-            $"\"wrist_height\":{r_wrist.ToString("F3", Inv)}," +
+            $"\"wrist_height\":{r_wrist.ToString("F3", Inv)},"      +
             $"\"left_wrist_height\":{l_wrist.ToString("F3", Inv)}," +
-            $"\"wrist_x\":{r_wrist_x.ToString("F3", Inv)},"    +
-            $"\"wrist_z\":{r_wrist_z.ToString("F3", Inv)},"    +
-            $"\"left_wrist_x\":{l_wrist_x.ToString("F3", Inv)}," +
+            $"\"wrist_x\":{r_wrist_x.ToString("F3", Inv)},"         +
+            $"\"wrist_z\":{r_wrist_z.ToString("F3", Inv)},"         +
+            $"\"left_wrist_x\":{l_wrist_x.ToString("F3", Inv)},"    +
             $"\"left_wrist_z\":{l_wrist_z.ToString("F3", Inv)},";
     }
 
@@ -228,7 +318,7 @@ public class SkeletonHelper : MonoBehaviour
 #if UNITY_EDITOR
             UnityEditor.Handles.Label(
                 hips.position + Vector3.up * 0.1f,
-                $"hip={nh:F2} knee={nk:F2} ratio={ratio:F2} [{bp}]");
+                $"hip={nh:F2} knee={nk:F2} ratio={ratio:F2} [{bp}] act={_currentActivity}");
 #endif
         }
 
@@ -239,7 +329,7 @@ public class SkeletonHelper : MonoBehaviour
 #if UNITY_EDITOR
             UnityEditor.Handles.Label(
                 head.position + Vector3.up * 0.12f,
-                $"pitch={HeadPitch():F1}°");
+                $"pitch={HeadPitch():F1}° offset={_episodeOffsets[0]:F1}");
 #endif
         }
 

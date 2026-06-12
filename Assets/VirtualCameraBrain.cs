@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -21,12 +22,12 @@ public class VirtualCameraBrain : MonoBehaviour
     public int renderWidth  = 512;
     public int renderHeight = 512;
 
-    static System.DateTime? experimentBaseDate = null;
+    static DateTime? experimentBaseDate = null;
 
     static string VirtualDayToDateString(int virtualDay)
     {
         if (experimentBaseDate == null)
-            experimentBaseDate = System.DateTime.Today;
+            experimentBaseDate = DateTime.Today;
         return experimentBaseDate.Value
             .AddDays(virtualDay - 1)
             .ToString("yyyy-MM-dd");
@@ -40,6 +41,10 @@ public class VirtualCameraBrain : MonoBehaviour
 
     float virtualHour = -1f;
     public void SetVirtualHour(float hour) => virtualHour = hour;
+
+    // TV state: set by ExperimentRunner before capture
+    bool _tvOn = false;
+    public void SetTVState(bool isOn) => _tvOn = isOn;
 
     void Start()
     {
@@ -59,8 +64,7 @@ public class VirtualCameraBrain : MonoBehaviour
             yield break;
         }
 
-        string tCapture = System.DateTime.UtcNow
-            .ToString("yyyy-MM-ddTHH:mm:ss.fff");
+        string tCapture = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fff");
 
         int captureCount = Mathf.Min(topN, sortedNodes.Count);
 
@@ -101,7 +105,7 @@ public class VirtualCameraBrain : MonoBehaviour
                 tex.Apply();
                 RenderTexture.active = null;
 
-                imageList.Add(System.Convert.ToBase64String(tex.EncodeToPNG()));
+                imageList.Add(Convert.ToBase64String(tex.EncodeToPNG()));
                 nodeNames.Add($"{node.nodeName}_b{b}");
                 nodeScores.Add(node.lastScore);
 
@@ -141,7 +145,7 @@ public class VirtualCameraBrain : MonoBehaviour
     {
         float hour = virtualHour >= 0f
             ? virtualHour
-            : (float)System.DateTime.Now.Hour;
+            : (float)DateTime.Now.Hour;
 
         string roomName = "";
         if (nodeNames.Count > 0)
@@ -177,7 +181,8 @@ public class VirtualCameraBrain : MonoBehaviour
                 $"spine={sk.SpineAngle():F1} | " +
                 $"h2h={sk.NormalizedHandToHead():F3} | " +
                 $"arm={sk.RightArmElevation():F1} | " +
-                $"wrist={sk.NormalizedWristHeight():F3}");
+                $"wrist_h={sk.NormalizedWristHeight():F3} | " +
+                $"wrist_z={sk.NormalizedWristRelativeZ():F3}");
         }
         else
         {
@@ -200,6 +205,9 @@ public class VirtualCameraBrain : MonoBehaviour
         string expModeField   = !string.IsNullOrEmpty(experimentMode)
             ? $"\"experiment_mode\":\"{Esc(experimentMode)}\"," : "";
 
+        // TV state from Unity directly - no MongoDB query needed
+        string tvOnField = $"\"tv_on\":{(_tvOn ? "true" : "false")},";
+
         string json = "{"
             + $"\"userID\":\"{Esc(user.userID)}\","
             + $"\"activity\":\"{Esc(activity)}\","
@@ -208,6 +216,7 @@ public class VirtualCameraBrain : MonoBehaviour
             + $"\"t_capture\":\"{tCapture}\","
             + virtualDayField
             + expModeField
+            + tvOnField
             + skelJson
             + $"\"image_count\":{imageList.Count},"
             + $"\"image_list\":{StrArrayJson(imageList)},"
@@ -223,7 +232,6 @@ public class VirtualCameraBrain : MonoBehaviour
         req.downloadHandler = new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
         req.timeout = 120;
-        Debug.Log($"[JSON] {json.Substring(0, Mathf.Min(300, json.Length))}");
         yield return req.SendWebRequest();
 
         if (req.result == UnityWebRequest.Result.Success)
@@ -236,7 +244,8 @@ public class VirtualCameraBrain : MonoBehaviour
                 : " [NO SKELETON]";
             Debug.Log(
                 $"[VCB] POST ok | {user.userID} | {activity} | " +
-                $"{imageList.Count} img | hour={hour}{dayLog}{skelLog} | t={tCapture}");
+                $"{imageList.Count} img | hour={hour}{dayLog}{skelLog} | " +
+                $"tv={_tvOn} | t={tCapture}");
         }
         else
         {

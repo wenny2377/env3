@@ -39,6 +39,8 @@ public class DynamicSyncManager : MonoBehaviour
         StartCoroutine(ObjectLoop());
     }
 
+    // ── Position sync loop ────────────────────────────────────────────────────
+
     IEnumerator PositionLoop()
     {
         while (true)
@@ -50,7 +52,7 @@ public class DynamicSyncManager : MonoBehaviour
 
     IEnumerator SendPositions()
     {
-        var entries = new List<string>();
+        var    entries   = new List<string>();
         string timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fff");
 
         foreach (var user in new UserEntity[] { userMom, userDad })
@@ -82,7 +84,7 @@ public class DynamicSyncManager : MonoBehaviour
                 "\"activity\":\"" + EscStr(user.currentActivity) + "\","
                 + fwdJson;
 
-            string entry = BuildObjectJson(
+            entries.Add(BuildObjectJson(
                 label:     user.userID.ToLower(),
                 room:      "",
                 x:         pos.x,
@@ -90,8 +92,7 @@ public class DynamicSyncManager : MonoBehaviour
                 source:    "unity_user",
                 timestamp: timestamp,
                 extra:     extra
-            );
-            entries.Add(entry);
+            ));
         }
 
         if (entries.Count == 0) yield break;
@@ -99,6 +100,8 @@ public class DynamicSyncManager : MonoBehaviour
         string json = "{\"objects\":[" + string.Join(",", entries) + "]}";
         yield return StartCoroutine(PostJson(backendUrl + "/dynamic_sync", json, "position"));
     }
+
+    // ── Object sync loop ──────────────────────────────────────────────────────
 
     IEnumerator ObjectLoop()
     {
@@ -113,7 +116,7 @@ public class DynamicSyncManager : MonoBehaviour
     {
         if (dynamicObjects == null || dynamicObjects.Count == 0) yield break;
 
-        var entries = new List<string>();
+        var    entries   = new List<string>();
         string timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fff");
 
         foreach (var obj in dynamicObjects)
@@ -145,7 +148,7 @@ public class DynamicSyncManager : MonoBehaviour
                 ? ""
                 : "\"held_by\":\"" + EscStr(heldBy) + "\"";
 
-            string entry = BuildObjectJson(
+            entries.Add(BuildObjectJson(
                 label:     obj.name.ToLower(),
                 room:      room,
                 x:         pos.x,
@@ -153,8 +156,7 @@ public class DynamicSyncManager : MonoBehaviour
                 source:    "unity",
                 timestamp: timestamp,
                 extra:     extra
-            );
-            entries.Add(entry);
+            ));
         }
 
         if (entries.Count == 0) yield break;
@@ -162,6 +164,8 @@ public class DynamicSyncManager : MonoBehaviour
         string json = "{\"objects\":[" + string.Join(",", entries) + "]}";
         yield return StartCoroutine(PostJson(backendUrl + "/dynamic_sync", json, "objects"));
     }
+
+    // ── Held object detection ─────────────────────────────────────────────────
 
     string FindHolderOf(GameObject obj)
     {
@@ -191,14 +195,9 @@ public class DynamicSyncManager : MonoBehaviour
 
                 if (counterpartHidden && itemActive)
                 {
-                    Debug.Log($"[FindHolderOf] HIT: {obj.name} held by {user.userID} activity={bi.activity}");
+                    Debug.Log($"[FindHolderOf] HIT: {obj.name} held by " +
+                              $"{user.userID} activity={bi.activity}");
                     return user.userID;
-                }
-
-                string objNameLower = obj.name.ToLower();
-                if ((objNameLower == "broom" || objNameLower == "book") && isCounterpart)
-                {
-                    Debug.Log($"[FindHolderOf] {obj.name} FAIL: counterpartHidden={counterpartHidden} itemActive={itemActive} sceneCP.activeSelf={bi.sceneCounterpart?.activeSelf} item.activeSelf={bi.item?.activeSelf} sceneCP.name={bi.sceneCounterpart?.name} item.name={bi.item?.name} sceneCP=={obj.name}:{bi.sceneCounterpart == obj}");
                 }
             }
         }
@@ -211,6 +210,8 @@ public class DynamicSyncManager : MonoBehaviour
         if (userDad != null && userDad.userID == userID) return userDad;
         return null;
     }
+
+    // ── HTTP helper ───────────────────────────────────────────────────────────
 
     IEnumerator PostJson(string url, string json, string label)
     {
@@ -231,16 +232,18 @@ public class DynamicSyncManager : MonoBehaviour
             Debug.LogWarning($"[DynamicSync] /{label} POST failed: {req.error}");
     }
 
+    // ── JSON builders ─────────────────────────────────────────────────────────
+
     string BuildObjectJson(string label, string room, float x, float z,
                            string source, string timestamp, string extra)
     {
         string xs   = x.ToString("F3", Inv);
         string zs   = z.ToString("F3", Inv);
-        string json = "{\"label\":\""  + EscStr(label)  + "\","
-                    + "\"room\":\""    + EscStr(room)   + "\","
-                    + "\"position\":[" + xs + "," + zs  + "],"
-                    + "\"source\":\""  + EscStr(source) + "\","
-                    + "\"timestamp\":\"" + timestamp + "\"";
+        string json = "{\"label\":\""     + EscStr(label)     + "\","
+                    + "\"room\":\""       + EscStr(room)      + "\","
+                    + "\"position\":["    + xs + "," + zs     + "],"
+                    + "\"source\":\""     + EscStr(source)    + "\","
+                    + "\"timestamp\":\"" + timestamp          + "\"";
 
         if (!string.IsNullOrEmpty(extra))
             json += "," + extra;
@@ -258,6 +261,8 @@ public class DynamicSyncManager : MonoBehaviour
                 .Replace("\r", "\\r");
     }
 
+    // ── Room detection ────────────────────────────────────────────────────────
+
     string DetectRoom(Vector3 pos)
     {
         Collider[] hits = Physics.OverlapSphere(pos, 0.5f,
@@ -270,6 +275,8 @@ public class DynamicSyncManager : MonoBehaviour
         }
         return "";
     }
+
+    // ── Public force-sync API ─────────────────────────────────────────────────
 
     public void ForcePositionSync() => StartCoroutine(SendPositions());
     public void ForceObjectSync()   => StartCoroutine(SendObjects());

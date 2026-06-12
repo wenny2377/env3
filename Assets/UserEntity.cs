@@ -59,8 +59,6 @@ public class UserEntity : MonoBehaviour
     public Transform readingPutdownSpot;
     public Transform phonePickupSpot;
     public Transform phonePutdownSpot;
-    public Transform typingPickupSpot;
-    public Transform typingPutdownSpot;
 
     [Header("TV")]
     public GameObject[] tvScreenObjects;
@@ -105,6 +103,14 @@ public class UserEntity : MonoBehaviour
     public BehaviorItem readItem;
     public BehaviorItem phoneItem;
 
+    [Header("Corruption Model (0=disabled for baseline)")]
+    [Tooltip("Pickup miss rate: 0.15 = EPIC-KITCHENS recall ~85%")]
+    [Range(0f, 1f)]
+    public float pickupMissRate  = 0.0f;
+    [Tooltip("Putdown miss rate: object stays 'held' without being released")]
+    [Range(0f, 1f)]
+    public float putdownMissRate = 0.0f;
+
     [Header("Animator state names")]
     public string stateStanding = "Standing";
     public string stateWalk = "Walking";
@@ -137,6 +143,12 @@ public class UserEntity : MonoBehaviour
 
     public void ResetBusy() => IsBusy = false;
 
+    public void SetSkeletonNoise(bool enabled)
+    {
+        if (_skeletonHelper != null)
+            _skeletonHelper.skeletonNoiseEnabled = enabled;
+    }
+
     public BehaviorItem[] GetBehaviorItems() => _allItems;
 
     Animator anim;
@@ -145,6 +157,7 @@ public class UserEntity : MonoBehaviour
     float _shadowTimer = 0f;
     BehaviorItem[] _allItems;
     DynamicSyncManager _dsm;
+    SkeletonHelper _skeletonHelper;
 
     static readonly System.Globalization.CultureInfo Inv =
         System.Globalization.CultureInfo.InvariantCulture;
@@ -165,6 +178,7 @@ public class UserEntity : MonoBehaviour
         agent.Warp(transform.position);
 
         _dsm = FindObjectOfType<DynamicSyncManager>();
+        _skeletonHelper = GetComponent<SkeletonHelper>();
 
         InitBehaviorItems();
         ResetAllItems();
@@ -173,13 +187,13 @@ public class UserEntity : MonoBehaviour
 
     void InitBehaviorItems()
     {
-        drinkItem.activity = "Drinking";
+        drinkItem.activity        = "Drinking";
         sittingDrinkItem.activity = "SittingDrink";
-        eatItem.activity = "Eating";
-        cookItem.activity = "Cooking";
-        cleanItem.activity = "Cleaning";
-        readItem.activity = "Reading";
-        phoneItem.activity = "PhoneUse";
+        eatItem.activity          = "Eating";
+        cookItem.activity         = "Cooking";
+        cleanItem.activity        = "Cleaning";
+        readItem.activity         = "Reading";
+        phoneItem.activity        = "PhoneUse";
 
         _allItems = new BehaviorItem[]
         {
@@ -193,9 +207,9 @@ public class UserEntity : MonoBehaviour
         if (_allItems == null) return;
         foreach (var bi in _allItems)
         {
-            if (bi.item != null) bi.item.SetActive(false);
+            if (bi.item  != null) bi.item.SetActive(false);
             if (bi.item2 != null) bi.item2.SetActive(false);
-            if (bi.sceneCounterpart != null) bi.sceneCounterpart.SetActive(true);
+            if (bi.sceneCounterpart  != null) bi.sceneCounterpart.SetActive(true);
             if (bi.sceneCounterpart2 != null) bi.sceneCounterpart2.SetActive(true);
         }
     }
@@ -301,18 +315,18 @@ public class UserEntity : MonoBehaviour
         yield return new WaitForSeconds(noddingDuration);
         PlayAnim(currentActivity switch
         {
-            "Drinking" => stateDrink,
-            "SittingDrink" => stateSittingDrink,
-            "Sitting" => stateSitting,
-            "Laying" => stateLaying,
-            "Reading" => stateReading,
-            "Typing" => stateTyping,
-            "Watching" => stateWatching,
-            "PhoneUse" => statePhone,
-            "Eating" => stateEating,
-            "Cooking" => stateCooking,
-            "Cleaning" => stateCleaning,
-            _ => stateStanding,
+            "Drinking"    => stateDrink,
+            "SittingDrink"=> stateSittingDrink,
+            "Sitting"     => stateSitting,
+            "Laying"      => stateLaying,
+            "Reading"     => stateReading,
+            "Typing"      => stateTyping,
+            "Watching"    => stateWatching,
+            "PhoneUse"    => statePhone,
+            "Eating"      => stateEating,
+            "Cooking"     => stateCooking,
+            "Cleaning"    => stateCleaning,
+            _             => stateStanding,
         });
     }
 
@@ -350,9 +364,7 @@ public class UserEntity : MonoBehaviour
         }
 
         if (standingSpot != null)
-        {
             yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
-        }
     }
 
     IEnumerator DoSittingDrink()
@@ -389,9 +401,7 @@ public class UserEntity : MonoBehaviour
         }
 
         if (standingSpot != null)
-        {
             yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
-        }
     }
 
     IEnumerator DoSitting()
@@ -456,9 +466,7 @@ public class UserEntity : MonoBehaviour
         }
 
         if (standingSpot != null)
-        {
             yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
-        }
     }
 
     IEnumerator DoCook()
@@ -493,9 +501,7 @@ public class UserEntity : MonoBehaviour
         }
 
         if (standingSpot != null)
-        {
             yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
-        }
     }
 
     IEnumerator DoOpen()
@@ -549,6 +555,7 @@ public class UserEntity : MonoBehaviour
 
     IEnumerator DoWatching()
     {
+        // Watching: no pickup/putdown - TV state handled by VirtualCameraBrain.SetTVState
         Transform spot = ConsumeOverride(watchingSpot);
         if (spot == null) { Warn("watchingSpot"); yield break; }
         SetActivity("Walking");
@@ -596,9 +603,7 @@ public class UserEntity : MonoBehaviour
         }
 
         if (standingSpot != null)
-        {
             yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
-        }
     }
 
     IEnumerator DoCleaning()
@@ -633,9 +638,7 @@ public class UserEntity : MonoBehaviour
         }
 
         if (standingSpot != null)
-        {
             yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
-        }
     }
 
     IEnumerator DoPhoneUse()
@@ -670,48 +673,22 @@ public class UserEntity : MonoBehaviour
         }
 
         if (standingSpot != null)
-        {
             yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
-        }
     }
 
     IEnumerator DoTyping()
     {
-        if (typingPickupSpot != null)
-        {
-            SetActivity("Walking");
-            yield return StartCoroutine(NavWalkTo(typingPickupSpot.position, false));
-            yield return new WaitForSeconds(0.3f);
-            PreActivateHeldObject("Typing");
-            yield return new WaitForSeconds(0.5f);
-        }
-
+        // Typing uses keyboard (fixed object) - no pickup/putdown needed
+        // Detection relies on skeleton wrist_z and zone (desk area)
         Transform spot = ConsumeOverride(typingSpot);
-        if (spot != null)
-        {
-            yield return StartCoroutine(NavWalkTo(spot.position, true));
-            yield return StartCoroutine(SmoothRotateTo(spot.forward));
-            TeleportToSeat(spot);
-        }
+        if (spot == null) { Warn("typingSpot"); yield break; }
 
+        SetActivity("Walking");
+        yield return StartCoroutine(NavWalkTo(spot.position, true));
+        yield return StartCoroutine(SmoothRotateTo(spot.forward));
+        TeleportToSeat(spot);
         SetActivity("Typing");
         PlayAnim(stateTyping);
-        yield return null;
-
-        if (typingPutdownSpot != null)
-        {
-            yield return StartCoroutine(DoStandUp());
-            SetActivity("Walking");
-            yield return StartCoroutine(NavWalkTo(typingPutdownSpot.position, false));
-            yield return new WaitForSeconds(0.3f);
-            yield return ClearHeldObject();
-            yield return new WaitForSeconds(0.5f);
-        }
-
-        if (standingSpot != null)
-        {
-            yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
-        }
     }
 
     IEnumerator DoDadReading()
@@ -796,7 +773,7 @@ public class UserEntity : MonoBehaviour
 
         SetActivity("Standing");
         PlayAnim(stateStanding);
-        
+
         yield return ClearHeldObject();
     }
 
@@ -890,7 +867,7 @@ public class UserEntity : MonoBehaviour
             + "}";
         using var req = new UnityWebRequest($"{backendUrl}/device_state", "POST");
         byte[] body = System.Text.Encoding.UTF8.GetBytes(json);
-        req.uploadHandler = new UploadHandlerRaw(body);
+        req.uploadHandler   = new UploadHandlerRaw(body);
         req.downloadHandler = new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
         req.timeout = 2;
@@ -903,7 +880,7 @@ public class UserEntity : MonoBehaviour
             ? lastAssignedActivity : "Walking";
         string hourStr = currentVirtualHour >= 0f
             ? currentVirtualHour.ToString("F1", Inv)
-            : ((float)System.DateTime.Now.Hour).ToString("F1", Inv);
+            : ((float)DateTime.Now.Hour).ToString("F1", Inv);
 
         Vector3 fwd = transform.forward;
         string timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fff");
@@ -922,7 +899,7 @@ public class UserEntity : MonoBehaviour
 
         using var req = new UnityWebRequest($"{backendUrl}/track_position", "POST");
         byte[] body = System.Text.Encoding.UTF8.GetBytes(json);
-        req.uploadHandler = new UploadHandlerRaw(body);
+        req.uploadHandler   = new UploadHandlerRaw(body);
         req.downloadHandler = new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
         req.timeout = 2;
@@ -953,81 +930,88 @@ public class UserEntity : MonoBehaviour
             if (!string.Equals(bi.activity, activityName,
                 System.StringComparison.OrdinalIgnoreCase)) continue;
 
-            Debug.Log($"[DEBUG] bi.activity={bi.activity}, bi.item={bi.item?.name ?? "NULL"}");
-
             if (bi.item == null)
             {
                 Debug.LogError($"[ERROR] bi.item is NULL for {activityName}");
                 return;
             }
 
-            if (bi.item != null) bi.item.SetActive(true);
+            if (bi.item  != null) bi.item.SetActive(true);
             if (bi.item2 != null) bi.item2.SetActive(true);
-            if (bi.sceneCounterpart != null) bi.sceneCounterpart.SetActive(false);
+            if (bi.sceneCounterpart  != null) bi.sceneCounterpart.SetActive(false);
             if (bi.sceneCounterpart2 != null) bi.sceneCounterpart2.SetActive(false);
 
             StartCoroutine(PostPickupEvent(bi.item.name));
-            
+
             if (_dsm != null) _dsm.ForceObjectSync();
             Debug.Log($"[PreActivate] {userID} | {activityName} | held object activated");
             return;
         }
     }
-    
+
     public IEnumerator ClearHeldObject()
     {
         return PostPutdownEvent();
     }
-    
+
     IEnumerator PostPickupEvent(string objectName)
     {
+        // Corruption model: simulate pickup miss (EPIC-KITCHENS recall ~85%)
+        // Set pickupMissRate = 0.15 in Inspector to enable for robustness study
+        if (pickupMissRate > 0f && UnityEngine.Random.value < pickupMissRate)
+        {
+            Debug.Log($"[PickupEvent] SIMULATED MISS ({pickupMissRate:P0}): {objectName}");
+            yield break;
+        }
+
         string eventTime = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fff");
         string json = $"{{\"user_id\":\"{userID}\",\"object\":\"{objectName}\",\"pickup_time\":\"{eventTime}\"}}";
-        
-        Debug.Log($"[PickupEvent] Sending: {json}");
+
+        Debug.Log($"[PickupEvent] Sending: {objectName} at {eventTime}");
 
         using var req = new UnityWebRequest($"{backendUrl}/object_event", "POST");
         byte[] body = System.Text.Encoding.UTF8.GetBytes(json);
-        req.uploadHandler = new UploadHandlerRaw(body);
+        req.uploadHandler   = new UploadHandlerRaw(body);
         req.downloadHandler = new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
         req.timeout = 2;
         yield return req.SendWebRequest();
 
         if (req.result == UnityWebRequest.Result.Success)
-        {
-            Debug.Log($"[PickupEvent] SUCCESS: {userID} picked up {objectName} at {eventTime}");
-        }
+            Debug.Log($"[PickupEvent] SUCCESS: {userID} picked up {objectName}");
         else
-        {
             Debug.LogError($"[PickupEvent] FAILED: {req.error} for {objectName}");
-        }
     }
-    
+
     IEnumerator PostPutdownEvent()
     {
+        // Corruption model: simulate putdown miss (EPIC-KITCHENS motivated)
+        // Models occlusion where camera doesn't see the object being put down
+        if (putdownMissRate > 0f && UnityEngine.Random.value < putdownMissRate)
+        {
+            Debug.Log($"[PutdownEvent] SIMULATED MISS ({putdownMissRate:P0}): not recorded");
+            if (_dsm != null) _dsm.ForceObjectSync();
+            yield break;
+        }
+
         string eventTime = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fff");
         string json = $"{{\"user_id\":\"{userID}\",\"putdown_time\":\"{eventTime}\"}}";
-        
-        Debug.Log($"[PutdownEvent] Sending: {json}");
+
+        Debug.Log($"[PutdownEvent] Sending at {eventTime}");
 
         using var req = new UnityWebRequest($"{backendUrl}/object_event", "POST");
         byte[] body = System.Text.Encoding.UTF8.GetBytes(json);
-        req.uploadHandler = new UploadHandlerRaw(body);
+        req.uploadHandler   = new UploadHandlerRaw(body);
         req.downloadHandler = new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
         req.timeout = 2;
         yield return req.SendWebRequest();
 
         if (req.result == UnityWebRequest.Result.Success)
-        {
             Debug.Log($"[PutdownEvent] SUCCESS: {userID} put down at {eventTime}");
-        }
         else
-        {
             Debug.LogError($"[PutdownEvent] FAILED: {req.error}");
-        }
-        
+
         if (_dsm != null) _dsm.ForceObjectSync();
     }
 
@@ -1043,6 +1027,10 @@ public class UserEntity : MonoBehaviour
 
         if (isTransition) return;
 
+        // Notify SkeletonHelper to resample per-episode intra-class offsets
+        if (_skeletonHelper != null)
+            _skeletonHelper.OnActivityChanged(a);
+
         bool stateChanged = false;
 
         foreach (var bi in _allItems)
@@ -1051,27 +1039,15 @@ public class UserEntity : MonoBehaviour
             bool active = string.Equals(
                 bi.activity, a,
                 System.StringComparison.OrdinalIgnoreCase);
-            
-            if (bi.item != null && bi.item.activeSelf != active)
-            {
-                bi.item.SetActive(active);
-                stateChanged = true;
-            }
+
+            if (bi.item  != null && bi.item.activeSelf  != active)
+            { bi.item.SetActive(active);  stateChanged = true; }
             if (bi.item2 != null && bi.item2.activeSelf != active)
-            {
-                bi.item2.SetActive(active);
-                stateChanged = true;
-            }
-            if (bi.sceneCounterpart != null && bi.sceneCounterpart.activeSelf == active)
-            {
-                bi.sceneCounterpart.SetActive(!active);
-                stateChanged = true;
-            }
+            { bi.item2.SetActive(active); stateChanged = true; }
+            if (bi.sceneCounterpart  != null && bi.sceneCounterpart.activeSelf  == active)
+            { bi.sceneCounterpart.SetActive(!active);  stateChanged = true; }
             if (bi.sceneCounterpart2 != null && bi.sceneCounterpart2.activeSelf == active)
-            {
-                bi.sceneCounterpart2.SetActive(!active);
-                stateChanged = true;
-            }
+            { bi.sceneCounterpart2.SetActive(!active); stateChanged = true; }
         }
 
         if (stateChanged && _dsm != null)
@@ -1095,34 +1071,32 @@ public class UserEntity : MonoBehaviour
 
     void OnDrawGizmos()
     {
-        DrawSpot(drinkSpot, Color.cyan, "Drink");
-        DrawSpot(sittingDrinkSpot, Color.blue, "SitDrink");
-        DrawSpot(sittingSpot, Color.blue, "Sitting");
-        DrawSpot(eatSpot, Color.yellow, "Eat");
-        DrawSpot(cookSpot, Color.red, "Cook");
-        DrawSpot(openSpot, Color.white, "Open");
-        DrawSpot(layingSpot, Color.green, "Laying");
-        DrawSpot(watchingSpot, Color.magenta, "Watch");
-        DrawSpot(readingSpot, Color.blue, "Read");
-        DrawSpot(cleanSpot, Color.gray, "Clean");
-        DrawSpot(phoneSpot, Color.magenta, "Phone");
-        DrawSpot(typingSpot, Color.red, "Type");
-        
-        DrawSpot(cleaningPickupSpot, Color.cyan, "CleanPickup");
+        DrawSpot(drinkSpot,         Color.cyan,    "Drink");
+        DrawSpot(sittingDrinkSpot,  Color.blue,    "SitDrink");
+        DrawSpot(sittingSpot,       Color.blue,    "Sitting");
+        DrawSpot(eatSpot,           Color.yellow,  "Eat");
+        DrawSpot(cookSpot,          Color.red,     "Cook");
+        DrawSpot(openSpot,          Color.white,   "Open");
+        DrawSpot(layingSpot,        Color.green,   "Laying");
+        DrawSpot(watchingSpot,      Color.magenta, "Watch");
+        DrawSpot(readingSpot,       Color.blue,    "Read");
+        DrawSpot(cleanSpot,         Color.gray,    "Clean");
+        DrawSpot(phoneSpot,         Color.magenta, "Phone");
+        DrawSpot(typingSpot,        Color.red,     "Type");
+
+        DrawSpot(cleaningPickupSpot,  Color.cyan,    "CleanPickup");
         DrawSpot(cleaningPutdownSpot, Color.magenta, "CleanPutdown");
-        DrawSpot(cookingPickupSpot, Color.cyan, "CookPickup");
-        DrawSpot(cookingPutdownSpot, Color.magenta, "CookPutdown");
-        DrawSpot(eatingPickupSpot, Color.cyan, "EatPickup");
-        DrawSpot(eatingPutdownSpot, Color.magenta, "EatPutdown");
-        DrawSpot(drinkingPickupSpot, Color.cyan, "DrinkPickup");
+        DrawSpot(cookingPickupSpot,   Color.cyan,    "CookPickup");
+        DrawSpot(cookingPutdownSpot,  Color.magenta, "CookPutdown");
+        DrawSpot(eatingPickupSpot,    Color.cyan,    "EatPickup");
+        DrawSpot(eatingPutdownSpot,   Color.magenta, "EatPutdown");
+        DrawSpot(drinkingPickupSpot,  Color.cyan,    "DrinkPickup");
         DrawSpot(drinkingPutdownSpot, Color.magenta, "DrinkPutdown");
-        DrawSpot(readingPickupSpot, Color.cyan, "ReadPickup");
-        DrawSpot(readingPutdownSpot, Color.magenta, "ReadPutdown");
-        DrawSpot(phonePickupSpot, Color.cyan, "PhonePickup");
-        DrawSpot(phonePutdownSpot, Color.magenta, "PhonePutdown");
-        DrawSpot(typingPickupSpot, Color.cyan, "TypePickup");
-        DrawSpot(typingPutdownSpot, Color.magenta, "TypePutdown");
-        
+        DrawSpot(readingPickupSpot,   Color.cyan,    "ReadPickup");
+        DrawSpot(readingPutdownSpot,  Color.magenta, "ReadPutdown");
+        DrawSpot(phonePickupSpot,     Color.cyan,    "PhonePickup");
+        DrawSpot(phonePutdownSpot,    Color.magenta, "PhonePutdown");
+
         if (standingSpot != null)
         {
             Gizmos.color = Color.white;
