@@ -11616,7 +11616,7 @@ MonoBehaviour:
   - {fileID: 1074887085}
   mode: 1
   experimentType: 1
-  exp_totalObservations: 300
+  exp_totalObservations: 600
   episodesPerVirtualDay: 10
   addNoiseEpisodes: 1
   noiseInterval: 10
