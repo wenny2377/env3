@@ -26,7 +26,7 @@ public class ExperimentRunner : MonoBehaviour
     public ExperimentType experimentType = ExperimentType.Baseline;
 
     [Header("Experiment Settings")]
-    public int   exp_totalObservations = 300;
+    public int   exp_totalObservations = 600;
     public int   episodesPerVirtualDay = 10;
     public bool  addNoiseEpisodes      = true;
     public int   noiseInterval         = 10;

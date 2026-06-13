@@ -5681,7 +5681,7 @@ MonoBehaviour:
   stillDuration: 0.5
   captureCooldown: 3
   minViewAngle: 30
-  virtualCameraBrain: {fileID: 0}
+  virtualCameraBrain: {fileID: 1982473817}
 --- !u!1 &926923879
 GameObject:
   m_ObjectHideFlags: 0
@@ -9515,7 +9515,7 @@ MonoBehaviour:
   fridgeOpenAngle: -90
   fridgeOpenSpeed: 90
   walkSpeed: 1.4
-  arrivalThreshold: 0.08
+  arrivalThreshold: 0.32
   rotationSpeed: 8
   navSampleRadius: 3
   shadowInterval: 0.5
@@ -9574,8 +9574,8 @@ MonoBehaviour:
     item2: {fileID: 0}
     sceneCounterpart: {fileID: 1644722504}
     sceneCounterpart2: {fileID: 0}
-  pickupMissRate: 0.134
-  putdownMissRate: 0.308
+  pickupMissRate: 0.15
+  putdownMissRate: 0.1
   stateStanding: Standing
   stateWalk: Walking
   stateDrink: Drinking
