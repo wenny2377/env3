@@ -2701,6 +2701,7 @@ MonoBehaviour:
   putDownDuration: 1
   sittingDuration: 3
   standUpDuration: 0.8
+  activityHoldDuration: 3
   drinkItem:
     activity: 
     item: {fileID: 478297989}
@@ -3931,7 +3932,7 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: bcede7b9689d2fe5594ef968d1225d82, type: 2}
     - target: {fileID: 919132149155446097, guid: 8edeee06432ec08b5adec7d3d06fb83d, type: 3}
       propertyPath: m_Name
-      value: bottle
+      value: water
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -5677,7 +5678,7 @@ MonoBehaviour:
   userDad: {fileID: 426001001}
   captureStates: Drinking,Watching,Typing,Reading,Laying,PhoneUse,SittingDrink,Cooking,Opening,Eating,Cleaning,Sitting,StandUp
   stillSpeedThreshold: 0.05
-  stillDuration: 1.5
+  stillDuration: 0.5
   captureCooldown: 3
   minViewAngle: 30
   virtualCameraBrain: {fileID: 0}
@@ -6800,7 +6801,7 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: bcede7b9689d2fe5594ef968d1225d82, type: 2}
     - target: {fileID: 919132149155446097, guid: 8edeee06432ec08b5adec7d3d06fb83d, type: 3}
       propertyPath: m_Name
-      value: waterbottle
+      value: water
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -8132,7 +8133,7 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: bcede7b9689d2fe5594ef968d1225d82, type: 2}
     - target: {fileID: 919132149155446097, guid: 8edeee06432ec08b5adec7d3d06fb83d, type: 3}
       propertyPath: m_Name
-      value: waterbottle
+      value: water
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -9530,6 +9531,7 @@ MonoBehaviour:
   putDownDuration: 1
   sittingDuration: 3
   standUpDuration: 0.8
+  activityHoldDuration: 3
   drinkItem:
     activity: 
     item: {fileID: 1711110536}
@@ -11613,7 +11615,7 @@ MonoBehaviour:
   - {fileID: 267607256}
   - {fileID: 1074887085}
   mode: 1
-  experimentType: 0
+  experimentType: 1
   exp_totalObservations: 300
   episodesPerVirtualDay: 10
   addNoiseEpisodes: 1
@@ -11622,6 +11624,9 @@ MonoBehaviour:
   waitAfterCapture: 8
   waitBetweenEpisodes: 2
   minIntervalInSlot: 1.5
+  corruptionPickupMissRate: 0.15
+  corruptionPutdownMissRate: 0.1
+  corruptionObjectConfusionRate: 0.1
   backendUrl: http://localhost:5000
   runOnStart: 1
   demoSettleTime: 2.5

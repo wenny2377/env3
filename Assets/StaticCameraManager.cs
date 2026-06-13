@@ -28,8 +28,8 @@ public class StaticCameraManager : MonoBehaviour
 
     [Header("Still Detection")]
     public float stillSpeedThreshold = 0.05f;
-    public float stillDuration       = 1.5f;
-    public float captureCooldown     = 5f;
+    public float stillDuration       = 0.5f;
+    public float captureCooldown     = 3.0f;
 
     [Header("Multi-view Selection")]
     public float minViewAngle = 30f;
@@ -67,7 +67,10 @@ public class StaticCameraManager : MonoBehaviour
         else
             Debug.LogWarning("[SCM] userDad not assigned");
 
-        Debug.Log($"[SCM] Started | mode={captureMode} | captureStates=[{captureStates}]");
+        Debug.Log($"[SCM] Started | mode={captureMode} | "
+                + $"stillDuration={stillDuration}s | "
+                + $"cooldown={captureCooldown}s | "
+                + $"captureStates=[{captureStates}]");
     }
 
     void Update()
@@ -174,10 +177,23 @@ public class StaticCameraManager : MonoBehaviour
                 continue;
             }
 
-            string label = !string.IsNullOrEmpty(user.lastAssignedActivity)
-                ? user.lastAssignedActivity : cur;
+            // Skip if user is in transition (walking to spot)
+            // This prevents capturing mid-action states
+            string curAct = user.currentActivity;
+            if (curAct == "Walking" || curAct == "StandUp" ||
+                curAct == "PickingUp" || curAct == "PuttingDown")
+                continue;
 
-            Debug.Log($"[SCM] {user.userID} | {label} | still={stillTimer:F1}s | capturing");
+            // Skip if lastAssignedActivity is an intermediate action
+            string assigned = user.lastAssignedActivity;
+            if (assigned == "Opening" || assigned == "Walking" ||
+                assigned == "Standing" || assigned == "StandUp")
+                continue;
+
+            string label = !string.IsNullOrEmpty(assigned) ? assigned : curAct;
+
+            Debug.Log($"[SCM] {user.userID} | {label} | "
+                    + $"still={stillTimer:F1}s | capturing");
             yield return StartCoroutine(CaptureWithBestNodes(user, label, cams));
         }
     }
@@ -225,7 +241,8 @@ public class StaticCameraManager : MonoBehaviour
 
         string names = string.Join(", ",
             toUse.ConvertAll(n => $"{n.nodeName}({n.lastScore:F2})"));
-        Debug.Log($"[SCM] {user.userID} | {activity} | views={toUse.Count} | [{names}]");
+        Debug.Log($"[SCM] {user.userID} | {activity} | "
+                + $"views={toUse.Count} | [{names}]");
 
         if (virtualCameraBrain == null)
         {

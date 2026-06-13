@@ -15,42 +15,20 @@ public class VirtualCameraBrain : MonoBehaviour
 
     [Header("Burst Capture Settings")]
     [Range(1, 3)]
-    public int  burstCount    = 2;
+    public int   burstCount    = 2;
     public float burstInterval = 0.3f;
 
     [Header("Capture Resolution (Square)")]
     public int renderWidth  = 512;
     public int renderHeight = 512;
 
-    static DateTime? experimentBaseDate = null;
-
-    static string VirtualDayToDateString(int virtualDay)
-    {
-        if (experimentBaseDate == null)
-            experimentBaseDate = DateTime.Today;
-        return experimentBaseDate.Value
-            .AddDays(virtualDay - 1)
-            .ToString("yyyy-MM-dd");
-    }
-
-    public static void ResetBaseDate()
-    {
-        experimentBaseDate = null;
-        Debug.Log("[VCB] Base date reset.");
-    }
-
-    float virtualHour = -1f;
-    public void SetVirtualHour(float hour) => virtualHour = hour;
-
-    // TV state: set by ExperimentRunner before capture
     bool _tvOn = false;
     public void SetTVState(bool isOn) => _tvOn = isOn;
+    public void SetVirtualHour(float hour) { }
 
     void Start()
     {
-        Debug.Log(
-            $"[VCB] Initialized | topN={topN} | burst={burstCount}x{burstInterval}s | " +
-            $"resolution={renderWidth}x{renderHeight}");
+        Debug.Log($"[VCB] topN={topN} burst={burstCount}x{burstInterval}s {renderWidth}x{renderHeight}");
     }
 
     public IEnumerator ExecuteMultiCapture(
@@ -64,9 +42,8 @@ public class VirtualCameraBrain : MonoBehaviour
             yield break;
         }
 
-        string tCapture = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fff");
-
-        int captureCount = Mathf.Min(topN, sortedNodes.Count);
+        string tCapture    = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fff");
+        int    captureCount = Mathf.Min(topN, sortedNodes.Count);
 
         var imageList  = new List<string>();
         var nodeNames  = new List<string>();
@@ -75,8 +52,7 @@ public class VirtualCameraBrain : MonoBehaviour
         for (int i = 0; i < captureCount; i++)
         {
             CameraNode node   = sortedNodes[i];
-            Camera     nodeCam =
-                node.GetComponentInChildren<Camera>(includeInactive: true);
+            Camera     nodeCam = node.GetComponentInChildren<Camera>(includeInactive: true);
 
             if (nodeCam == null)
             {
@@ -88,8 +64,7 @@ public class VirtualCameraBrain : MonoBehaviour
 
             for (int b = 0; b < burstCount; b++)
             {
-                if (b > 0)
-                    yield return new WaitForSeconds(burstInterval);
+                if (b > 0) yield return new WaitForSeconds(burstInterval);
 
                 RenderTexture rt = new RenderTexture(renderWidth, renderHeight, 24);
                 nodeCam.targetTexture = rt;
@@ -99,8 +74,7 @@ public class VirtualCameraBrain : MonoBehaviour
                 nodeCam.targetTexture = null;
 
                 RenderTexture.active = rt;
-                var tex = new Texture2D(
-                    renderWidth, renderHeight, TextureFormat.RGB24, false);
+                var tex = new Texture2D(renderWidth, renderHeight, TextureFormat.RGB24, false);
                 tex.ReadPixels(new Rect(0, 0, renderWidth, renderHeight), 0, 0);
                 tex.Apply();
                 RenderTexture.active = null;
@@ -112,20 +86,15 @@ public class VirtualCameraBrain : MonoBehaviour
                 Destroy(rt);
                 Destroy(tex);
             }
-
-            Debug.Log(
-                $"[VCB] node={node.nodeName} burst={burstCount} score={node.lastScore:F2}");
         }
 
         if (imageList.Count == 0)
         {
-            Debug.LogWarning(
-                $"[VCB] No images captured for {user.userID} | {activity}.");
+            Debug.LogWarning($"[VCB] No images captured for {user.userID} | {activity}.");
             yield break;
         }
 
-        yield return StartCoroutine(PostMultiImage(
-            user, activity, imageList, nodeNames, nodeScores, tCapture));
+        yield return StartCoroutine(PostPredict(user, activity, imageList, nodeNames, nodeScores, tCapture));
     }
 
     public IEnumerator ExecuteCaptureSequence(
@@ -135,7 +104,7 @@ public class VirtualCameraBrain : MonoBehaviour
             ExecuteMultiCapture(user, new List<CameraNode> { camNode }, activity));
     }
 
-    IEnumerator PostMultiImage(
+    IEnumerator PostPredict(
         UserEntity   user,
         string       activity,
         List<string> imageList,
@@ -143,80 +112,44 @@ public class VirtualCameraBrain : MonoBehaviour
         List<float>  nodeScores,
         string       tCapture)
     {
-        float hour = virtualHour >= 0f
-            ? virtualHour
-            : (float)DateTime.Now.Hour;
-
         string roomName = "";
         if (nodeNames.Count > 0)
         {
-            string firstName = nodeNames[0].Split('_')[0] + "_" +
-                               nodeNames[0].Split('_')[1];
-            int camIdx = firstName.LastIndexOf("_Cam");
-            roomName = camIdx > 0
-                ? firstName.Substring(0, camIdx)
-                : firstName;
-        }
-
-        string virtualDayField = "";
-        if (ExperimentRunner.UseVirtualDay)
-        {
-            string dateStr = VirtualDayToDateString(
-                ExperimentRunner.CurrentVirtualDay);
-            virtualDayField = $"\"virtual_day\":\"{dateStr}\",";
+            string firstName = nodeNames[0].Split('_')[0] + "_" + nodeNames[0].Split('_')[1];
+            int    camIdx    = firstName.LastIndexOf("_Cam");
+            roomName = camIdx > 0 ? firstName.Substring(0, camIdx) : firstName;
         }
 
         Vector3 pos = user.transform.position;
         Vector3 fwd = user.transform.forward;
 
-        var sk = user.GetComponent<SkeletonHelper>();
+        var    sk      = user.GetComponent<SkeletonHelper>();
         string skelJson = sk != null ? sk.ToJsonFragment() : "";
 
         if (sk != null)
-        {
-            Debug.Log(
-                $"[SKEL] {user.userID} | {activity} | " +
-                $"hip={sk.NormalizedHipHeight():F3} | " +
-                $"pitch={sk.HeadPitch():F1} | " +
-                $"spine={sk.SpineAngle():F1} | " +
-                $"h2h={sk.NormalizedHandToHead():F3} | " +
-                $"arm={sk.RightArmElevation():F1} | " +
-                $"wrist_h={sk.NormalizedWristHeight():F3} | " +
-                $"wrist_z={sk.NormalizedWristRelativeZ():F3}");
-        }
+            Debug.Log($"[SKEL] {user.userID} | {activity} | pitch={sk.HeadPitch():F1} wrist_h={sk.NormalizedWristHeight():F3}");
         else
-        {
             Debug.LogWarning($"[SKEL] {user.userID} | {activity} | SkeletonHelper NOT FOUND");
-        }
 
-        string posJson =
-            $"\"user_pos\":{{" +
-            $"\"x\":{pos.x.ToString("F3", InvCulture)}," +
-            $"\"y\":{pos.y.ToString("F3", InvCulture)}," +
-            $"\"z\":{pos.z.ToString("F3", InvCulture)}}}";
+        string posJson = $"\"user_pos\":{{\"x\":{pos.x.ToString("F3", Inv)},\"y\":{pos.y.ToString("F3", Inv)},\"z\":{pos.z.ToString("F3", Inv)}}}";
+        string fwdJson = $"\"user_forward\":{{\"x\":{fwd.x.ToString("F3", Inv)},\"y\":{fwd.y.ToString("F3", Inv)},\"z\":{fwd.z.ToString("F3", Inv)}}}";
 
-        string fwdJson =
-            $"\"user_forward\":{{" +
-            $"\"x\":{fwd.x.ToString("F3", InvCulture)}," +
-            $"\"y\":{fwd.y.ToString("F3", InvCulture)}," +
-            $"\"z\":{fwd.z.ToString("F3", InvCulture)}}}";
+        string expModeField = !string.IsNullOrEmpty(ExperimentRunner.CurrentExperimentMode)
+            ? $"\"experiment_mode\":\"{Esc(ExperimentRunner.CurrentExperimentMode)}\"," : "";
 
-        string experimentMode = ExperimentRunner.CurrentExperimentMode;
-        string expModeField   = !string.IsNullOrEmpty(experimentMode)
-            ? $"\"experiment_mode\":\"{Esc(experimentMode)}\"," : "";
-
-        // TV state from Unity directly - no MongoDB query needed
-        string tvOnField = $"\"tv_on\":{(_tvOn ? "true" : "false")},";
+        string virtualTimeFields =
+            $"\"virtual_hour\":{ExperimentRunner.CurrentVirtualHour.ToString("F1", Inv)},"
+          + $"\"virtual_day\":{ExperimentRunner.CurrentVirtualDay},"
+          + $"\"time_slot\":\"{Esc(ExperimentRunner.CurrentTimeSlot)}\",";
 
         string json = "{"
             + $"\"userID\":\"{Esc(user.userID)}\","
             + $"\"activity\":\"{Esc(activity)}\","
             + $"\"room_name\":\"{Esc(roomName)}\","
-            + $"\"virtual_hour\":{hour.ToString("F1", InvCulture)},"
             + $"\"t_capture\":\"{tCapture}\","
-            + virtualDayField
+            + virtualTimeFields
             + expModeField
-            + tvOnField
+            + $"\"tv_on\":{(_tvOn ? "true" : "false")},"
             + skelJson
             + $"\"image_count\":{imageList.Count},"
             + $"\"image_list\":{StrArrayJson(imageList)},"
@@ -235,30 +168,13 @@ public class VirtualCameraBrain : MonoBehaviour
         yield return req.SendWebRequest();
 
         if (req.result == UnityWebRequest.Result.Success)
-        {
-            string dayLog = ExperimentRunner.UseVirtualDay
-                ? $" day={VirtualDayToDateString(ExperimentRunner.CurrentVirtualDay)}"
-                : "";
-            string skelLog = sk != null
-                ? $" head={sk.HeadPitch():F1}°"
-                : " [NO SKELETON]";
-            Debug.Log(
-                $"[VCB] POST ok | {user.userID} | {activity} | " +
-                $"{imageList.Count} img | hour={hour}{dayLog}{skelLog} | " +
-                $"tv={_tvOn} | t={tCapture}");
-        }
+            Debug.Log($"[VCB] ok | {user.userID} | {activity} | day={ExperimentRunner.CurrentVirtualDay} slot={ExperimentRunner.CurrentTimeSlot} tv={_tvOn}");
         else
-        {
-            Debug.LogWarning(
-                $"[VCB] POST failed: {req.error} | {user.userID} | {activity}");
-        }
+            Debug.LogWarning($"[VCB] failed: {req.error} | {user.userID} | {activity}");
     }
 
-    static readonly System.Globalization.CultureInfo InvCulture =
-        System.Globalization.CultureInfo.InvariantCulture;
-
-    static string Esc(string s) =>
-        s.Replace("\\", "\\\\").Replace("\"", "\\\"");
+    static readonly System.Globalization.CultureInfo Inv = System.Globalization.CultureInfo.InvariantCulture;
+    static string Esc(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
 
     static string StrArrayJson(List<string> list)
     {
@@ -274,8 +190,7 @@ public class VirtualCameraBrain : MonoBehaviour
     static string FloatArrayJson(List<float> list)
     {
         var parts = new List<string>();
-        foreach (var f in list)
-            parts.Add(f.ToString("F4", InvCulture));
+        foreach (var f in list) parts.Add(f.ToString("F4", Inv));
         return "[" + string.Join(",", parts) + "]";
     }
 }
