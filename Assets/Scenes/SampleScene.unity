@@ -8761,7 +8761,7 @@ Transform:
   m_GameObject: {fileID: 1328002659}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.97162193, z: -0, w: 0.23653942}
-  m_LocalPosition: {x: 4.05, y: 0, z: -0.24}
+  m_LocalPosition: {x: 3.74, y: 0, z: 4.32}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -10468,7 +10468,7 @@ Transform:
   m_GameObject: {fileID: 1587946581}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.90146947, z: -0, w: 0.43284273}
-  m_LocalPosition: {x: 4.07, y: 0, z: 5.2}
+  m_LocalPosition: {x: 3.44, y: 0, z: 6.44}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -11614,8 +11614,9 @@ MonoBehaviour:
   - {fileID: 1603672535}
   - {fileID: 267607256}
   - {fileID: 1074887085}
-  mode: 1
+  mode: 0
   experimentType: 1
+  exp_totalDays: 21
   exp_totalObservations: 600
   episodesPerVirtualDay: 10
   addNoiseEpisodes: 1
@@ -11631,6 +11632,7 @@ MonoBehaviour:
   runOnStart: 1
   demoSettleTime: 2.5
   demoHoldTime: 1
+  demoSceneTime: 5
   momDrinkingSpots:
   - {fileID: 836976212}
   - {fileID: 1710019823}
