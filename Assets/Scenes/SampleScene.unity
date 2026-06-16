@@ -1143,7 +1143,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 1b50747709784df3e9816aa0f687217d, type: 3}
       propertyPath: m_Name
-      value: bowl (1)
+      value: 'bowl '
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 1b50747709784df3e9816aa0f687217d, type: 3}
       propertyPath: m_IsActive
@@ -3119,7 +3119,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 93b5f75de119d1cd98f5657f574d4ad2, type: 3}
       propertyPath: m_Name
-      value: standCola
+      value: cola
       objectReference: {fileID: 0}
     - target: {fileID: 7474637704702720156, guid: 93b5f75de119d1cd98f5657f574d4ad2, type: 3}
       propertyPath: m_LocalPosition.x
@@ -5512,7 +5512,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 27761514525130c7499c96f478d6e6b8, type: 3}
       propertyPath: m_Name
-      value: spoon (1)
+      value: 'spoon '
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -8002,7 +8002,7 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: 1db71a166fadb3982b4330cad09b1ced, type: 2}
     - target: {fileID: 919132149155446097, guid: 2a11933bf3470f08a8589af5460676bd, type: 3}
       propertyPath: m_Name
-      value: 'cell phone '
+      value: 'phone '
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 2a11933bf3470f08a8589af5460676bd, type: 3}
       propertyPath: m_IsActive
@@ -11837,7 +11837,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 3eb0a5e227bba0763ba59533c2a52653, type: 3}
       propertyPath: m_Name
-      value: pan (2)
+      value: 'pan '
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

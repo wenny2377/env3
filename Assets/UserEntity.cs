@@ -616,6 +616,10 @@ public class UserEntity : MonoBehaviour
         }
         SetActivity("Cleaning");
         PlayAnim(STATE_CLEANING);
+        lastAssignedActivity = "Cleaning";
+        var scm = StaticCameraManager.Instance;
+        if (scm != null)
+            yield return StartCoroutine(scm.TriggerManualCapture(this, "Cleaning"));
         yield return new WaitForSeconds(cleanDuration);
         if (cleaningPutdownSpot != null)
         {
@@ -707,6 +711,10 @@ public class UserEntity : MonoBehaviour
         yield return StartCoroutine(SmoothRotateTo(spot.forward));
         SetActivity("Cleaning");
         PlayAnim(STATE_CLEANING);
+        lastAssignedActivity = "Cleaning";
+        var scm = StaticCameraManager.Instance;
+        if (scm != null)
+            yield return StartCoroutine(scm.TriggerManualCapture(this, "Cleaning"));
         yield return new WaitForSeconds(cleanDuration);
     }
 
