@@ -98,6 +98,8 @@ public class UserEntity : MonoBehaviour
     [Range(0f, 1f)] public float pickupMissRate  = 0.0f;
     [Range(0f, 1f)] public float putdownMissRate = 0.0f;
 
+    [HideInInspector] public bool skipReturnToStanding = false;
+
     const float WALK_SPEED        = 1.4f;
     const float ARRIVAL_THRESHOLD = 0.15f;
     const float ROTATION_SPEED    = 8f;
@@ -377,7 +379,7 @@ public class UserEntity : MonoBehaviour
             yield return ClearHeldObject();
             yield return new WaitForSeconds(0.5f);
         }
-        if (standingSpot != null)
+        if (!skipReturnToStanding && standingSpot != null)
             yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
     }
 
@@ -410,7 +412,7 @@ public class UserEntity : MonoBehaviour
             yield return ClearHeldObject();
             yield return new WaitForSeconds(0.5f);
         }
-        if (standingSpot != null)
+        if (!skipReturnToStanding && standingSpot != null)
             yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
     }
 
@@ -470,7 +472,7 @@ public class UserEntity : MonoBehaviour
             yield return ClearHeldObject();
             yield return new WaitForSeconds(0.5f);
         }
-        if (standingSpot != null)
+        if (!skipReturnToStanding && standingSpot != null)
             yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
     }
 
@@ -501,7 +503,7 @@ public class UserEntity : MonoBehaviour
             yield return ClearHeldObject();
             yield return new WaitForSeconds(0.5f);
         }
-        if (standingSpot != null)
+        if (!skipReturnToStanding && standingSpot != null)
             yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
     }
 
@@ -594,7 +596,7 @@ public class UserEntity : MonoBehaviour
             yield return ClearHeldObject();
             yield return new WaitForSeconds(0.5f);
         }
-        if (standingSpot != null)
+        if (!skipReturnToStanding && standingSpot != null)
             yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
     }
 
@@ -629,7 +631,7 @@ public class UserEntity : MonoBehaviour
             yield return ClearHeldObject();
             yield return new WaitForSeconds(0.5f);
         }
-        if (standingSpot != null)
+        if (!skipReturnToStanding && standingSpot != null)
             yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
     }
 
@@ -660,7 +662,7 @@ public class UserEntity : MonoBehaviour
             yield return ClearHeldObject();
             yield return new WaitForSeconds(0.5f);
         }
-        if (standingSpot != null)
+        if (!skipReturnToStanding && standingSpot != null)
             yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
     }
 

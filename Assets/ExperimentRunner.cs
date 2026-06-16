@@ -545,38 +545,47 @@ public class ExperimentRunner : MonoBehaviour
 
         if (virtualCameraBrain != null) virtualCameraBrain.SetVirtualHour(CurrentVirtualHour);
         SetUsersVirtualHour(CurrentVirtualHour);
+        yield return new WaitForSeconds(0.5f);
 
-        bool tvOn = TV_ON_BEHAVIORS.Contains(seq.groundTruth);
-        yield return StartCoroutine(SetDeviceState("tv", tvOn ? "on" : "off"));
-        if (virtualCameraBrain != null) virtualCameraBrain.SetTVState(tvOn);
-        yield return new WaitForSeconds(1.5f);
-
-        int lastIdx = seq.actions.Length - 1;
-        for (int i = 0; i < lastIdx; i++)
+        for (int i = 0; i < seq.actions.Length; i++)
         {
-            targetUser.lastAssignedActivity = seq.actions[i];
+            string action = seq.actions[i];
+            bool   isLast = (i == seq.actions.Length - 1);
+
+            if (action == "Opening")
+            {
+                targetUser.skipReturnToStanding = true;
+                targetUser.lastAssignedActivity = action;
+                targetUser.ResetBusy();
+                yield return StartCoroutine(targetUser.SwitchActivity(action));
+                targetUser.skipReturnToStanding = false;
+                yield return new WaitForSeconds(0.3f);
+                continue;
+            }
+
+            bool tvOn = TV_ON_BEHAVIORS.Contains(action);
+            yield return StartCoroutine(SetDeviceState("tv", tvOn ? "on" : "off"));
+            if (virtualCameraBrain != null) virtualCameraBrain.SetTVState(tvOn);
+
+            Transform spot = (targetUser == userMom)
+                ? GetMomSpot(action, episodeIndex)
+                : GetDadSpot(action, episodeIndex);
+            if (spot != null) targetUser.overrideSpot = spot;
+
+            targetUser.skipReturnToStanding = !isLast;
+            targetUser.lastAssignedActivity = action;
             targetUser.ResetBusy();
-            yield return StartCoroutine(targetUser.SwitchActivity(seq.actions[i]));
-            yield return new WaitForSeconds(0.5f);
+            yield return StartCoroutine(targetUser.SwitchActivity(action));
+
+            targetUser.lastAssignedActivity = action;
+            yield return new WaitForSeconds(waitAfterCapture);
+            targetUser.lastAssignedActivity = "";
+
+            targetUser.skipReturnToStanding = false;
+
+            if (!isLast)
+                yield return new WaitForSeconds(0.5f);
         }
-
-        Transform spot = (targetUser == userMom)
-            ? GetMomSpot(seq.groundTruth, episodeIndex)
-            : GetDadSpot(seq.groundTruth, episodeIndex);
-        if (spot != null) targetUser.overrideSpot = spot;
-
-        if (HeldObjectActions.Contains(seq.groundTruth))
-        {
-            targetUser.PreActivateHeldObject(seq.groundTruth);
-            yield return new WaitForSeconds(1.0f);
-        }
-
-        targetUser.lastAssignedActivity = seq.actions[lastIdx];
-        targetUser.ResetBusy();
-        yield return StartCoroutine(targetUser.SwitchActivity(seq.actions[lastIdx]));
-        targetUser.lastAssignedActivity = seq.groundTruth;
-        yield return new WaitForSeconds(waitAfterCapture);
-        targetUser.lastAssignedActivity = "";
 
         yield return StartCoroutine(SetDeviceState("tv", "off"));
         if (virtualCameraBrain != null) virtualCameraBrain.SetTVState(false);
@@ -715,22 +724,18 @@ public class ExperimentRunner : MonoBehaviour
         int totalWeight = 0;
         foreach (var s in sequences) totalWeight += s.weight;
 
-        var result    = new List<BehaviorSequence>();
-        int allocated = 0;
-        for (int i = 0; i < sequences.Length; i++)
+        var result = new List<BehaviorSequence>();
+        var rng    = new System.Random();
+
+        for (int i = 0; i < totalCount; i++)
         {
-            int count = (i == sequences.Length - 1)
-                ? Mathf.Max(0, totalCount - allocated)
-                : Mathf.Max(0, Mathf.RoundToInt(
-                    (float)sequences[i].weight / totalWeight * totalCount));
-            for (int j = 0; j < count; j++) result.Add(sequences[i]);
-            allocated += count;
-        }
-        var rng = new System.Random();
-        for (int i = result.Count - 1; i > 0; i--)
-        {
-            int j = rng.Next(i + 1);
-            (result[i], result[j]) = (result[j], result[i]);
+            int r   = rng.Next(totalWeight);
+            int cum = 0;
+            foreach (var s in sequences)
+            {
+                cum += s.weight;
+                if (r < cum) { result.Add(s); break; }
+            }
         }
         return result;
     }

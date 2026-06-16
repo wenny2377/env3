@@ -11565,7 +11565,7 @@ MonoBehaviour:
   - {fileID: 267607256}
   - {fileID: 1074887085}
   mode: 1
-  experimentType: 0
+  experimentType: 1
   exp_totalDays: 21
   skipProbability: 0.2
   waitAfterCapture: 8
