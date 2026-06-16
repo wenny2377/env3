@@ -26,29 +26,12 @@ public class ExperimentRunner : MonoBehaviour
     public ExperimentType experimentType = ExperimentType.Baseline;
 
     [Header("Experiment Settings")]
-    public int   exp_totalDays         = 21;
-    public int   exp_totalObservations = 600;
-    public int   episodesPerVirtualDay = 10;
-    public bool  addNoiseEpisodes      = true;
-    public int   noiseInterval         = 10;
+    public int   exp_totalDays   = 21;
     [Range(0f, 1f)]
-    public float skipProbability       = 0.2f;
+    public float skipProbability = 0.2f;
 
     [Header("Timing Settings")]
-    public float waitAfterCapture    = 3.0f;
-    public float waitBetweenEpisodes = 2.0f;
-    public float minIntervalInSlot   = 1.5f;
-
-    [Header("Corruption Settings")]
-    [Tooltip("Pickup miss rate for corruption experiment (EPIC-KITCHENS baseline: 0.15)")]
-    [Range(0f, 1f)]
-    public float corruptionPickupMissRate  = 0.15f;
-    [Tooltip("Putdown miss rate for corruption experiment")]
-    [Range(0f, 1f)]
-    public float corruptionPutdownMissRate = 0.10f;
-    [Tooltip("Object label confusion rate for corruption experiment")]
-    [Range(0f, 1f)]
-    public float corruptionObjectConfusionRate = 0.10f;
+    public float waitAfterCapture = 3.0f;
 
     [Header("Backend URL")]
     public string backendUrl = "http://localhost:5000";
@@ -57,9 +40,8 @@ public class ExperimentRunner : MonoBehaviour
     public bool runOnStart = true;
 
     [Header("Demo Mode Settings")]
-    public float demoSettleTime  = 2.5f;
-    public float demoHoldTime    = 1.0f;
-    public float demoSceneTime   = 5.0f;
+    public float demoSettleTime = 2.5f;
+    public float demoSceneTime  = 5.0f;
 
     [Header("Mom Spots - Drinking")]     public Transform[] momDrinkingSpots     = new Transform[3];
     [Header("Mom Spots - SittingDrink")] public Transform[] momSittingDrinkSpots = new Transform[3];
@@ -84,6 +66,16 @@ public class ExperimentRunner : MonoBehaviour
     [Header("Dad Spots - Reading")]      public Transform[] dadReadingSpots      = new Transform[3];
     [Header("Dad Spots - Cleaning")]     public Transform[] dadCleaningSpots     = new Transform[3];
     [Header("Dad Spots - PhoneUse")]     public Transform[] dadPhoneSpots        = new Transform[3];
+
+    const float CORRUPTION_PICKUP_MISS_RATE   = 0.15f;
+    const float CORRUPTION_PUTDOWN_MISS_RATE  = 0.10f;
+    const float CORRUPTION_OBJECT_CONFUSION   = 0.10f;
+    const int   EPISODES_PER_VIRTUAL_DAY      = 10;
+    const bool  ADD_NOISE_EPISODES            = true;
+    const int   NOISE_INTERVAL                = 10;
+    const float MIN_INTERVAL_IN_SLOT          = 1.5f;
+    const float WAIT_BETWEEN_EPISODES         = 2.0f;
+    const float DEMO_HOLD_TIME                = 1.0f;
 
     public enum RunMode        { Demo, Experiment }
     public enum ExperimentType { Baseline, Corruption }
@@ -139,86 +131,86 @@ public class ExperimentRunner : MonoBehaviour
         new TimeSlot {
             name = "Noon", virtualHour = 12f,
             momSequences = new BehaviorSequence[] {
-                new BehaviorSequence { actions = new[]{ "Sitting","Reading" },             groundTruth = "Reading",      weight = 4 },
-                new BehaviorSequence { actions = new[]{ "Reading","SittingDrink","Laying"},groundTruth = "Laying",       weight = 3 },
-                new BehaviorSequence { actions = new[]{ "SittingDrink","Laying" },         groundTruth = "Laying",       weight = 2 },
-                new BehaviorSequence { actions = new[]{ "Eating" },                        groundTruth = "Eating",       weight = 2 },
-                new BehaviorSequence { actions = new[]{ "Reading" },                       groundTruth = "Reading",      weight = 2 },
-                new BehaviorSequence { actions = new[]{ "PhoneUse" },                      groundTruth = "PhoneUse",     weight = 1 },
+                new BehaviorSequence { actions = new[]{ "Sitting","Reading" },              groundTruth = "Reading",      weight = 4 },
+                new BehaviorSequence { actions = new[]{ "Reading","SittingDrink","Laying" },groundTruth = "Laying",       weight = 3 },
+                new BehaviorSequence { actions = new[]{ "SittingDrink","Laying" },          groundTruth = "Laying",       weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Eating" },                         groundTruth = "Eating",       weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Reading" },                         groundTruth = "Reading",      weight = 2 },
+                new BehaviorSequence { actions = new[]{ "PhoneUse" },                        groundTruth = "PhoneUse",     weight = 1 },
             },
             dadSequences = new BehaviorSequence[] {
-                new BehaviorSequence { actions = new[]{ "Laying" },                        groundTruth = "Laying",       weight = 4 },
-                new BehaviorSequence { actions = new[]{ "Laying","Watching" },             groundTruth = "Watching",     weight = 3 },
-                new BehaviorSequence { actions = new[]{ "Eating","Laying" },               groundTruth = "Laying",       weight = 2 },
-                new BehaviorSequence { actions = new[]{ "PhoneUse" },                      groundTruth = "PhoneUse",     weight = 2 },
-                new BehaviorSequence { actions = new[]{ "Watching" },                      groundTruth = "Watching",     weight = 2 },
-                new BehaviorSequence { actions = new[]{ "Sitting" },                       groundTruth = "Sitting",      weight = 1 },
+                new BehaviorSequence { actions = new[]{ "Laying" },                         groundTruth = "Laying",       weight = 4 },
+                new BehaviorSequence { actions = new[]{ "Laying","Watching" },              groundTruth = "Watching",     weight = 3 },
+                new BehaviorSequence { actions = new[]{ "Eating","Laying" },                groundTruth = "Laying",       weight = 2 },
+                new BehaviorSequence { actions = new[]{ "PhoneUse" },                       groundTruth = "PhoneUse",     weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Watching" },                       groundTruth = "Watching",     weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Sitting" },                        groundTruth = "Sitting",      weight = 1 },
             },
         },
         new TimeSlot {
             name = "Afternoon", virtualHour = 15f,
             momSequences = new BehaviorSequence[] {
-                new BehaviorSequence { actions = new[]{ "Cleaning","Reading" },            groundTruth = "Reading",      weight = 3 },
-                new BehaviorSequence { actions = new[]{ "Cleaning" },                      groundTruth = "Cleaning",     weight = 3 },
-                new BehaviorSequence { actions = new[]{ "Reading","SittingDrink" },        groundTruth = "SittingDrink", weight = 3 },
-                new BehaviorSequence { actions = new[]{ "Sitting","Reading" },             groundTruth = "Reading",      weight = 2 },
-                new BehaviorSequence { actions = new[]{ "PhoneUse" },                      groundTruth = "PhoneUse",     weight = 2 },
-                new BehaviorSequence { actions = new[]{ "SittingDrink" },                  groundTruth = "SittingDrink", weight = 1 },
+                new BehaviorSequence { actions = new[]{ "Cleaning","Reading" },             groundTruth = "Reading",      weight = 3 },
+                new BehaviorSequence { actions = new[]{ "Cleaning" },                       groundTruth = "Cleaning",     weight = 3 },
+                new BehaviorSequence { actions = new[]{ "Reading","SittingDrink" },         groundTruth = "SittingDrink", weight = 3 },
+                new BehaviorSequence { actions = new[]{ "Sitting","Reading" },              groundTruth = "Reading",      weight = 2 },
+                new BehaviorSequence { actions = new[]{ "PhoneUse" },                       groundTruth = "PhoneUse",     weight = 2 },
+                new BehaviorSequence { actions = new[]{ "SittingDrink" },                   groundTruth = "SittingDrink", weight = 1 },
             },
             dadSequences = new BehaviorSequence[] {
-                new BehaviorSequence { actions = new[]{ "Typing","PhoneUse","Typing" },    groundTruth = "Typing",       weight = 4 },
-                new BehaviorSequence { actions = new[]{ "Typing" },                        groundTruth = "Typing",       weight = 3 },
-                new BehaviorSequence { actions = new[]{ "PhoneUse","Typing" },             groundTruth = "Typing",       weight = 2 },
-                new BehaviorSequence { actions = new[]{ "PhoneUse" },                      groundTruth = "PhoneUse",     weight = 3 },
-                new BehaviorSequence { actions = new[]{ "Sitting" },                       groundTruth = "Sitting",      weight = 1 },
+                new BehaviorSequence { actions = new[]{ "Typing","PhoneUse","Typing" },     groundTruth = "Typing",       weight = 4 },
+                new BehaviorSequence { actions = new[]{ "Typing" },                         groundTruth = "Typing",       weight = 3 },
+                new BehaviorSequence { actions = new[]{ "PhoneUse","Typing" },              groundTruth = "Typing",       weight = 2 },
+                new BehaviorSequence { actions = new[]{ "PhoneUse" },                       groundTruth = "PhoneUse",     weight = 3 },
+                new BehaviorSequence { actions = new[]{ "Sitting" },                        groundTruth = "Sitting",      weight = 1 },
             },
         },
         new TimeSlot {
             name = "Evening", virtualHour = 19f,
             momSequences = new BehaviorSequence[] {
-                new BehaviorSequence { actions = new[]{ "Cooking","Eating","Watching" },   groundTruth = "Watching",     weight = 4 },
-                new BehaviorSequence { actions = new[]{ "Eating","Watching" },             groundTruth = "Watching",     weight = 3 },
-                new BehaviorSequence { actions = new[]{ "Cooking","Eating" },              groundTruth = "Eating",       weight = 2 },
-                new BehaviorSequence { actions = new[]{ "Watching","SittingDrink" },       groundTruth = "Watching",     weight = 2 },
-                new BehaviorSequence { actions = new[]{ "PhoneUse" },                      groundTruth = "PhoneUse",     weight = 2 },
-                new BehaviorSequence { actions = new[]{ "Watching" },                      groundTruth = "Watching",     weight = 1 },
+                new BehaviorSequence { actions = new[]{ "Cooking","Eating","Watching" },    groundTruth = "Watching",     weight = 4 },
+                new BehaviorSequence { actions = new[]{ "Eating","Watching" },              groundTruth = "Watching",     weight = 3 },
+                new BehaviorSequence { actions = new[]{ "Cooking","Eating" },               groundTruth = "Eating",       weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Watching","SittingDrink" },        groundTruth = "Watching",     weight = 2 },
+                new BehaviorSequence { actions = new[]{ "PhoneUse" },                       groundTruth = "PhoneUse",     weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Watching" },                       groundTruth = "Watching",     weight = 1 },
             },
             dadSequences = new BehaviorSequence[] {
-                new BehaviorSequence { actions = new[]{ "Eating","PhoneUse","SittingDrink" }, groundTruth = "PhoneUse",    weight = 3 },
-                new BehaviorSequence { actions = new[]{ "Eating","PhoneUse" },                groundTruth = "PhoneUse",    weight = 3 },
-                new BehaviorSequence { actions = new[]{ "PhoneUse","SittingDrink" },          groundTruth = "SittingDrink",weight = 5 },
-                new BehaviorSequence { actions = new[]{ "Eating","Watching" },                groundTruth = "Watching",    weight = 2 },
-                new BehaviorSequence { actions = new[]{ "PhoneUse" },                         groundTruth = "PhoneUse",    weight = 2 },
-                new BehaviorSequence { actions = new[]{ "Watching" },                         groundTruth = "Watching",    weight = 1 },
+                new BehaviorSequence { actions = new[]{ "Eating","PhoneUse","SittingDrink" },groundTruth = "PhoneUse",    weight = 3 },
+                new BehaviorSequence { actions = new[]{ "Eating","PhoneUse" },               groundTruth = "PhoneUse",    weight = 3 },
+                new BehaviorSequence { actions = new[]{ "PhoneUse","SittingDrink" },         groundTruth = "SittingDrink",weight = 5 },
+                new BehaviorSequence { actions = new[]{ "Eating","Watching" },               groundTruth = "Watching",    weight = 2 },
+                new BehaviorSequence { actions = new[]{ "PhoneUse" },                        groundTruth = "PhoneUse",    weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Watching" },                        groundTruth = "Watching",    weight = 1 },
             },
         },
         new TimeSlot {
             name = "Night", virtualHour = 23f,
             momSequences = new BehaviorSequence[] {
-                new BehaviorSequence { actions = new[]{ "Reading","Laying" },              groundTruth = "Laying",       weight = 4 },
-                new BehaviorSequence { actions = new[]{ "Laying" },                        groundTruth = "Laying",       weight = 3 },
-                new BehaviorSequence { actions = new[]{ "Sitting","Reading","Laying" },    groundTruth = "Laying",       weight = 2 },
-                new BehaviorSequence { actions = new[]{ "SittingDrink","Reading" },        groundTruth = "Reading",      weight = 2 },
-                new BehaviorSequence { actions = new[]{ "Reading" },                       groundTruth = "Reading",      weight = 2 },
-                new BehaviorSequence { actions = new[]{ "PhoneUse" },                      groundTruth = "PhoneUse",     weight = 1 },
+                new BehaviorSequence { actions = new[]{ "Reading","Laying" },               groundTruth = "Laying",       weight = 4 },
+                new BehaviorSequence { actions = new[]{ "Laying" },                         groundTruth = "Laying",       weight = 3 },
+                new BehaviorSequence { actions = new[]{ "Sitting","Reading","Laying" },     groundTruth = "Laying",       weight = 2 },
+                new BehaviorSequence { actions = new[]{ "SittingDrink","Reading" },         groundTruth = "Reading",      weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Reading" },                        groundTruth = "Reading",      weight = 2 },
+                new BehaviorSequence { actions = new[]{ "PhoneUse" },                       groundTruth = "PhoneUse",     weight = 1 },
             },
             dadSequences = new BehaviorSequence[] {
-                new BehaviorSequence { actions = new[]{ "PhoneUse","Watching","Laying" },  groundTruth = "Laying",       weight = 4 },
-                new BehaviorSequence { actions = new[]{ "PhoneUse","Laying" },             groundTruth = "Laying",       weight = 3 },
-                new BehaviorSequence { actions = new[]{ "Watching","Laying" },             groundTruth = "Laying",       weight = 2 },
-                new BehaviorSequence { actions = new[]{ "PhoneUse" },                      groundTruth = "PhoneUse",     weight = 2 },
-                new BehaviorSequence { actions = new[]{ "PhoneUse","Watching" },           groundTruth = "Watching",     weight = 2 },
-                new BehaviorSequence { actions = new[]{ "Sitting" },                       groundTruth = "Sitting",      weight = 1 },
+                new BehaviorSequence { actions = new[]{ "PhoneUse","Watching","Laying" },   groundTruth = "Laying",       weight = 4 },
+                new BehaviorSequence { actions = new[]{ "PhoneUse","Laying" },              groundTruth = "Laying",       weight = 3 },
+                new BehaviorSequence { actions = new[]{ "Watching","Laying" },              groundTruth = "Laying",       weight = 2 },
+                new BehaviorSequence { actions = new[]{ "PhoneUse" },                       groundTruth = "PhoneUse",     weight = 2 },
+                new BehaviorSequence { actions = new[]{ "PhoneUse","Watching" },            groundTruth = "Watching",     weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Sitting" },                        groundTruth = "Sitting",      weight = 1 },
             },
         },
     };
 
-    int   totalRuns   = 0;
-    int   successRuns = 0;
-    int   skippedRuns = 0;
-    int   noiseRuns   = 0;
-    bool  isRunning   = false;
-    bool  flaskReady  = false;
+    int    totalRuns    = 0;
+    int    successRuns  = 0;
+    int    skippedRuns  = 0;
+    int    noiseRuns    = 0;
+    bool   isRunning    = false;
+    bool   flaskReady   = false;
     string _demoMessage = "Observing...";
 
     static readonly System.Globalization.CultureInfo InvCulture =
@@ -266,14 +258,11 @@ public class ExperimentRunner : MonoBehaviour
         }
     }
 
-    // ── Demo Story ────────────────────────────────────────────────────────────
-
     IEnumerator RunDemoScan()
     {
         yield return new WaitForSeconds(1.0f);
         Debug.Log("[Demo] Story begin");
 
-        // Scene 1: Mom Cooking → Eating (Kitchen)
         yield return StartCoroutine(PostDemoScene(1, "User_Mom"));
         _demoMessage = "Observing Mom cooking dinner...";
         userDad.gameObject.SetActive(false);
@@ -283,26 +272,20 @@ public class ExperimentRunner : MonoBehaviour
         SetUsersVirtualHour(19f);
         PostVirtualHourFireAndForget(19f);
         yield return StartCoroutine(SetDeviceState("tv", "off"));
-
-        yield return StartCoroutine(userMom.MoveToSpotAndHold("Opening", GetMomSpot("Opening", 0)));
+        yield return StartCoroutine(userMom.MoveToSpotAndHold("Opening",  GetMomSpot("Opening",  0)));
         yield return new WaitForSeconds(demoSceneTime * 0.5f);
-
-        yield return StartCoroutine(userMom.MoveToSpotAndHold("Cooking", GetMomSpot("Cooking", 0)));
+        yield return StartCoroutine(userMom.MoveToSpotAndHold("Cooking",  GetMomSpot("Cooking",  0)));
+        yield return new WaitForSeconds(demoSceneTime);
+        yield return StartCoroutine(userMom.MoveToSpotAndHold("Eating",   GetMomSpot("Eating",   0)));
         yield return new WaitForSeconds(demoSceneTime);
 
-        yield return StartCoroutine(userMom.MoveToSpotAndHold("Eating", GetMomSpot("Eating", 0)));
-        yield return new WaitForSeconds(demoSceneTime);
-
-        // Scene 2: Mom Sitting → Proactive triggers
         yield return StartCoroutine(PostDemoScene(2, "User_Mom"));
         _demoMessage = "Mom finished eating. Predicting next need...";
         yield return StartCoroutine(userMom.MoveToSpotAndHold("Sitting", GetMomSpot("Sitting", 0)));
         yield return new WaitForSeconds(demoSettleTime);
         yield return StartCoroutine(PostActionEvent("User_Mom", "Eating", "Sitting", "Evening"));
         yield return new WaitForSeconds(4.0f);
-        Debug.Log("[Demo] Scene 2 done - proactive triggered");
 
-        // Scene 3: Mom SittingDrink → Watching (LivingRoom)
         yield return StartCoroutine(PostDemoScene(3, "User_Mom"));
         _demoMessage = "Bringing water to Mom.";
         yield return StartCoroutine(SetDeviceState("tv", "on"));
@@ -310,10 +293,8 @@ public class ExperimentRunner : MonoBehaviour
         yield return StartCoroutine(userMom.MoveToSpotAndHold("SittingDrink", GetMomSpot("SittingDrink", 0)));
         yield return new WaitForSeconds(demoSceneTime * 0.5f);
         yield return StartCoroutine(userMom.MoveToSpotAndHold("Watching", GetMomSpot("Watching", 0)));
-        yield return new WaitForSeconds(demoHoldTime);
-        Debug.Log("[Demo] Scene 3 done");
+        yield return new WaitForSeconds(DEMO_HOLD_TIME);
 
-        // Scene 4: Dad Typing (DadRoom) — Dashboard auto chat
         yield return StartCoroutine(PostDemoScene(4, "User_Dad"));
         _demoMessage = "Dad is working in his room...";
         yield return StartCoroutine(SetDeviceState("tv", "off"));
@@ -321,10 +302,8 @@ public class ExperimentRunner : MonoBehaviour
         userMom.gameObject.SetActive(false);
         userDad.gameObject.SetActive(true);
         yield return StartCoroutine(userDad.MoveToSpotAndHold("Typing", GetDadSpot("Typing", 0)));
-        yield return StartCoroutine(WaitForSceneDone(maxWaitSeconds: 120f));
-        Debug.Log("[Demo] Scene 4 done - Dad chat complete");
+        yield return StartCoroutine(WaitForSceneDone(120f));
 
-        // Scene 5: Mom Watching (LivingRoom) — Dashboard auto chat
         yield return StartCoroutine(PostDemoScene(5, "User_Mom"));
         _demoMessage = "Mom is watching TV in the living room...";
         userDad.gameObject.SetActive(false);
@@ -332,10 +311,8 @@ public class ExperimentRunner : MonoBehaviour
         yield return StartCoroutine(SetDeviceState("tv", "on"));
         if (virtualCameraBrain != null) virtualCameraBrain.SetTVState(true);
         yield return StartCoroutine(userMom.MoveToSpotAndHold("Watching", GetMomSpot("Watching", 0)));
-        yield return StartCoroutine(WaitForSceneDone(maxWaitSeconds: 60f));
-        Debug.Log("[Demo] Scene 5 done - Mom chat complete");
+        yield return StartCoroutine(WaitForSceneDone(60f));
 
-        // Scene 6: Both appear — story end
         yield return StartCoroutine(PostDemoScene(6, ""));
         _demoMessage = "System has learned the preferences of both residents.";
         yield return StartCoroutine(SetDeviceState("tv", "off"));
@@ -383,13 +360,11 @@ public class ExperimentRunner : MonoBehaviour
             using var req = UnityWebRequest.Get($"{backendUrl}/demo/wait_scene_done");
             req.timeout = 5;
             yield return req.SendWebRequest();
-            if (req.result == UnityWebRequest.Result.Success)
+            if (req.result == UnityWebRequest.Result.Success &&
+                req.downloadHandler.text.Contains("\"done\":true"))
             {
-                if (req.downloadHandler.text.Contains("\"done\":true"))
-                {
-                    Debug.Log("[Demo] Scene done confirmed");
-                    yield break;
-                }
+                Debug.Log("[Demo] Scene done confirmed");
+                yield break;
             }
             yield return new WaitForSeconds(2f);
             waited += 2f;
@@ -430,20 +405,20 @@ public class ExperimentRunner : MonoBehaviour
 
         if (userMom != null)
         {
-            userMom.pickupMissRate  = isCorruption ? corruptionPickupMissRate  : 0.0f;
-            userMom.putdownMissRate = isCorruption ? corruptionPutdownMissRate : 0.0f;
+            userMom.pickupMissRate  = isCorruption ? CORRUPTION_PICKUP_MISS_RATE  : 0.0f;
+            userMom.putdownMissRate = isCorruption ? CORRUPTION_PUTDOWN_MISS_RATE : 0.0f;
             userMom.SetSkeletonNoise(isCorruption);
         }
         if (userDad != null)
         {
-            userDad.pickupMissRate  = isCorruption ? corruptionPickupMissRate  : 0.0f;
-            userDad.putdownMissRate = isCorruption ? corruptionPutdownMissRate : 0.0f;
+            userDad.pickupMissRate  = isCorruption ? CORRUPTION_PICKUP_MISS_RATE  : 0.0f;
+            userDad.putdownMissRate = isCorruption ? CORRUPTION_PUTDOWN_MISS_RATE : 0.0f;
             userDad.SetSkeletonNoise(isCorruption);
         }
 
         var dsm = FindObjectOfType<DynamicSyncManager>();
         if (dsm != null)
-            dsm.objectConfusionRate = isCorruption ? corruptionObjectConfusionRate : 0.0f;
+            dsm.objectConfusionRate = isCorruption ? CORRUPTION_OBJECT_CONFUSION : 0.0f;
 
         Debug.Log($"[ExperimentRunner] Start | type={experimentType} | "
                 + $"corruption={isCorruption} | "
@@ -497,13 +472,12 @@ public class ExperimentRunner : MonoBehaviour
         cameraManager.captureMode = StaticCameraManager.CaptureMode.EventDriven;
 
         int totalDays    = exp_totalDays;
-        int epPerSlot    = Mathf.Max(1, episodesPerVirtualDay / TimeSlots.Length);
+        int epPerSlot    = Mathf.Max(1, EPISODES_PER_VIRTUAL_DAY / TimeSlots.Length);
         int episodeCount = 0;
 
         for (int day = 1; day <= totalDays; day++)
         {
             CurrentVirtualDay = day;
-
             foreach (var slot in TimeSlots)
             {
                 CurrentVirtualHour = slot.virtualHour;
@@ -523,14 +497,12 @@ public class ExperimentRunner : MonoBehaviour
                         if (Random.value < skipProbability) { skippedRuns++; }
                         else
                         {
-                            yield return StartCoroutine(
-                                RunSequenceEpisode(userMom, momQ[i], episodeCount));
-                            yield return new WaitForSeconds(minIntervalInSlot);
+                            yield return StartCoroutine(RunSequenceEpisode(userMom, momQ[i], episodeCount));
+                            yield return new WaitForSeconds(MIN_INTERVAL_IN_SLOT);
                             successRuns++;
                             episodeCount++;
                         }
-                        if (addNoiseEpisodes && episodeCount > 0 &&
-                            episodeCount % noiseInterval == 0)
+                        if (ADD_NOISE_EPISODES && episodeCount > 0 && episodeCount % NOISE_INTERVAL == 0)
                         {
                             yield return StartCoroutine(RunNoiseEpisode(userMom));
                             noiseRuns++;
@@ -543,14 +515,12 @@ public class ExperimentRunner : MonoBehaviour
                         if (Random.value < skipProbability) { skippedRuns++; }
                         else
                         {
-                            yield return StartCoroutine(
-                                RunSequenceEpisode(userDad, dadQ[i], episodeCount));
-                            yield return new WaitForSeconds(minIntervalInSlot);
+                            yield return StartCoroutine(RunSequenceEpisode(userDad, dadQ[i], episodeCount));
+                            yield return new WaitForSeconds(MIN_INTERVAL_IN_SLOT);
                             successRuns++;
                             episodeCount++;
                         }
-                        if (addNoiseEpisodes && episodeCount > 0 &&
-                            episodeCount % noiseInterval == 0)
+                        if (ADD_NOISE_EPISODES && episodeCount > 0 && episodeCount % NOISE_INTERVAL == 0)
                         {
                             yield return StartCoroutine(RunNoiseEpisode(userDad));
                             noiseRuns++;
@@ -559,13 +529,11 @@ public class ExperimentRunner : MonoBehaviour
                 }
                 yield return StartCoroutine(PostCheckpoint(day, slot.name, episodeCount));
             }
-            Debug.Log($"[Experiment] Day {day}/{totalDays} "
-                    + $"success={successRuns} skip={skippedRuns}");
+            Debug.Log($"[Experiment] Day {day}/{totalDays} success={successRuns} skip={skippedRuns}");
         }
     }
 
-    IEnumerator RunSequenceEpisode(
-        UserEntity targetUser, BehaviorSequence seq, int episodeIndex = 0)
+    IEnumerator RunSequenceEpisode(UserEntity targetUser, BehaviorSequence seq, int episodeIndex = 0)
     {
         UserEntity other = (targetUser == userMom) ? userDad : userMom;
         if (other      != null) other.gameObject.SetActive(false);
@@ -575,8 +543,7 @@ public class ExperimentRunner : MonoBehaviour
         if (_dsm != null) _dsm.ForceObjectSync();
         yield return new WaitForSeconds(0.5f);
 
-        if (virtualCameraBrain != null)
-            virtualCameraBrain.SetVirtualHour(CurrentVirtualHour);
+        if (virtualCameraBrain != null) virtualCameraBrain.SetVirtualHour(CurrentVirtualHour);
         SetUsersVirtualHour(CurrentVirtualHour);
 
         bool tvOn = TV_ON_BEHAVIORS.Contains(seq.groundTruth);
@@ -607,7 +574,6 @@ public class ExperimentRunner : MonoBehaviour
         targetUser.lastAssignedActivity = seq.actions[lastIdx];
         targetUser.ResetBusy();
         yield return StartCoroutine(targetUser.SwitchActivity(seq.actions[lastIdx]));
-
         targetUser.lastAssignedActivity = seq.groundTruth;
         yield return new WaitForSeconds(waitAfterCapture);
         targetUser.lastAssignedActivity = "";
@@ -619,7 +585,7 @@ public class ExperimentRunner : MonoBehaviour
         yield return new WaitForSeconds(3.0f);
 
         if (other != null) { WarpUserToSpot(other); other.gameObject.SetActive(true); }
-        yield return new WaitForSeconds(waitBetweenEpisodes);
+        yield return new WaitForSeconds(WAIT_BETWEEN_EPISODES);
     }
 
     IEnumerator RunNoiseEpisode(UserEntity user)
@@ -629,8 +595,7 @@ public class ExperimentRunner : MonoBehaviour
         if (other != null) other.gameObject.SetActive(false);
         if (user  != null) user.gameObject.SetActive(true);
 
-        if (virtualCameraBrain != null)
-            virtualCameraBrain.SetVirtualHour(CurrentVirtualHour);
+        if (virtualCameraBrain != null) virtualCameraBrain.SetVirtualHour(CurrentVirtualHour);
 
         user.lastAssignedActivity = noise;
         user.ResetBusy();
@@ -640,7 +605,7 @@ public class ExperimentRunner : MonoBehaviour
 
         yield return StartCoroutine(user.ReturnToStanding());
         if (other != null) { WarpUserToSpot(other); other.gameObject.SetActive(true); }
-        yield return new WaitForSeconds(waitBetweenEpisodes);
+        yield return new WaitForSeconds(WAIT_BETWEEN_EPISODES);
     }
 
     IEnumerator SetDeviceState(string label, string state)
@@ -672,8 +637,7 @@ public class ExperimentRunner : MonoBehaviour
                     + $"\"slot\":\"{slotName}\""
                     + "}";
                 using var req = new UnityWebRequest($"{backendUrl}/exp_checkpoint", "POST");
-                req.uploadHandler   = new UploadHandlerRaw(
-                    System.Text.Encoding.UTF8.GetBytes(json));
+                req.uploadHandler   = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(json));
                 req.downloadHandler = new DownloadHandlerBuffer();
                 req.SetRequestHeader("Content-Type", "application/json");
                 req.timeout = 5;
@@ -746,8 +710,7 @@ public class ExperimentRunner : MonoBehaviour
         _              => null,
     };
 
-    List<BehaviorSequence> BuildSequenceQueue(
-        BehaviorSequence[] sequences, int totalCount)
+    List<BehaviorSequence> BuildSequenceQueue(BehaviorSequence[] sequences, int totalCount)
     {
         int totalWeight = 0;
         foreach (var s in sequences) totalWeight += s.weight;
@@ -779,8 +742,7 @@ public class ExperimentRunner : MonoBehaviour
     {
         string json = $"{{\"virtual_hour\":{hour.ToString("F1", InvCulture)}}}";
         using var req = new UnityWebRequest($"{backendUrl}/set_virtual_hour", "POST");
-        req.uploadHandler   = new UploadHandlerRaw(
-            System.Text.Encoding.UTF8.GetBytes(json));
+        req.uploadHandler   = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(json));
         req.downloadHandler = new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
         req.timeout = 3;
@@ -792,12 +754,10 @@ public class ExperimentRunner : MonoBehaviour
         if (mode == RunMode.Demo)
         {
             GUI.Box(new Rect(10, Screen.height - 60, 600, 50), "");
-            GUI.Label(new Rect(20, Screen.height - 50, 580, 40),
-                $"Robot: {_demoMessage}");
+            GUI.Label(new Rect(20, Screen.height - 50, 580, 40), $"Robot: {_demoMessage}");
             return;
         }
-        string status = isRunning ? "" :
-            (flaskReady ? "[Ready] Press Space" : "[Waiting Flask...]");
+        string status = isRunning ? "" : (flaskReady ? "[Ready] Press Space" : "[Waiting Flask...]");
         GUI.Label(new Rect(10, 10, 1400, 22),
             $"[{experimentType}] {CurrentTimeSlot} {CurrentVirtualHour:F0}:00  "
           + $"Day={CurrentVirtualDay}/{exp_totalDays}  "

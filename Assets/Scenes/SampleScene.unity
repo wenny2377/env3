@@ -2684,13 +2684,6 @@ MonoBehaviour:
   fridgeHingePoint: {fileID: 1812008388}
   fridgeOpenAngle: -90
   fridgeOpenSpeed: 90
-  walkSpeed: 1.4
-  arrivalThreshold: 0.08
-  rotationSpeed: 8
-  navSampleRadius: 3
-  shadowInterval: 0.5
-  jitterRadius: 0.25
-  backendUrl: http://localhost:5000
   noddingDuration: 1.5
   drinkDuration: 2
   eatDuration: 3
@@ -2744,26 +2737,9 @@ MonoBehaviour:
     item2: {fileID: 0}
     sceneCounterpart: {fileID: 1644722504}
     sceneCounterpart2: {fileID: 0}
+  backendUrl: http://localhost:5000
   pickupMissRate: 0
   putdownMissRate: 0
-  stateStanding: Standing
-  stateWalk: Walking
-  stateDrink: Drinking
-  stateSittingDrink: SittingDrink
-  stateSitting: Sitting
-  stateStandUp: StandUp
-  stateLaying: Laying
-  stateReading: Reading
-  stateTyping: Typing
-  stateWatching: Watching
-  statePhone: PhoneUse
-  stateNodding: Nodding
-  stateEating: Eating
-  stateCooking: Cooking
-  stateCleaning: Cleaning
-  stateOpening: Opening
-  statePickingUp: PickingUp
-  statePuttingDown: PuttingDown
   lastAssignedActivity: 
   currentVirtualHour: -1
   overrideSpot: {fileID: 0}
@@ -4815,10 +4791,8 @@ MonoBehaviour:
   - {fileID: 1644722504}
   backendUrl: http://localhost:5000
   positionInterval: 0.5
-  objectSyncInterval: 1
-  moveTolerance: 0.02
+  objectSyncInterval: 5
   objectConfusionRate: 0
-  verboseLog: 0
 --- !u!1 &828247090
 GameObject:
   m_ObjectHideFlags: 0
@@ -9514,13 +9488,6 @@ MonoBehaviour:
   fridgeHingePoint: {fileID: 1812008388}
   fridgeOpenAngle: -90
   fridgeOpenSpeed: 90
-  walkSpeed: 1.4
-  arrivalThreshold: 0.32
-  rotationSpeed: 8
-  navSampleRadius: 3
-  shadowInterval: 0.5
-  jitterRadius: 0.25
-  backendUrl: http://localhost:5000
   noddingDuration: 1.5
   drinkDuration: 2
   eatDuration: 3
@@ -9574,26 +9541,9 @@ MonoBehaviour:
     item2: {fileID: 0}
     sceneCounterpart: {fileID: 1644722504}
     sceneCounterpart2: {fileID: 0}
+  backendUrl: http://localhost:5000
   pickupMissRate: 0.15
   putdownMissRate: 0.1
-  stateStanding: Standing
-  stateWalk: Walking
-  stateDrink: Drinking
-  stateSittingDrink: SittingDrink
-  stateSitting: Sitting
-  stateStandUp: StandUp
-  stateLaying: Laying
-  stateReading: Reading
-  stateTyping: Typing
-  stateWatching: Watching
-  statePhone: PhoneUse
-  stateNodding: Nodding
-  stateEating: Eating
-  stateCooking: Cooking
-  stateCleaning: Cleaning
-  stateOpening: Opening
-  statePickingUp: PickingUp
-  statePuttingDown: PuttingDown
   lastAssignedActivity: 
   currentVirtualHour: -1
   overrideSpot: {fileID: 0}
@@ -11614,24 +11564,14 @@ MonoBehaviour:
   - {fileID: 1603672535}
   - {fileID: 267607256}
   - {fileID: 1074887085}
-  mode: 0
-  experimentType: 1
+  mode: 1
+  experimentType: 0
   exp_totalDays: 21
-  exp_totalObservations: 600
-  episodesPerVirtualDay: 10
-  addNoiseEpisodes: 1
-  noiseInterval: 10
   skipProbability: 0.2
   waitAfterCapture: 8
-  waitBetweenEpisodes: 2
-  minIntervalInSlot: 1.5
-  corruptionPickupMissRate: 0.15
-  corruptionPutdownMissRate: 0.1
-  corruptionObjectConfusionRate: 0.1
   backendUrl: http://localhost:5000
   runOnStart: 1
   demoSettleTime: 2.5
-  demoHoldTime: 1
   demoSceneTime: 5
   momDrinkingSpots:
   - {fileID: 836976212}

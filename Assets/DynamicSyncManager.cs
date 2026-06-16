@@ -18,17 +18,14 @@ public class DynamicSyncManager : MonoBehaviour
 
     [Header("Intervals (seconds)")]
     public float positionInterval   = 0.5f;
-    public float objectSyncInterval = 2.0f;
-
-    [Header("Movement Threshold")]
-    public float moveTolerance = 0.02f;
+    public float objectSyncInterval = 5.0f;
 
     [Header("Corruption Model")]
     [Range(0f, 1f)]
     public float objectConfusionRate = 0.0f;
 
-    [Header("Debug")]
-    public bool verboseLog = false;
+    const float MOVE_TOLERANCE = 0.02f;
+    const int   POST_TIMEOUT   = 15;
 
     static readonly Dictionary<string, string> ConfusionMap = new Dictionary<string, string>
     {
@@ -41,7 +38,8 @@ public class DynamicSyncManager : MonoBehaviour
     Dictionary<string, Quaternion> lastRot    = new Dictionary<string, Quaternion>();
     Dictionary<string, Vector3>    lastObjPos = new Dictionary<string, Vector3>();
 
-    static readonly System.Globalization.CultureInfo Inv = System.Globalization.CultureInfo.InvariantCulture;
+    static readonly System.Globalization.CultureInfo Inv =
+        System.Globalization.CultureInfo.InvariantCulture;
 
     void Start()
     {
@@ -86,7 +84,7 @@ public class DynamicSyncManager : MonoBehaviour
             Quaternion rot = user.transform.rotation;
 
             bool posMoved = !lastPos.ContainsKey(user.userID) ||
-                            Vector3.Distance(pos, lastPos[user.userID]) >= moveTolerance;
+                            Vector3.Distance(pos, lastPos[user.userID]) >= MOVE_TOLERANCE;
             bool rotMoved = !lastRot.ContainsKey(user.userID) ||
                             Quaternion.Angle(rot, lastRot[user.userID]) >= 1f;
 
@@ -150,7 +148,7 @@ public class DynamicSyncManager : MonoBehaviour
 
             string key   = obj.name;
             bool   moved = !lastObjPos.ContainsKey(key) ||
-                           Vector3.Distance(pos, lastObjPos[key]) > moveTolerance;
+                           Vector3.Distance(pos, lastObjPos[key]) > MOVE_TOLERANCE;
             if (moved) lastObjPos[key] = pos;
 
             string room  = DetectRoom(pos);
@@ -212,13 +210,12 @@ public class DynamicSyncManager : MonoBehaviour
 
     IEnumerator Post(string url, string json)
     {
-        if (verboseLog) Debug.Log($"[DynamicSync] POST {url}");
         byte[] body = System.Text.Encoding.UTF8.GetBytes(json);
         using var req = new UnityWebRequest(url, "POST");
         req.uploadHandler   = new UploadHandlerRaw(body);
         req.downloadHandler = new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
-        req.timeout = 5;
+        req.timeout = POST_TIMEOUT;
         yield return req.SendWebRequest();
         if (req.result != UnityWebRequest.Result.Success)
             Debug.LogWarning($"[DynamicSync] POST failed: {req.error}");
