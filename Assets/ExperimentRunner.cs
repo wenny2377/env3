@@ -67,9 +67,9 @@ public class ExperimentRunner : MonoBehaviour
     [Header("Dad Spots - Cleaning")]     public Transform[] dadCleaningSpots     = new Transform[3];
     [Header("Dad Spots - PhoneUse")]     public Transform[] dadPhoneSpots        = new Transform[3];
 
-    const float CORRUPTION_PICKUP_MISS_RATE   = 0.15f;
-    const float CORRUPTION_PUTDOWN_MISS_RATE  = 0.10f;
-    const float CORRUPTION_OBJECT_CONFUSION   = 0.10f;
+    const float CORRUPTION_PICKUP_MISS_RATE   = 0.35f;
+    const float CORRUPTION_PUTDOWN_MISS_RATE  = 0.15f;
+    const float CORRUPTION_OBJECT_CONFUSION   = 0.20f;
     const int   EPISODES_PER_VIRTUAL_DAY      = 10;
     const bool  ADD_NOISE_EPISODES            = true;
     const int   NOISE_INTERVAL                = 10;

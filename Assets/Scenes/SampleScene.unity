@@ -2740,6 +2740,7 @@ MonoBehaviour:
   backendUrl: http://localhost:5000
   pickupMissRate: 0
   putdownMissRate: 0
+  skipReturnToStanding: 0
   lastAssignedActivity: 
   currentVirtualHour: -1
   overrideSpot: {fileID: 0}
@@ -9544,6 +9545,7 @@ MonoBehaviour:
   backendUrl: http://localhost:5000
   pickupMissRate: 0.15
   putdownMissRate: 0.1
+  skipReturnToStanding: 0
   lastAssignedActivity: 
   currentVirtualHour: -1
   overrideSpot: {fileID: 0}
