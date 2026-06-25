@@ -14,6 +14,12 @@ public class ExperimentRunner : MonoBehaviour
     public StaticCameraManager cameraManager;
     public VirtualCameraBrain  virtualCameraBrain;
 
+    [Header("Demo Camera")]
+    public DemoCameraController demoCameraController;
+
+    [Header("Demo - Mami Look Target")]
+    public Transform mamiTransform;
+
     [Header("Camera Nodes")]
     public List<CameraNode> livingRoomNodes;
     public List<CameraNode> kitchenNodes;
@@ -131,76 +137,76 @@ public class ExperimentRunner : MonoBehaviour
         new TimeSlot {
             name = "Noon", virtualHour = 12f,
             momSequences = new BehaviorSequence[] {
-                new BehaviorSequence { actions = new[]{ "Sitting","Reading" },              groundTruth = "Reading",      weight = 4 },
-                new BehaviorSequence { actions = new[]{ "Reading","SittingDrink","Laying" },groundTruth = "Laying",       weight = 3 },
-                new BehaviorSequence { actions = new[]{ "SittingDrink","Laying" },          groundTruth = "Laying",       weight = 2 },
-                new BehaviorSequence { actions = new[]{ "Eating" },                         groundTruth = "Eating",       weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Sitting","Reading" },               groundTruth = "Reading",      weight = 4 },
+                new BehaviorSequence { actions = new[]{ "Reading","SittingDrink","Laying" }, groundTruth = "Laying",       weight = 3 },
+                new BehaviorSequence { actions = new[]{ "SittingDrink","Laying" },           groundTruth = "Laying",       weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Eating" },                          groundTruth = "Eating",       weight = 2 },
                 new BehaviorSequence { actions = new[]{ "Reading" },                         groundTruth = "Reading",      weight = 2 },
                 new BehaviorSequence { actions = new[]{ "PhoneUse" },                        groundTruth = "PhoneUse",     weight = 1 },
             },
             dadSequences = new BehaviorSequence[] {
-                new BehaviorSequence { actions = new[]{ "Laying" },                         groundTruth = "Laying",       weight = 4 },
-                new BehaviorSequence { actions = new[]{ "Laying","Watching" },              groundTruth = "Watching",     weight = 3 },
-                new BehaviorSequence { actions = new[]{ "Eating","Laying" },                groundTruth = "Laying",       weight = 2 },
-                new BehaviorSequence { actions = new[]{ "PhoneUse" },                       groundTruth = "PhoneUse",     weight = 2 },
-                new BehaviorSequence { actions = new[]{ "Watching" },                       groundTruth = "Watching",     weight = 2 },
-                new BehaviorSequence { actions = new[]{ "Sitting" },                        groundTruth = "Sitting",      weight = 1 },
+                new BehaviorSequence { actions = new[]{ "Laying" },                          groundTruth = "Laying",       weight = 4 },
+                new BehaviorSequence { actions = new[]{ "Laying","Watching" },               groundTruth = "Watching",     weight = 3 },
+                new BehaviorSequence { actions = new[]{ "Eating","Laying" },                 groundTruth = "Laying",       weight = 2 },
+                new BehaviorSequence { actions = new[]{ "PhoneUse" },                        groundTruth = "PhoneUse",     weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Watching" },                        groundTruth = "Watching",     weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Sitting" },                         groundTruth = "Sitting",      weight = 1 },
             },
         },
         new TimeSlot {
             name = "Afternoon", virtualHour = 15f,
             momSequences = new BehaviorSequence[] {
-                new BehaviorSequence { actions = new[]{ "Cleaning","Reading" },             groundTruth = "Reading",      weight = 3 },
-                new BehaviorSequence { actions = new[]{ "Cleaning" },                       groundTruth = "Cleaning",     weight = 3 },
-                new BehaviorSequence { actions = new[]{ "Reading","SittingDrink" },         groundTruth = "SittingDrink", weight = 3 },
-                new BehaviorSequence { actions = new[]{ "Sitting","Reading" },              groundTruth = "Reading",      weight = 2 },
-                new BehaviorSequence { actions = new[]{ "PhoneUse" },                       groundTruth = "PhoneUse",     weight = 2 },
-                new BehaviorSequence { actions = new[]{ "SittingDrink" },                   groundTruth = "SittingDrink", weight = 1 },
+                new BehaviorSequence { actions = new[]{ "Cleaning","Reading" },              groundTruth = "Reading",      weight = 3 },
+                new BehaviorSequence { actions = new[]{ "Cleaning" },                        groundTruth = "Cleaning",     weight = 3 },
+                new BehaviorSequence { actions = new[]{ "Reading","SittingDrink" },          groundTruth = "SittingDrink", weight = 3 },
+                new BehaviorSequence { actions = new[]{ "Sitting","Reading" },               groundTruth = "Reading",      weight = 2 },
+                new BehaviorSequence { actions = new[]{ "PhoneUse" },                        groundTruth = "PhoneUse",     weight = 2 },
+                new BehaviorSequence { actions = new[]{ "SittingDrink" },                    groundTruth = "SittingDrink", weight = 1 },
             },
             dadSequences = new BehaviorSequence[] {
-                new BehaviorSequence { actions = new[]{ "Typing","PhoneUse","Typing" },     groundTruth = "Typing",       weight = 4 },
-                new BehaviorSequence { actions = new[]{ "Typing" },                         groundTruth = "Typing",       weight = 3 },
-                new BehaviorSequence { actions = new[]{ "PhoneUse","Typing" },              groundTruth = "Typing",       weight = 2 },
-                new BehaviorSequence { actions = new[]{ "PhoneUse" },                       groundTruth = "PhoneUse",     weight = 3 },
-                new BehaviorSequence { actions = new[]{ "Sitting" },                        groundTruth = "Sitting",      weight = 1 },
+                new BehaviorSequence { actions = new[]{ "Typing","PhoneUse","Typing" },      groundTruth = "Typing",       weight = 4 },
+                new BehaviorSequence { actions = new[]{ "Typing" },                          groundTruth = "Typing",       weight = 3 },
+                new BehaviorSequence { actions = new[]{ "PhoneUse","Typing" },               groundTruth = "Typing",       weight = 2 },
+                new BehaviorSequence { actions = new[]{ "PhoneUse" },                        groundTruth = "PhoneUse",     weight = 3 },
+                new BehaviorSequence { actions = new[]{ "Sitting" },                         groundTruth = "Sitting",      weight = 1 },
             },
         },
         new TimeSlot {
             name = "Evening", virtualHour = 19f,
             momSequences = new BehaviorSequence[] {
-                new BehaviorSequence { actions = new[]{ "Cooking","Eating","Watching" },    groundTruth = "Watching",     weight = 4 },
-                new BehaviorSequence { actions = new[]{ "Eating","Watching" },              groundTruth = "Watching",     weight = 3 },
-                new BehaviorSequence { actions = new[]{ "Cooking","Eating" },               groundTruth = "Eating",       weight = 2 },
-                new BehaviorSequence { actions = new[]{ "Watching","SittingDrink" },        groundTruth = "Watching",     weight = 2 },
-                new BehaviorSequence { actions = new[]{ "PhoneUse" },                       groundTruth = "PhoneUse",     weight = 2 },
-                new BehaviorSequence { actions = new[]{ "Watching" },                       groundTruth = "Watching",     weight = 1 },
+                new BehaviorSequence { actions = new[]{ "Cooking","Eating","Watching" },     groundTruth = "Watching",     weight = 4 },
+                new BehaviorSequence { actions = new[]{ "Eating","Watching" },               groundTruth = "Watching",     weight = 3 },
+                new BehaviorSequence { actions = new[]{ "Cooking","Eating" },                groundTruth = "Eating",       weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Watching","SittingDrink" },         groundTruth = "Watching",     weight = 2 },
+                new BehaviorSequence { actions = new[]{ "PhoneUse" },                        groundTruth = "PhoneUse",     weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Watching" },                        groundTruth = "Watching",     weight = 1 },
             },
             dadSequences = new BehaviorSequence[] {
-                new BehaviorSequence { actions = new[]{ "Eating","PhoneUse","SittingDrink" },groundTruth = "PhoneUse",    weight = 3 },
-                new BehaviorSequence { actions = new[]{ "Eating","PhoneUse" },               groundTruth = "PhoneUse",    weight = 3 },
-                new BehaviorSequence { actions = new[]{ "PhoneUse","SittingDrink" },         groundTruth = "SittingDrink",weight = 5 },
-                new BehaviorSequence { actions = new[]{ "Eating","Watching" },               groundTruth = "Watching",    weight = 2 },
-                new BehaviorSequence { actions = new[]{ "PhoneUse" },                        groundTruth = "PhoneUse",    weight = 2 },
-                new BehaviorSequence { actions = new[]{ "Watching" },                        groundTruth = "Watching",    weight = 1 },
+                new BehaviorSequence { actions = new[]{ "Eating","PhoneUse","SittingDrink" },groundTruth = "PhoneUse",     weight = 3 },
+                new BehaviorSequence { actions = new[]{ "Eating","PhoneUse" },               groundTruth = "PhoneUse",     weight = 3 },
+                new BehaviorSequence { actions = new[]{ "PhoneUse","SittingDrink" },         groundTruth = "SittingDrink", weight = 5 },
+                new BehaviorSequence { actions = new[]{ "Eating","Watching" },               groundTruth = "Watching",     weight = 2 },
+                new BehaviorSequence { actions = new[]{ "PhoneUse" },                        groundTruth = "PhoneUse",     weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Watching" },                        groundTruth = "Watching",     weight = 1 },
             },
         },
         new TimeSlot {
             name = "Night", virtualHour = 23f,
             momSequences = new BehaviorSequence[] {
-                new BehaviorSequence { actions = new[]{ "Reading","Laying" },               groundTruth = "Laying",       weight = 4 },
-                new BehaviorSequence { actions = new[]{ "Laying" },                         groundTruth = "Laying",       weight = 3 },
-                new BehaviorSequence { actions = new[]{ "Sitting","Reading","Laying" },     groundTruth = "Laying",       weight = 2 },
-                new BehaviorSequence { actions = new[]{ "SittingDrink","Reading" },         groundTruth = "Reading",      weight = 2 },
-                new BehaviorSequence { actions = new[]{ "Reading" },                        groundTruth = "Reading",      weight = 2 },
-                new BehaviorSequence { actions = new[]{ "PhoneUse" },                       groundTruth = "PhoneUse",     weight = 1 },
+                new BehaviorSequence { actions = new[]{ "Reading","Laying" },                groundTruth = "Laying",       weight = 4 },
+                new BehaviorSequence { actions = new[]{ "Laying" },                          groundTruth = "Laying",       weight = 3 },
+                new BehaviorSequence { actions = new[]{ "Sitting","Reading","Laying" },      groundTruth = "Laying",       weight = 2 },
+                new BehaviorSequence { actions = new[]{ "SittingDrink","Reading" },          groundTruth = "Reading",      weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Reading" },                         groundTruth = "Reading",      weight = 2 },
+                new BehaviorSequence { actions = new[]{ "PhoneUse" },                        groundTruth = "PhoneUse",     weight = 1 },
             },
             dadSequences = new BehaviorSequence[] {
-                new BehaviorSequence { actions = new[]{ "PhoneUse","Watching","Laying" },   groundTruth = "Laying",       weight = 4 },
-                new BehaviorSequence { actions = new[]{ "PhoneUse","Laying" },              groundTruth = "Laying",       weight = 3 },
-                new BehaviorSequence { actions = new[]{ "Watching","Laying" },              groundTruth = "Laying",       weight = 2 },
-                new BehaviorSequence { actions = new[]{ "PhoneUse" },                       groundTruth = "PhoneUse",     weight = 2 },
-                new BehaviorSequence { actions = new[]{ "PhoneUse","Watching" },            groundTruth = "Watching",     weight = 2 },
-                new BehaviorSequence { actions = new[]{ "Sitting" },                        groundTruth = "Sitting",      weight = 1 },
+                new BehaviorSequence { actions = new[]{ "PhoneUse","Watching","Laying" },    groundTruth = "Laying",       weight = 4 },
+                new BehaviorSequence { actions = new[]{ "PhoneUse","Laying" },               groundTruth = "Laying",       weight = 3 },
+                new BehaviorSequence { actions = new[]{ "Watching","Laying" },               groundTruth = "Laying",       weight = 2 },
+                new BehaviorSequence { actions = new[]{ "PhoneUse" },                        groundTruth = "PhoneUse",     weight = 2 },
+                new BehaviorSequence { actions = new[]{ "PhoneUse","Watching" },             groundTruth = "Watching",     weight = 2 },
+                new BehaviorSequence { actions = new[]{ "Sitting" },                         groundTruth = "Sitting",      weight = 1 },
             },
         },
     };
@@ -271,16 +277,22 @@ public class ExperimentRunner : MonoBehaviour
         CurrentTimeSlot    = "Evening";
         SetUsersVirtualHour(19f);
         PostVirtualHourFireAndForget(19f);
+        if (demoCameraController != null) demoCameraController.SetActiveCamera("Cam_Overview", userMom);
         yield return StartCoroutine(SetDeviceState("tv", "off"));
-        yield return StartCoroutine(userMom.MoveToSpotAndHold("Opening",  GetMomSpot("Opening",  0)));
-        yield return new WaitForSeconds(demoSceneTime * 0.5f);
-        yield return StartCoroutine(userMom.MoveToSpotAndHold("Cooking",  GetMomSpot("Cooking",  0)));
+        userMom.overrideSpot = GetMomSpot("Opening", 0);
+        userMom.ResetBusy();
+        yield return StartCoroutine(userMom.SwitchActivity("Opening"));
+        yield return new WaitForSeconds(1.0f);
+        userMom.ResetBusy();
+        yield return StartCoroutine(userMom.MoveToSpotAndHold("Cooking", GetMomSpot("Cooking", 0)));
         yield return new WaitForSeconds(demoSceneTime);
-        yield return StartCoroutine(userMom.MoveToSpotAndHold("Eating",   GetMomSpot("Eating",   0)));
+        yield return userMom.ClearHeldObject();
+        yield return StartCoroutine(userMom.MoveToSpotAndHold("Eating", GetMomSpot("Eating", 0)));
         yield return new WaitForSeconds(demoSceneTime);
 
         yield return StartCoroutine(PostDemoScene(2, "User_Mom"));
         _demoMessage = "Mom finished eating. Predicting next need...";
+        yield return userMom.ClearHeldObject();
         yield return StartCoroutine(userMom.MoveToSpotAndHold("Sitting", GetMomSpot("Sitting", 0)));
         yield return new WaitForSeconds(demoSettleTime);
         yield return StartCoroutine(PostActionEvent("User_Mom", "Eating", "Sitting", "Evening"));
@@ -292,8 +304,9 @@ public class ExperimentRunner : MonoBehaviour
         if (virtualCameraBrain != null) virtualCameraBrain.SetTVState(true);
         yield return StartCoroutine(userMom.MoveToSpotAndHold("SittingDrink", GetMomSpot("SittingDrink", 0)));
         yield return new WaitForSeconds(demoSceneTime * 0.5f);
+        yield return userMom.ClearHeldObject();
         yield return StartCoroutine(userMom.MoveToSpotAndHold("Watching", GetMomSpot("Watching", 0)));
-        yield return new WaitForSeconds(DEMO_HOLD_TIME);
+        yield return new WaitForSeconds(4.0f);
 
         yield return StartCoroutine(PostDemoScene(4, "User_Dad"));
         _demoMessage = "Dad is working in his room...";
@@ -301,8 +314,19 @@ public class ExperimentRunner : MonoBehaviour
         if (virtualCameraBrain != null) virtualCameraBrain.SetTVState(false);
         userMom.gameObject.SetActive(false);
         userDad.gameObject.SetActive(true);
+
+        if (demoCameraController != null) demoCameraController.SetActiveCamera("Cam_Overview", userDad);
         yield return StartCoroutine(userDad.MoveToSpotAndHold("Typing", GetDadSpot("Typing", 0)));
+        yield return new WaitForSeconds(1.5f);
+
+        if (demoCameraController != null) demoCameraController.SetActiveCamera("Cam_MamiCall", userDad);
+        yield return StartCoroutine(ActorLookAtMami(userDad, 1.2f));
+
+        if (demoCameraController != null) demoCameraController.SetActiveCamera("Cam_Dialogue", userDad);
         yield return StartCoroutine(WaitForSceneDone(120f));
+
+        ReleaseActor(userDad);
+        if (demoCameraController != null) demoCameraController.SetActiveCamera("Cam_Overview", userDad);
 
         yield return StartCoroutine(PostDemoScene(5, "User_Mom"));
         _demoMessage = "Mom is watching TV in the living room...";
@@ -310,8 +334,19 @@ public class ExperimentRunner : MonoBehaviour
         userMom.gameObject.SetActive(true);
         yield return StartCoroutine(SetDeviceState("tv", "on"));
         if (virtualCameraBrain != null) virtualCameraBrain.SetTVState(true);
+
+        if (demoCameraController != null) demoCameraController.SetActiveCamera("Cam_Overview", userMom);
         yield return StartCoroutine(userMom.MoveToSpotAndHold("Watching", GetMomSpot("Watching", 0)));
+        yield return new WaitForSeconds(1.5f);
+
+        if (demoCameraController != null) demoCameraController.SetActiveCamera("Cam_MamiCall", userMom);
+        yield return StartCoroutine(ActorLookAtMami(userMom, 1.2f));
+
+        if (demoCameraController != null) demoCameraController.SetActiveCamera("Cam_Dialogue", userMom);
         yield return StartCoroutine(WaitForSceneDone(60f));
+
+        ReleaseActor(userMom);
+        if (demoCameraController != null) demoCameraController.SetActiveCamera("Cam_Overview", userMom);
 
         yield return StartCoroutine(PostDemoScene(6, ""));
         _demoMessage = "System has learned the preferences of both residents.";
@@ -323,6 +358,45 @@ public class ExperimentRunner : MonoBehaviour
         yield return new WaitForSeconds(2.0f);
         userMom.gameObject.SetActive(true);
         Debug.Log("[Demo] Story complete.");
+    }
+
+    IEnumerator ActorLookAtMami(UserEntity actor, float holdSeconds)
+    {
+        if (actor == null) { yield return new WaitForSeconds(holdSeconds); yield break; }
+
+        var agent = actor.GetComponent<NavMeshAgent>();
+
+        if (agent != null) agent.isStopped = true;
+
+        if (mamiTransform != null)
+        {
+            Vector3 dir = mamiTransform.position - actor.transform.position;
+            dir.y = 0f;
+            if (dir.sqrMagnitude > 0.001f)
+            {
+                Quaternion startRot  = actor.transform.rotation;
+                Quaternion targetRot = Quaternion.LookRotation(dir.normalized);
+                float elapsed  = 0f;
+                float duration = 0.35f;
+                while (elapsed < duration)
+                {
+                    actor.transform.rotation =
+                        Quaternion.Slerp(startRot, targetRot, elapsed / duration);
+                    elapsed += Time.deltaTime;
+                    yield return null;
+                }
+                actor.transform.rotation = targetRot;
+            }
+        }
+
+        yield return new WaitForSeconds(holdSeconds);
+    }
+
+    void ReleaseActor(UserEntity actor)
+    {
+        if (actor == null) return;
+        var agent = actor.GetComponent<NavMeshAgent>();
+        if (agent != null) agent.isStopped = false;
     }
 
     IEnumerator PostDemoScene(int scene, string userId)
