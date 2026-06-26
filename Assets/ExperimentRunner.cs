@@ -17,9 +17,6 @@ public class ExperimentRunner : MonoBehaviour
     [Header("Demo Camera")]
     public DemoCameraController demoCameraController;
 
-    [Header("Demo - Mami Look Target")]
-    public Transform mamiTransform;
-
     [Header("Camera Nodes")]
     public List<CameraNode> livingRoomNodes;
     public List<CameraNode> kitchenNodes;
@@ -49,6 +46,29 @@ public class ExperimentRunner : MonoBehaviour
     public float demoSettleTime = 2.5f;
     public float demoSceneTime  = 5.0f;
 
+    [Header("Demo Spots - Mom")]
+    public Transform demoMomOpenSpot;
+    public Transform demoMomCookSpot;
+    public Transform demoMomEatSpot;
+    public Transform demoMomSittingSpot;
+    public Transform demoMomWatchSpot;
+    public Transform demoMomSittingDrinkSpot;
+    public Transform demoMamiSpotMom;
+
+    [Header("Demo Spots - Dad")]
+    public Transform demoDadTypingSpot;
+    public Transform demoMamiSpotDad;
+
+    [Header("Demo Items")]
+    public GameObject demoEgg;
+    public GameObject demoMiniPCLight;
+    public GameObject demoWater;
+    public GameObject demoTVScreen;
+    public GameObject demoBowl;
+
+    [Header("Demo - Mami Look Target")]
+    public Transform mamiTransform;
+
     [Header("Mom Spots - Drinking")]     public Transform[] momDrinkingSpots     = new Transform[3];
     [Header("Mom Spots - SittingDrink")] public Transform[] momSittingDrinkSpots = new Transform[3];
     [Header("Mom Spots - Sitting")]      public Transform[] momSittingSpots      = new Transform[3];
@@ -73,15 +93,15 @@ public class ExperimentRunner : MonoBehaviour
     [Header("Dad Spots - Cleaning")]     public Transform[] dadCleaningSpots     = new Transform[3];
     [Header("Dad Spots - PhoneUse")]     public Transform[] dadPhoneSpots        = new Transform[3];
 
-    const float CORRUPTION_PICKUP_MISS_RATE   = 0.35f;
-    const float CORRUPTION_PUTDOWN_MISS_RATE  = 0.15f;
-    const float CORRUPTION_OBJECT_CONFUSION   = 0.20f;
-    const int   EPISODES_PER_VIRTUAL_DAY      = 10;
-    const bool  ADD_NOISE_EPISODES            = true;
-    const int   NOISE_INTERVAL                = 10;
-    const float MIN_INTERVAL_IN_SLOT          = 1.5f;
-    const float WAIT_BETWEEN_EPISODES         = 2.0f;
-    const float DEMO_HOLD_TIME                = 1.0f;
+    const float CORRUPTION_PICKUP_MISS_RATE  = 0.35f;
+    const float CORRUPTION_PUTDOWN_MISS_RATE = 0.15f;
+    const float CORRUPTION_OBJECT_CONFUSION  = 0.20f;
+    const int   EPISODES_PER_VIRTUAL_DAY     = 10;
+    const bool  ADD_NOISE_EPISODES           = true;
+    const int   NOISE_INTERVAL               = 10;
+    const float MIN_INTERVAL_IN_SLOT         = 1.5f;
+    const float WAIT_BETWEEN_EPISODES        = 2.0f;
+    const float DEMO_HOLD_TIME               = 1.0f;
 
     public enum RunMode        { Demo, Experiment }
     public enum ExperimentType { Baseline, Corruption }
@@ -232,45 +252,40 @@ public class ExperimentRunner : MonoBehaviour
     {
         WarpUserToSpot(userMom);
         WarpUserToSpot(userDad);
-
         if (cameraManager == null)
             cameraManager = StaticCameraManager.Instance ?? FindObjectOfType<StaticCameraManager>();
         InitCamera();
-
         if (userMom != null) userMom.gameObject.SetActive(true);
         if (userDad != null) userDad.gameObject.SetActive(true);
-
-        if (mode == RunMode.Demo)
-        {
-            StartCoroutine(RunDemoScan());
-            return;
-        }
+        if (demoEgg         != null) demoEgg.SetActive(false);
+        if (demoMiniPCLight != null) demoMiniPCLight.SetActive(false);
+        if (mode == RunMode.Demo && demoWater != null) demoWater.SetActive(false);
+        if (mode == RunMode.Demo && demoBowl  != null) demoBowl.SetActive(false);
+        if (mode == RunMode.Demo) StartCoroutine(KeepDemoWaterHidden());
+        if (mode == RunMode.Demo) { StartCoroutine(RunDemoScan()); return; }
         StartCoroutine(PollUntilReady());
     }
 
     void Update()
     {
         if (mode == RunMode.Demo) return;
-
         if (flaskReady && !runOnStart && !isRunning && Input.GetKeyDown(KeyCode.Space))
             StartExperiment();
-
         if (Input.GetKeyDown(KeyCode.Escape) && isRunning)
         {
             StopAllCoroutines();
             CurrentExperimentMode = "";
-            isRunning             = false;
-            Debug.Log("[ExperimentRunner] Stopped.");
+            isRunning = false;
         }
     }
 
     IEnumerator RunDemoScan()
     {
-        yield return new WaitForSeconds(1.0f);
-        Debug.Log("[Demo] Story begin");
+        yield return new WaitForSeconds(2.0f);
 
+        // ── Scene 1：行為觀察 ──────────────────────────────────────────
         yield return StartCoroutine(PostDemoScene(1, "User_Mom"));
-        _demoMessage = "Observing Mom cooking dinner...";
+        _demoMessage = "Mami is observing Mom...";
         userDad.gameObject.SetActive(false);
         userMom.gameObject.SetActive(true);
         CurrentVirtualHour = 19f;
@@ -279,95 +294,177 @@ public class ExperimentRunner : MonoBehaviour
         PostVirtualHourFireAndForget(19f);
         if (demoCameraController != null) demoCameraController.SetActiveCamera("Cam_Overview", userMom);
         yield return StartCoroutine(SetDeviceState("tv", "off"));
-        userMom.overrideSpot = GetMomSpot("Opening", 0);
+
+        userMom.overrideSpot = demoMomOpenSpot;
         userMom.ResetBusy();
         yield return StartCoroutine(userMom.SwitchActivity("Opening"));
         yield return new WaitForSeconds(1.0f);
         userMom.ResetBusy();
-        yield return StartCoroutine(userMom.MoveToSpotAndHold("Cooking", GetMomSpot("Cooking", 0)));
+
+        if (demoEgg != null) demoEgg.SetActive(true);
+        yield return StartCoroutine(userMom.MoveToSpotAndHold("Cooking", demoMomCookSpot));
+        yield return new WaitForSeconds(demoSceneTime);
+        if (demoEgg != null) demoEgg.SetActive(false);
+        yield return userMom.ClearHeldObject();
+
+        if (demoBowl != null) demoBowl.SetActive(false);
+        yield return userMom.ClearHeldObject();
+        yield return new WaitForSeconds(0.3f);
+        yield return StartCoroutine(userMom.MoveToSpotAndHold("Eating", demoMomEatSpot));
         yield return new WaitForSeconds(demoSceneTime);
         yield return userMom.ClearHeldObject();
-        yield return StartCoroutine(userMom.MoveToSpotAndHold("Eating", GetMomSpot("Eating", 0)));
-        yield return new WaitForSeconds(demoSceneTime);
+        if (demoBowl != null) demoBowl.SetActive(true);
 
-        yield return StartCoroutine(PostDemoScene(2, "User_Mom"));
-        _demoMessage = "Mom finished eating. Predicting next need...";
-        yield return userMom.ClearHeldObject();
-        yield return StartCoroutine(userMom.MoveToSpotAndHold("Sitting", GetMomSpot("Sitting", 0)));
-        yield return new WaitForSeconds(demoSettleTime);
-        yield return StartCoroutine(PostActionEvent("User_Mom", "Eating", "Sitting", "Evening"));
-        yield return new WaitForSeconds(4.0f);
+        yield return StartCoroutine(userMom.MoveToSpotAndHold("Sitting", demoMomSittingSpot));
+        yield return new WaitForSeconds(1.0f);
 
-        yield return StartCoroutine(PostDemoScene(3, "User_Mom"));
-        _demoMessage = "Bringing water to Mom.";
         yield return StartCoroutine(SetDeviceState("tv", "on"));
         if (virtualCameraBrain != null) virtualCameraBrain.SetTVState(true);
-        yield return StartCoroutine(userMom.MoveToSpotAndHold("SittingDrink", GetMomSpot("SittingDrink", 0)));
-        yield return new WaitForSeconds(demoSceneTime * 0.5f);
-        yield return userMom.ClearHeldObject();
-        yield return StartCoroutine(userMom.MoveToSpotAndHold("Watching", GetMomSpot("Watching", 0)));
-        yield return new WaitForSeconds(4.0f);
+        if (demoTVScreen != null) demoTVScreen.SetActive(true);
+        userMom.SetAnim("Watching");
+        if (demoCameraController != null) demoCameraController.SetActiveCamera("Cam_Overview", userMom);
+        yield return new WaitForSeconds(2.0f);
+        if (demoCameraController != null) demoCameraController.SetActiveCamera("Cam_TV", userMom);
+        yield return new WaitForSeconds(2.0f);
+        if (demoCameraController != null) demoCameraController.SetActiveCamera("Cam_Overview", userMom);
+        yield return new WaitForSeconds(2.0f);
 
-        yield return StartCoroutine(PostDemoScene(4, "User_Dad"));
-        _demoMessage = "Dad is working in his room...";
+        // ── Scene 2：主動服務 ──────────────────────────────────────────
+        yield return StartCoroutine(PostDemoScene(2, "User_Mom"));
+        _demoMessage = "Mami detected behavior change...";
+        if (demoMiniPCLight != null) demoMiniPCLight.SetActive(true);
+        yield return StartCoroutine(PostActionEvent("User_Mom", "Eating", "Sitting", "Evening"));
+        yield return new WaitForSeconds(5.0f);
+        if (demoMiniPCLight != null) demoMiniPCLight.SetActive(false);
+        yield return StartCoroutine(WaitForSceneDone(60f));
+        userMom.PreActivateHeldObject("SittingDrink");
+        userMom.SetAnim("SittingDrink");
+        yield return new WaitForSeconds(6.0f);
+        yield return userMom.ClearHeldObject();
+        _demoWaterShouldShow = true;
+        if (demoWater != null) demoWater.SetActive(true);
+        yield return new WaitForSeconds(0.5f);
+
+        // ── Scene 3：媽媽呼叫 Mami ────────────────────────────────────
+        // 先把所有動畫跑完，最後才 PostDemoScene 通知 HTML
+        _demoMessage = "Mom calls Mami...";
+        yield return userMom.ClearHeldObject();
+        userMom.SetAnim("Watching");
+        yield return new WaitForSeconds(1.5f);
+
+        if (demoCameraController != null) demoCameraController.SetActiveCamera("Cam_Overview", userMom);
+        yield return new WaitForSeconds(2.0f);
+
+        if (demoCameraController != null) demoCameraController.SetActiveCamera("Cam_MamiCall", userMom);
+        yield return new WaitForSeconds(1.5f);
+
+        yield return StartCoroutine(PostDemoScene(3, "User_Mom"));
+        yield return StartCoroutine(WaitForSceneDone(120f));
+
+        yield return new WaitForSeconds(3.0f);
+        ReleaseActor(userMom);
+        if (demoCameraController != null) demoCameraController.SetActiveCamera("Cam_Overview", userMom);
+        yield return new WaitForSeconds(2.5f);
+
+        // ── Scene 4：爸爸呼叫 Mami ────────────────────────────────────
+        _demoMessage = "Dad calls Mami while typing...";
         yield return StartCoroutine(SetDeviceState("tv", "off"));
         if (virtualCameraBrain != null) virtualCameraBrain.SetTVState(false);
+        if (demoTVScreen != null) demoTVScreen.SetActive(false);
+        yield return userMom.ClearHeldObject();
+        yield return StartCoroutine(userMom.ReturnToStanding());
         userMom.gameObject.SetActive(false);
         userDad.gameObject.SetActive(true);
 
         if (demoCameraController != null) demoCameraController.SetActiveCamera("Cam_Overview", userDad);
-        yield return StartCoroutine(userDad.MoveToSpotAndHold("Typing", GetDadSpot("Typing", 0)));
-        yield return new WaitForSeconds(1.5f);
+        yield return StartCoroutine(userDad.MoveToSpotAndHold("Typing", demoDadTypingSpot));
+        yield return new WaitForSeconds(2.0f);
 
-        if (demoCameraController != null) demoCameraController.SetActiveCamera("Cam_MamiCall", userDad);
-        yield return StartCoroutine(ActorLookAtMami(userDad, 1.2f));
-
-        if (demoCameraController != null) demoCameraController.SetActiveCamera("Cam_Dialogue", userDad);
-        yield return StartCoroutine(WaitForSceneDone(120f));
-
-        ReleaseActor(userDad);
         if (demoCameraController != null) demoCameraController.SetActiveCamera("Cam_Overview", userDad);
 
-        yield return StartCoroutine(PostDemoScene(5, "User_Mom"));
-        _demoMessage = "Mom is watching TV in the living room...";
-        userDad.gameObject.SetActive(false);
-        userMom.gameObject.SetActive(true);
-        yield return StartCoroutine(SetDeviceState("tv", "on"));
-        if (virtualCameraBrain != null) virtualCameraBrain.SetTVState(true);
-
-        if (demoCameraController != null) demoCameraController.SetActiveCamera("Cam_Overview", userMom);
-        yield return StartCoroutine(userMom.MoveToSpotAndHold("Watching", GetMomSpot("Watching", 0)));
+        yield return StartCoroutine(PostDemoScene(4, "User_Dad"));
+        yield return StartCoroutine(WaitForSceneDone(120f));
         yield return new WaitForSeconds(1.5f);
 
-        if (demoCameraController != null) demoCameraController.SetActiveCamera("Cam_MamiCall", userMom);
-        yield return StartCoroutine(ActorLookAtMami(userMom, 1.2f));
+        // ── Scene 5：沒有餅乾 ─────────────────────────────────────────
+        _demoMessage = "Dad asks for cookie...";
+        yield return StartCoroutine(PostDemoScene(5, "User_Dad"));
+        yield return StartCoroutine(WaitForSceneDone(120f));
 
-        if (demoCameraController != null) demoCameraController.SetActiveCamera("Cam_Dialogue", userMom);
-        yield return StartCoroutine(WaitForSceneDone(60f));
-
-        ReleaseActor(userMom);
-        if (demoCameraController != null) demoCameraController.SetActiveCamera("Cam_Overview", userMom);
-
+        // ── Scene 6：結束 ──────────────────────────────────────────────
         yield return StartCoroutine(PostDemoScene(6, ""));
-        _demoMessage = "System has learned the preferences of both residents.";
+        _demoMessage = "Mami has learned the preferences of both residents.";
         yield return StartCoroutine(SetDeviceState("tv", "off"));
         if (virtualCameraBrain != null) virtualCameraBrain.SetTVState(false);
-        yield return StartCoroutine(userMom.ReturnToStanding());
-        userDad.gameObject.SetActive(true);
-        WarpUserToSpot(userDad);
-        yield return new WaitForSeconds(2.0f);
+        yield return StartCoroutine(userDad.ReturnToStanding());
         userMom.gameObject.SetActive(true);
-        Debug.Log("[Demo] Story complete.");
+        WarpUserToSpot(userMom);
+        yield return new WaitForSeconds(2.0f);
+        if (demoCameraController != null) demoCameraController.SetActiveCamera("Cam_Overview", userMom);
+        Debug.Log("[Demo] Complete.");
+    }
+
+    bool _demoWaterShouldShow = false;
+
+    IEnumerator ActorRotateToSpot(UserEntity actor, Transform spot)
+    {
+        if (actor == null || spot == null) yield break;
+        Quaternion startRot  = actor.transform.rotation;
+        Quaternion targetRot = spot.rotation;
+        float elapsed = 0f;
+        while (elapsed < 0.35f)
+        {
+            actor.transform.rotation = Quaternion.Slerp(startRot, targetRot, elapsed / 0.35f);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+        actor.transform.rotation = targetRot;
+    }
+
+    IEnumerator KeepDemoWaterHidden()
+    {
+        while (true)
+        {
+            if (demoWater != null && !_demoWaterShouldShow && demoWater.activeSelf)
+                demoWater.SetActive(false);
+            yield return new WaitForSeconds(0.5f);
+        }
+    }
+
+    IEnumerator PollSpeakingAndSwitchCamera(UserEntity actor)
+    {
+        string lastWho = "none";
+        while (true)
+        {
+            using var req = UnityWebRequest.Get($"{backendUrl}/demo/speaking_state");
+            req.timeout = 3;
+            yield return req.SendWebRequest();
+            if (req.result == UnityWebRequest.Result.Success)
+            {
+                string text = req.downloadHandler.text;
+                string who  = "none";
+                if      (text.Contains("\"who\":\"user\""))  who = "user";
+                else if (text.Contains("\"who\":\"mami\"")) who = "mami";
+                if (who != lastWho)
+                {
+                    lastWho = who;
+                    if (who == "user" && demoCameraController != null)
+                        demoCameraController.SetActiveCamera("Cam_Overview", actor);
+                    else if (who == "mami" && demoCameraController != null)
+                        demoCameraController.SetActiveCamera("Cam_MamiCall", actor);
+                    else if (who == "none" && demoCameraController != null)
+                        demoCameraController.SetActiveCamera("Cam_Overview", actor);
+                }
+            }
+            yield return new WaitForSeconds(0.3f);
+        }
     }
 
     IEnumerator ActorLookAtMami(UserEntity actor, float holdSeconds)
     {
         if (actor == null) { yield return new WaitForSeconds(holdSeconds); yield break; }
-
         var agent = actor.GetComponent<NavMeshAgent>();
-
         if (agent != null) agent.isStopped = true;
-
         if (mamiTransform != null)
         {
             Vector3 dir = mamiTransform.position - actor.transform.position;
@@ -376,19 +473,16 @@ public class ExperimentRunner : MonoBehaviour
             {
                 Quaternion startRot  = actor.transform.rotation;
                 Quaternion targetRot = Quaternion.LookRotation(dir.normalized);
-                float elapsed  = 0f;
-                float duration = 0.35f;
-                while (elapsed < duration)
+                float elapsed = 0f;
+                while (elapsed < 0.35f)
                 {
-                    actor.transform.rotation =
-                        Quaternion.Slerp(startRot, targetRot, elapsed / duration);
+                    actor.transform.rotation = Quaternion.Slerp(startRot, targetRot, elapsed / 0.35f);
                     elapsed += Time.deltaTime;
                     yield return null;
                 }
                 actor.transform.rotation = targetRot;
             }
         }
-
         yield return new WaitForSeconds(holdSeconds);
     }
 
@@ -408,7 +502,7 @@ public class ExperimentRunner : MonoBehaviour
         req.SetRequestHeader("Content-Type", "application/json");
         req.timeout = 5;
         yield return req.SendWebRequest();
-        Debug.Log($"[Demo] Scene {scene} ready posted");
+        Debug.Log($"[Demo] Scene {scene} ready");
     }
 
     IEnumerator PostActionEvent(string userId, string prevAction, string currAction, string timeSlot)
@@ -423,7 +517,6 @@ public class ExperimentRunner : MonoBehaviour
         req.SetRequestHeader("Content-Type", "application/json");
         req.timeout = 5;
         yield return req.SendWebRequest();
-        Debug.Log($"[Demo] Action event: {prevAction} → {currAction}");
     }
 
     IEnumerator WaitForSceneDone(float maxWaitSeconds = 120f)
@@ -437,18 +530,17 @@ public class ExperimentRunner : MonoBehaviour
             if (req.result == UnityWebRequest.Result.Success &&
                 req.downloadHandler.text.Contains("\"done\":true"))
             {
-                Debug.Log("[Demo] Scene done confirmed");
+                Debug.Log("[Demo] Scene done");
                 yield break;
             }
             yield return new WaitForSeconds(2f);
             waited += 2f;
         }
-        Debug.LogWarning("[Demo] WaitForSceneDone timeout — continuing");
+        Debug.LogWarning("[Demo] WaitForSceneDone timeout");
     }
 
     IEnumerator PollUntilReady()
     {
-        Debug.Log("[ExperimentRunner] Polling /ready...");
         while (true)
         {
             using var req = UnityWebRequest.Get($"{backendUrl}/ready");
@@ -459,10 +551,8 @@ public class ExperimentRunner : MonoBehaviour
                 var data = req.downloadHandler.text;
                 if (data.Contains("\"ready\":true") || data.Contains("\"ready\": true"))
                 {
-                    Debug.Log("[ExperimentRunner] Flask ready.");
                     flaskReady = true;
                     if (runOnStart) { yield return new WaitForSeconds(2f); StartExperiment(); }
-                    else Debug.Log("[ExperimentRunner] Press Space to start.");
                     yield break;
                 }
             }
@@ -474,31 +564,21 @@ public class ExperimentRunner : MonoBehaviour
     {
         if (isRunning || mode == RunMode.Demo) return;
         totalRuns = successRuns = skippedRuns = noiseRuns = 0;
-
         bool isCorruption = experimentType == ExperimentType.Corruption;
-
         if (userMom != null)
         {
-            userMom.pickupMissRate  = isCorruption ? CORRUPTION_PICKUP_MISS_RATE  : 0.0f;
-            userMom.putdownMissRate = isCorruption ? CORRUPTION_PUTDOWN_MISS_RATE : 0.0f;
+            userMom.pickupMissRate  = isCorruption ? CORRUPTION_PICKUP_MISS_RATE  : 0f;
+            userMom.putdownMissRate = isCorruption ? CORRUPTION_PUTDOWN_MISS_RATE : 0f;
             userMom.SetSkeletonNoise(isCorruption);
         }
         if (userDad != null)
         {
-            userDad.pickupMissRate  = isCorruption ? CORRUPTION_PICKUP_MISS_RATE  : 0.0f;
-            userDad.putdownMissRate = isCorruption ? CORRUPTION_PUTDOWN_MISS_RATE : 0.0f;
+            userDad.pickupMissRate  = isCorruption ? CORRUPTION_PICKUP_MISS_RATE  : 0f;
+            userDad.putdownMissRate = isCorruption ? CORRUPTION_PUTDOWN_MISS_RATE : 0f;
             userDad.SetSkeletonNoise(isCorruption);
         }
-
         var dsm = FindObjectOfType<DynamicSyncManager>();
-        if (dsm != null)
-            dsm.objectConfusionRate = isCorruption ? CORRUPTION_OBJECT_CONFUSION : 0.0f;
-
-        Debug.Log($"[ExperimentRunner] Start | type={experimentType} | "
-                + $"corruption={isCorruption} | "
-                + $"pickupMiss={userMom?.pickupMissRate:P0} | "
-                + $"objConfusion={dsm?.objectConfusionRate:P0}");
-
+        if (dsm != null) dsm.objectConfusionRate = isCorruption ? CORRUPTION_OBJECT_CONFUSION : 0f;
         StartCoroutine(PostExperimentType(experimentType.ToString().ToLower()));
         StartCoroutine(RunExperiment());
     }
@@ -519,9 +599,8 @@ public class ExperimentRunner : MonoBehaviour
         isRunning = true;
         yield return StartCoroutine(RunObservationExp());
         CurrentExperimentMode = "";
-        UseVirtualDay         = false;
-        isRunning             = false;
-        Debug.Log($"[ExperimentRunner] Done. Regular={successRuns} Skip={skippedRuns} Noise={noiseRuns}");
+        UseVirtualDay = false;
+        isRunning = false;
         StartCoroutine(PostExperimentDone());
     }
 
@@ -545,11 +624,10 @@ public class ExperimentRunner : MonoBehaviour
         CurrentTimeSlot       = TimeSlots[0].name;
         cameraManager.captureMode = StaticCameraManager.CaptureMode.EventDriven;
 
-        int totalDays    = exp_totalDays;
         int epPerSlot    = Mathf.Max(1, EPISODES_PER_VIRTUAL_DAY / TimeSlots.Length);
         int episodeCount = 0;
 
-        for (int day = 1; day <= totalDays; day++)
+        for (int day = 1; day <= exp_totalDays; day++)
         {
             CurrentVirtualDay = day;
             foreach (var slot in TimeSlots)
@@ -573,16 +651,11 @@ public class ExperimentRunner : MonoBehaviour
                         {
                             yield return StartCoroutine(RunSequenceEpisode(userMom, momQ[i], episodeCount));
                             yield return new WaitForSeconds(MIN_INTERVAL_IN_SLOT);
-                            successRuns++;
-                            episodeCount++;
+                            successRuns++; episodeCount++;
                         }
                         if (ADD_NOISE_EPISODES && episodeCount > 0 && episodeCount % NOISE_INTERVAL == 0)
-                        {
-                            yield return StartCoroutine(RunNoiseEpisode(userMom));
-                            noiseRuns++;
-                        }
+                        { yield return StartCoroutine(RunNoiseEpisode(userMom)); noiseRuns++; }
                     }
-
                     if (i < dadQ.Count)
                     {
                         totalRuns++;
@@ -591,19 +664,15 @@ public class ExperimentRunner : MonoBehaviour
                         {
                             yield return StartCoroutine(RunSequenceEpisode(userDad, dadQ[i], episodeCount));
                             yield return new WaitForSeconds(MIN_INTERVAL_IN_SLOT);
-                            successRuns++;
-                            episodeCount++;
+                            successRuns++; episodeCount++;
                         }
                         if (ADD_NOISE_EPISODES && episodeCount > 0 && episodeCount % NOISE_INTERVAL == 0)
-                        {
-                            yield return StartCoroutine(RunNoiseEpisode(userDad));
-                            noiseRuns++;
-                        }
+                        { yield return StartCoroutine(RunNoiseEpisode(userDad)); noiseRuns++; }
                     }
                 }
                 yield return StartCoroutine(PostCheckpoint(day, slot.name, episodeCount));
             }
-            Debug.Log($"[Experiment] Day {day}/{totalDays} success={successRuns} skip={skippedRuns}");
+            Debug.Log($"[Experiment] Day {day}/{exp_totalDays} success={successRuns} skip={skippedRuns}");
         }
     }
 
@@ -612,11 +681,9 @@ public class ExperimentRunner : MonoBehaviour
         UserEntity other = (targetUser == userMom) ? userDad : userMom;
         if (other      != null) other.gameObject.SetActive(false);
         if (targetUser != null) targetUser.gameObject.SetActive(true);
-
         var _dsm = FindObjectOfType<DynamicSyncManager>();
         if (_dsm != null) _dsm.ForceObjectSync();
         yield return new WaitForSeconds(0.5f);
-
         if (virtualCameraBrain != null) virtualCameraBrain.SetVirtualHour(CurrentVirtualHour);
         SetUsersVirtualHour(CurrentVirtualHour);
         yield return new WaitForSeconds(0.5f);
@@ -650,23 +717,17 @@ public class ExperimentRunner : MonoBehaviour
             targetUser.lastAssignedActivity = action;
             targetUser.ResetBusy();
             yield return StartCoroutine(targetUser.SwitchActivity(action));
-
             targetUser.lastAssignedActivity = action;
             yield return new WaitForSeconds(waitAfterCapture);
             targetUser.lastAssignedActivity = "";
-
             targetUser.skipReturnToStanding = false;
-
-            if (!isLast)
-                yield return new WaitForSeconds(0.5f);
+            if (!isLast) yield return new WaitForSeconds(0.5f);
         }
 
         yield return StartCoroutine(SetDeviceState("tv", "off"));
         if (virtualCameraBrain != null) virtualCameraBrain.SetTVState(false);
-
         yield return StartCoroutine(targetUser.ReturnToStanding());
         yield return new WaitForSeconds(3.0f);
-
         if (other != null) { WarpUserToSpot(other); other.gameObject.SetActive(true); }
         yield return new WaitForSeconds(WAIT_BETWEEN_EPISODES);
     }
@@ -677,15 +738,12 @@ public class ExperimentRunner : MonoBehaviour
         UserEntity other = (user == userMom) ? userDad : userMom;
         if (other != null) other.gameObject.SetActive(false);
         if (user  != null) user.gameObject.SetActive(true);
-
         if (virtualCameraBrain != null) virtualCameraBrain.SetVirtualHour(CurrentVirtualHour);
-
         user.lastAssignedActivity = noise;
         user.ResetBusy();
         yield return StartCoroutine(user.SwitchActivity(noise));
         yield return new WaitForSeconds(waitAfterCapture);
         user.lastAssignedActivity = "";
-
         yield return StartCoroutine(user.ReturnToStanding());
         if (other != null) { WarpUserToSpot(other); other.gameObject.SetActive(true); }
         yield return new WaitForSeconds(WAIT_BETWEEN_EPISODES);
@@ -705,9 +763,7 @@ public class ExperimentRunner : MonoBehaviour
     IEnumerator PostCheckpoint(int day, string slotName, int episodeCount)
     {
         string[] checkUsers   = { "User_Mom", "User_Dad" };
-        string[] checkActions = {
-            "Watching","Eating","Sitting","Drinking","Reading","Typing","PhoneUse","Laying"
-        };
+        string[] checkActions = { "Watching","Eating","Sitting","Drinking","Reading","Typing","PhoneUse","Laying" };
         foreach (string uid in checkUsers)
         {
             foreach (string act in checkActions)
@@ -797,25 +853,17 @@ public class ExperimentRunner : MonoBehaviour
     {
         int totalWeight = 0;
         foreach (var s in sequences) totalWeight += s.weight;
-
         var result = new List<BehaviorSequence>();
         var rng    = new System.Random();
-
         for (int i = 0; i < totalCount; i++)
         {
-            int r   = rng.Next(totalWeight);
-            int cum = 0;
-            foreach (var s in sequences)
-            {
-                cum += s.weight;
-                if (r < cum) { result.Add(s); break; }
-            }
+            int r = rng.Next(totalWeight), cum = 0;
+            foreach (var s in sequences) { cum += s.weight; if (r < cum) { result.Add(s); break; } }
         }
         return result;
     }
 
-    void PostVirtualHourFireAndForget(float hour) =>
-        StartCoroutine(PostVirtualHourRoutine(hour));
+    void PostVirtualHourFireAndForget(float hour) => StartCoroutine(PostVirtualHourRoutine(hour));
 
     IEnumerator PostVirtualHourRoutine(float hour)
     {
@@ -833,7 +881,7 @@ public class ExperimentRunner : MonoBehaviour
         if (mode == RunMode.Demo)
         {
             GUI.Box(new Rect(10, Screen.height - 60, 600, 50), "");
-            GUI.Label(new Rect(20, Screen.height - 50, 580, 40), $"Robot: {_demoMessage}");
+            GUI.Label(new Rect(20, Screen.height - 50, 580, 40), $"Mami: {_demoMessage}");
             return;
         }
         string status = isRunning ? "" : (flaskReady ? "[Ready] Press Space" : "[Waiting Flask...]");
