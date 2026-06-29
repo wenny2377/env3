@@ -13,19 +13,15 @@ public class DynamicSyncManager : MonoBehaviour
     [Header("Experiment Objects")]
     public List<GameObject> dynamicObjects = new List<GameObject>();
 
-    [Header("Backend")]
-    public string backendUrl = "http://localhost:5000";
-
-    [Header("Intervals (seconds)")]
-    public float positionInterval   = 0.5f;
-    public float objectSyncInterval = 5.0f;
-
     [Header("Corruption Model")]
     [Range(0f, 1f)]
     public float objectConfusionRate = 0.0f;
 
-    const float MOVE_TOLERANCE = 0.02f;
-    const int   POST_TIMEOUT   = 15;
+    const string BACKEND_URL          = "http://localhost:5000";
+    const float  POSITION_INTERVAL    = 0.5f;
+    const float  OBJECT_SYNC_INTERVAL = 5.0f;
+    const float  MOVE_TOLERANCE       = 0.02f;
+    const int    POST_TIMEOUT         = 15;
 
     static readonly Dictionary<string, string> ConfusionMap = new Dictionary<string, string>
     {
@@ -37,9 +33,6 @@ public class DynamicSyncManager : MonoBehaviour
     Dictionary<string, Vector3>    lastPos    = new Dictionary<string, Vector3>();
     Dictionary<string, Quaternion> lastRot    = new Dictionary<string, Quaternion>();
     Dictionary<string, Vector3>    lastObjPos = new Dictionary<string, Vector3>();
-
-    static readonly System.Globalization.CultureInfo Inv =
-        System.Globalization.CultureInfo.InvariantCulture;
 
     void Start()
     {
@@ -56,18 +49,16 @@ public class DynamicSyncManager : MonoBehaviour
         return label;
     }
 
-    string VirtualTimeJson()
-    {
-        return $"\"virtual_hour\":{ExperimentRunner.CurrentVirtualHour.ToString("F1", Inv)},"
-             + $"\"virtual_day\":{ExperimentRunner.CurrentVirtualDay},"
-             + $"\"time_slot\":\"{ExperimentRunner.CurrentTimeSlot}\",";
-    }
+    string VirtualTimeJson() =>
+          $"\"virtual_hour\":{ExperimentRunner.CurrentVirtualHour.ToString("F1", JsonUtil.Inv)},"
+        + $"\"virtual_day\":{ExperimentRunner.CurrentVirtualDay},"
+        + $"\"time_slot\":\"{ExperimentRunner.CurrentTimeSlot}\"";
 
     IEnumerator PositionLoop()
     {
         while (true)
         {
-            yield return new WaitForSeconds(positionInterval);
+            yield return new WaitForSeconds(POSITION_INTERVAL);
             yield return StartCoroutine(SendPositions());
         }
     }
@@ -96,27 +87,27 @@ public class DynamicSyncManager : MonoBehaviour
             Vector3 fwd = user.transform.forward;
 
             entries.Add("{"
-                + $"\"label\":\"{Esc(user.userID.ToLower())}\","
+                + $"\"label\":\"{JsonUtil.Esc(user.userID.ToLower())}\","
                 + $"\"room\":\"\","
-                + $"\"position\":[{pos.x.ToString("F3", Inv)},{pos.z.ToString("F3", Inv)}],"
+                + $"\"position\":[{pos.x.ToString("F3", JsonUtil.Inv)},{pos.z.ToString("F3", JsonUtil.Inv)}],"
                 + $"\"source\":\"unity_user\","
-                + $"\"activity\":\"{Esc(user.currentActivity)}\","
-                + $"\"forward\":[{fwd.x.ToString("F3", Inv)},{fwd.y.ToString("F3", Inv)},{fwd.z.ToString("F3", Inv)}],"
-                + VirtualTimeJson().TrimEnd(',')
+                + $"\"activity\":\"{JsonUtil.Esc(user.GroundTruthLabel)}\","
+                + $"\"forward\":[{fwd.x.ToString("F3", JsonUtil.Inv)},{fwd.y.ToString("F3", JsonUtil.Inv)},{fwd.z.ToString("F3", JsonUtil.Inv)}],"
+                + VirtualTimeJson()
                 + "}");
         }
 
         if (entries.Count == 0) yield break;
-
-        string json = "{\"objects\":[" + string.Join(",", entries) + "]}";
-        yield return StartCoroutine(Post(backendUrl + "/dynamic_sync", json));
+        yield return StartCoroutine(Post(
+            BACKEND_URL + "/dynamic_sync",
+            "{\"objects\":[" + string.Join(",", entries) + "]}"));
     }
 
     IEnumerator ObjectLoop()
     {
         while (true)
         {
-            yield return new WaitForSeconds(objectSyncInterval);
+            yield return new WaitForSeconds(OBJECT_SYNC_INTERVAL);
             yield return StartCoroutine(SendObjects());
         }
     }
@@ -155,23 +146,22 @@ public class DynamicSyncManager : MonoBehaviour
             string label = ApplyConfusion(obj.name.ToLower());
 
             string entry = "{"
-                + $"\"label\":\"{Esc(label)}\","
-                + $"\"room\":\"{Esc(room)}\","
-                + $"\"position\":[{pos.x.ToString("F3", Inv)},{pos.z.ToString("F3", Inv)}],"
+                + $"\"label\":\"{JsonUtil.Esc(label)}\","
+                + $"\"room\":\"{JsonUtil.Esc(room)}\","
+                + $"\"position\":[{pos.x.ToString("F3", JsonUtil.Inv)},{pos.z.ToString("F3", JsonUtil.Inv)}],"
                 + $"\"source\":\"unity\","
                 + VirtualTimeJson();
 
             if (!string.IsNullOrEmpty(heldBy))
-                entry += $"\"held_by\":\"{Esc(heldBy)}\",";
+                entry += $",\"held_by\":\"{JsonUtil.Esc(heldBy)}\"";
 
-            entry = entry.TrimEnd(',') + "}";
-            entries.Add(entry);
+            entries.Add(entry + "}");
         }
 
         if (entries.Count == 0) yield break;
-
-        string json = "{\"objects\":[" + string.Join(",", entries) + "]}";
-        yield return StartCoroutine(Post(backendUrl + "/dynamic_sync", json));
+        yield return StartCoroutine(Post(
+            BACKEND_URL + "/dynamic_sync",
+            "{\"objects\":[" + string.Join(",", entries) + "]}"));
     }
 
     string FindHolderOf(GameObject obj)
@@ -231,13 +221,6 @@ public class DynamicSyncManager : MonoBehaviour
             if (ra != null) return ra.roomName;
         }
         return "";
-    }
-
-    static string Esc(string s)
-    {
-        if (string.IsNullOrEmpty(s)) return "";
-        return s.Replace("\\", "\\\\").Replace("\"", "\\\"")
-                .Replace("\n", "\\n").Replace("\r", "\\r");
     }
 
     public void ForcePositionSync() => StartCoroutine(SendPositions());

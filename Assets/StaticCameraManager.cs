@@ -12,34 +12,30 @@ public class StaticCameraManager : MonoBehaviour
         else { Destroy(gameObject); return; }
     }
 
-    public enum CaptureMode { EventDriven, Manual }
-
-    [Header("Capture Mode")]
-    public CaptureMode captureMode = CaptureMode.EventDriven;
-
-    [Header("Target Users (Required)")]
+    [Header("Users")]
     public UserEntity userMom;
     public UserEntity userDad;
-
-    [Header("Capture Target States")]
-    public string captureStates =
-        "Drinking,SittingDrink,Sitting,Eating,Cooking,Opening," +
-        "Laying,Watching,Reading,Cleaning,PhoneUse,Typing,StandUp";
-
-    [Header("Still Detection")]
-    public float stillSpeedThreshold = 0.05f;
-    public float stillDuration       = 0.5f;
-    public float captureCooldown     = 3.0f;
-
-    [Header("Multi-view Selection")]
-    public float minViewAngle = 30f;
 
     [Header("Dependencies")]
     public VirtualCameraBrain virtualCameraBrain;
 
-    HashSet<string>                      captureStateSet;
+    const float STILL_SPEED_THRESHOLD = 0.05f;
+    const float STILL_DURATION        = 0.5f;
+    const float CAPTURE_COOLDOWN      = 3.0f;
+    const float MIN_VIEW_ANGLE        = 30f;
+    const float ROOM_RECHECK_DIST     = 1.0f;
+
+    static readonly HashSet<string> CaptureStateSet = new HashSet<string>
+    {
+        "Drinking", "SeatedDrinking", "Sitting", "Eating",
+        "Cooking",  "Opening",        "Laying",  "Watching",
+        "Reading",  "Cleaning",       "UsingPhone", "Typing", "StandUp"
+    };
+
     Dictionary<string, List<CameraNode>> roomCameras      = new();
     Dictionary<string, bool>             _isCapturingDict = new();
+    Dictionary<string, Vector3>          _lastRoomCheckPos = new();
+    Dictionary<string, List<CameraNode>> _cachedUserCams  = new();
 
     bool IsCapturing(string userId) =>
         _isCapturingDict.TryGetValue(userId, out bool v) && v;
@@ -49,28 +45,14 @@ public class StaticCameraManager : MonoBehaviour
 
     void Start()
     {
-        captureStateSet = new HashSet<string>(captureStates.Split(','));
-
         if (virtualCameraBrain == null)
             virtualCameraBrain = FindObjectOfType<VirtualCameraBrain>();
-
         if (virtualCameraBrain == null)
             Debug.LogError("[SCM] VirtualCameraBrain not found.");
-
-        if (userMom != null)
-            StartCoroutine(SmartScanRoutine(userMom));
-        else
-            Debug.LogWarning("[SCM] userMom not assigned");
-
-        if (userDad != null)
-            StartCoroutine(SmartScanRoutine(userDad));
-        else
-            Debug.LogWarning("[SCM] userDad not assigned");
-
-        Debug.Log($"[SCM] Started | mode={captureMode} | "
-                + $"stillDuration={stillDuration}s | "
-                + $"cooldown={captureCooldown}s | "
-                + $"captureStates=[{captureStates}]");
+        if (userMom != null) StartCoroutine(SmartScanRoutine(userMom));
+        else Debug.LogWarning("[SCM] userMom not assigned");
+        if (userDad != null) StartCoroutine(SmartScanRoutine(userDad));
+        else Debug.LogWarning("[SCM] userDad not assigned");
     }
 
     void Update()
@@ -86,17 +68,16 @@ public class StaticCameraManager : MonoBehaviour
     {
         if (cameras == null || cameras.Count == 0) return;
         roomCameras[roomName] = cameras;
+        _cachedUserCams.Clear();
         Debug.Log($"[SCM] Registered '{roomName}': {cameras.Count} node(s)");
     }
 
-    public List<CameraNode> GetCamerasForUser(UserEntity user)
-        => FindCamerasForUser(user);
+    public List<CameraNode> GetCamerasForUser(UserEntity user) => FindCamerasForUser(user);
 
     public List<CameraNode> GetScoredCamerasForUser(UserEntity user)
     {
         var cams = FindCamerasForUser(user);
-        return (cams == null || cams.Count == 0)
-            ? null : ScoreCamerasRanked(user, cams);
+        return (cams == null || cams.Count == 0) ? null : ScoreCamerasRanked(user, cams);
     }
 
     public IEnumerator TriggerManualCapture(UserEntity user, string activity)
@@ -121,9 +102,6 @@ public class StaticCameraManager : MonoBehaviour
         {
             yield return new WaitForSeconds(0.1f);
 
-            if (captureMode == CaptureMode.Manual)
-                continue;
-
             Vector3 curPos = user.transform.position;
             float   speed  = Vector3.Distance(curPos, lastPos) / 0.1f;
             lastPos  = curPos;
@@ -138,21 +116,15 @@ public class StaticCameraManager : MonoBehaviour
                 continue;
             }
 
-            if (speed < stillSpeedThreshold)
-                stillTimer += 0.1f;
-            else
-                stillTimer = 0f;
+            stillTimer = speed < STILL_SPEED_THRESHOLD ? stillTimer + 0.1f : 0f;
 
-            bool inSet      = captureStateSet.Contains(cur);
-            bool isNew      = cur != lastCaptured;
-            bool isStill    = stillTimer >= stillDuration;
-            bool notCooling = cooldown <= 0f;
-
-            if (!inSet || !isNew || !isStill || !notCooling)
-                continue;
+            if (!CaptureStateSet.Contains(cur)) continue;
+            if (cur == lastCaptured)            continue;
+            if (stillTimer < STILL_DURATION)    continue;
+            if (cooldown > 0f)                  continue;
 
             lastCaptured = cur;
-            cooldown     = captureCooldown;
+            cooldown     = CAPTURE_COOLDOWN;
             stillTimer   = 0f;
 
             float lockWait = 0f;
@@ -167,8 +139,15 @@ public class StaticCameraManager : MonoBehaviour
                 continue;
             }
 
-            if (!captureStateSet.Contains(user.currentActivity))
-                continue;
+            if (!CaptureStateSet.Contains(user.currentActivity)) continue;
+
+            string curAct = user.currentActivity;
+            if (curAct == "Walking"   || curAct == "StandUp" ||
+                curAct == "PickingUp" || curAct == "PuttingDown") continue;
+
+            string assigned = user.lastAssignedActivity;
+            if (assigned == "Walking" || assigned == "Standing" ||
+                assigned == "StandUp") continue;
 
             List<CameraNode> cams = FindCamerasForUser(user);
             if (cams == null || cams.Count == 0)
@@ -177,23 +156,8 @@ public class StaticCameraManager : MonoBehaviour
                 continue;
             }
 
-            // Skip if user is in transition (walking to spot)
-            // This prevents capturing mid-action states
-            string curAct = user.currentActivity;
-            if (curAct == "Walking" || curAct == "StandUp" ||
-                curAct == "PickingUp" || curAct == "PuttingDown")
-                continue;
-
-            // Skip if lastAssignedActivity is an intermediate action
-            string assigned = user.lastAssignedActivity;
-            if (assigned == "Opening" || assigned == "Walking" ||
-                assigned == "Standing" || assigned == "StandUp")
-                continue;
-
-            string label = !string.IsNullOrEmpty(assigned) ? assigned : curAct;
-
-            Debug.Log($"[SCM] {user.userID} | {label} | "
-                    + $"still={stillTimer:F1}s | capturing");
+            string label = user.GroundTruthLabel;
+            Debug.Log($"[SCM] {user.userID} | {label} | still={stillTimer:F1}s");
             yield return StartCoroutine(CaptureWithBestNodes(user, label, cams));
         }
     }
@@ -206,7 +170,7 @@ public class StaticCameraManager : MonoBehaviour
         List<CameraNode> ranked = ScoreCamerasRanked(user, cameras);
         List<CameraNode> toUse  = new List<CameraNode>();
 
-        int     topN = virtualCameraBrain != null ? virtualCameraBrain.topN : 1;
+        int     topN = 2;
         Vector3 dir1 = Vector3.zero;
         Vector3 uPos = user.transform.position;
 
@@ -215,7 +179,6 @@ public class StaticCameraManager : MonoBehaviour
             foreach (var node in ranked)
             {
                 if (toUse.Count >= topN) break;
-
                 if (toUse.Count == 0)
                 {
                     toUse.Add(node);
@@ -223,9 +186,8 @@ public class StaticCameraManager : MonoBehaviour
                 }
                 else
                 {
-                    Vector3 dirI  = (node.transform.position - uPos).normalized;
-                    float   angle = Vector3.Angle(dir1, dirI);
-                    if (angle >= minViewAngle)
+                    Vector3 dirI = (node.transform.position - uPos).normalized;
+                    if (Vector3.Angle(dir1, dirI) >= MIN_VIEW_ANGLE)
                         toUse.Add(node);
                 }
             }
@@ -233,16 +195,13 @@ public class StaticCameraManager : MonoBehaviour
 
         if (toUse.Count == 0)
         {
-            if (ranked != null && ranked.Count > 0)
-                toUse.Add(ranked[0]);
-            else if (cameras.Count > 0)
-                toUse.Add(cameras[0]);
+            if (ranked != null && ranked.Count > 0) toUse.Add(ranked[0]);
+            else if (cameras.Count > 0)             toUse.Add(cameras[0]);
         }
 
         string names = string.Join(", ",
             toUse.ConvertAll(n => $"{n.nodeName}({n.lastScore:F2})"));
-        Debug.Log($"[SCM] {user.userID} | {activity} | "
-                + $"views={toUse.Count} | [{names}]");
+        Debug.Log($"[SCM] {user.userID} | {activity} | views={toUse.Count} | [{names}]");
 
         if (virtualCameraBrain == null)
         {
@@ -271,11 +230,7 @@ public class StaticCameraManager : MonoBehaviour
             Vector3 toCamera  = (node.transform.position - userPos).normalized;
             float   facingDot = Vector3.Dot(user.transform.forward, toCamera);
 
-            if (facingDot < -0.3f)
-            {
-                node.lastScore = -1000f;
-                continue;
-            }
+            if (facingDot < -0.3f) { node.lastScore = -1000f; continue; }
 
             Vector3 rayDir   = chestPos - node.transform.position;
             float   distance = rayDir.magnitude;
@@ -292,8 +247,7 @@ public class StaticCameraManager : MonoBehaviour
             float distScore = Mathf.Max(0f, (25f - distance) * 2f);
             node.lastScore  = (facingDot * 50f) + visScore + distScore;
 
-            if (visScore > 0f)
-                scored.Add(node);
+            if (visScore > 0f) scored.Add(node);
         }
 
         scored.Sort((a, b) => b.lastScore.CompareTo(a.lastScore));
@@ -308,9 +262,17 @@ public class StaticCameraManager : MonoBehaviour
             foreach (var v in roomCameras.Values) return v;
         }
 
+        Vector3 uPos = user.transform.position;
+
+        if (_cachedUserCams.TryGetValue(user.userID, out var cached))
+        {
+            if (_lastRoomCheckPos.TryGetValue(user.userID, out Vector3 lastCheck) &&
+                Vector3.Distance(uPos, lastCheck) < ROOM_RECHECK_DIST)
+                return cached;
+        }
+
         string  nearest = null;
         float   minDist = float.MaxValue;
-        Vector3 uPos    = user.transform.position;
 
         foreach (var kv in roomCameras)
         {
@@ -320,12 +282,15 @@ public class StaticCameraManager : MonoBehaviour
                 if (c != null) { center += c.transform.position; cnt++; }
             if (cnt == 0) continue;
             center /= cnt;
-
             float d = Vector3.Distance(uPos, center);
             if (d < minDist) { minDist = d; nearest = kv.Key; }
         }
 
-        return nearest != null ? roomCameras[nearest] : null;
+        if (nearest == null) return null;
+
+        _cachedUserCams[user.userID]  = roomCameras[nearest];
+        _lastRoomCheckPos[user.userID] = uPos;
+        return roomCameras[nearest];
     }
 
     void OnDrawGizmos()
@@ -338,8 +303,7 @@ public class StaticCameraManager : MonoBehaviour
                 Gizmos.color =
                     cam.lastScore >= 60f ? Color.green  :
                     cam.lastScore >= 30f ? Color.yellow :
-                    cam.lastScore >  0f  ? Color.red    :
-                                           Color.gray;
+                    cam.lastScore >  0f  ? Color.red    : Color.gray;
                 Gizmos.DrawWireSphere(cam.transform.position, 0.15f);
                 Gizmos.DrawRay(cam.transform.position, cam.transform.forward * 2f);
             }

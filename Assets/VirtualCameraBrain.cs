@@ -6,35 +6,18 @@ using UnityEngine.Networking;
 
 public class VirtualCameraBrain : MonoBehaviour
 {
-    [Header("Flask Endpoint")]
-    public string predictUrl = "http://127.0.0.1:5000/predict";
-
-    [Header("Multi-Angle Capture Count")]
-    [Range(1, 4)]
-    public int topN = 2;
-
-    [Header("Burst Capture Settings")]
-    [Range(1, 3)]
-    public int   burstCount    = 2;
-    public float burstInterval = 0.3f;
-
-    [Header("Capture Resolution (Square)")]
-    public int renderWidth  = 512;
-    public int renderHeight = 512;
+    const string PREDICT_URL    = "http://127.0.0.1:5000/predict";
+    const int    TOP_N          = 2;
+    const int    BURST_COUNT    = 2;
+    const float  BURST_INTERVAL = 0.3f;
+    const int    RENDER_WIDTH   = 512;
+    const int    RENDER_HEIGHT  = 512;
 
     bool _tvOn = false;
     public void SetTVState(bool isOn) => _tvOn = isOn;
-    public void SetVirtualHour(float hour) { }
-
-    void Start()
-    {
-        Debug.Log($"[VCB] topN={topN} burst={burstCount}x{burstInterval}s {renderWidth}x{renderHeight}");
-    }
 
     public IEnumerator ExecuteMultiCapture(
-        UserEntity       user,
-        List<CameraNode> sortedNodes,
-        string           activity)
+        UserEntity user, List<CameraNode> sortedNodes, string activity)
     {
         if (sortedNodes == null || sortedNodes.Count == 0)
         {
@@ -42,8 +25,9 @@ public class VirtualCameraBrain : MonoBehaviour
             yield break;
         }
 
-        string tCapture    = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fff");
-        int    captureCount = Mathf.Min(topN, sortedNodes.Count);
+        string snapshotExpMode = ExperimentRunner.CurrentExperimentMode;
+        string tCapture        = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fff");
+        int    captureCount    = Mathf.Min(TOP_N, sortedNodes.Count);
 
         var imageList  = new List<string>();
         var nodeNames  = new List<string>();
@@ -51,9 +35,8 @@ public class VirtualCameraBrain : MonoBehaviour
 
         for (int i = 0; i < captureCount; i++)
         {
-            CameraNode node   = sortedNodes[i];
+            CameraNode node    = sortedNodes[i];
             Camera     nodeCam = node.GetComponentInChildren<Camera>(includeInactive: true);
-
             if (nodeCam == null)
             {
                 Debug.LogWarning($"[VCB] No Camera under '{node.nodeName}'.");
@@ -62,11 +45,11 @@ public class VirtualCameraBrain : MonoBehaviour
 
             nodeCam.fieldOfView = node.fieldOfView;
 
-            for (int b = 0; b < burstCount; b++)
+            for (int b = 0; b < BURST_COUNT; b++)
             {
-                if (b > 0) yield return new WaitForSeconds(burstInterval);
+                if (b > 0) yield return new WaitForSeconds(BURST_INTERVAL);
 
-                RenderTexture rt = new RenderTexture(renderWidth, renderHeight, 24);
+                RenderTexture rt = new RenderTexture(RENDER_WIDTH, RENDER_HEIGHT, 24);
                 nodeCam.targetTexture = rt;
                 nodeCam.enabled       = true;
                 nodeCam.Render();
@@ -74,8 +57,8 @@ public class VirtualCameraBrain : MonoBehaviour
                 nodeCam.targetTexture = null;
 
                 RenderTexture.active = rt;
-                var tex = new Texture2D(renderWidth, renderHeight, TextureFormat.RGB24, false);
-                tex.ReadPixels(new Rect(0, 0, renderWidth, renderHeight), 0, 0);
+                var tex = new Texture2D(RENDER_WIDTH, RENDER_HEIGHT, TextureFormat.RGB24, false);
+                tex.ReadPixels(new Rect(0, 0, RENDER_WIDTH, RENDER_HEIGHT), 0, 0);
                 tex.Apply();
                 RenderTexture.active = null;
 
@@ -94,7 +77,9 @@ public class VirtualCameraBrain : MonoBehaviour
             yield break;
         }
 
-        yield return StartCoroutine(PostPredict(user, activity, imageList, nodeNames, nodeScores, tCapture));
+        yield return StartCoroutine(
+            PostPredict(user, activity, imageList, nodeNames, nodeScores,
+                        tCapture, snapshotExpMode));
     }
 
     public IEnumerator ExecuteCaptureSequence(
@@ -110,7 +95,8 @@ public class VirtualCameraBrain : MonoBehaviour
         List<string> imageList,
         List<string> nodeNames,
         List<float>  nodeScores,
-        string       tCapture)
+        string       tCapture,
+        string       snapshotExpMode = "")
     {
         string roomName = "";
         if (nodeNames.Count > 0)
@@ -123,29 +109,35 @@ public class VirtualCameraBrain : MonoBehaviour
         Vector3 pos = user.transform.position;
         Vector3 fwd = user.transform.forward;
 
-        var    sk      = user.GetComponent<SkeletonHelper>();
+        var    sk       = user.GetComponent<SkeletonHelper>();
         string skelJson = sk != null ? sk.ToJsonFragment() : "";
 
         if (sk != null)
-            Debug.Log($"[SKEL] {user.userID} | {activity} | pitch={sk.HeadPitch():F1} wrist_h={sk.NormalizedWristHeight():F3}");
+            Debug.Log($"[SKEL] {user.userID} | {activity} | "
+                    + $"axis={sk.BodyAxisAngle():F1} knee={sk.KneeHipRatio():F2} "
+                    + $"pitch={sk.HeadPitch():F1} r_h2h={sk.HandToHead(false):F3}");
         else
-            Debug.LogWarning($"[SKEL] {user.userID} | {activity} | SkeletonHelper NOT FOUND");
-
-        string posJson = $"\"user_pos\":{{\"x\":{pos.x.ToString("F3", Inv)},\"y\":{pos.y.ToString("F3", Inv)},\"z\":{pos.z.ToString("F3", Inv)}}}";
-        string fwdJson = $"\"user_forward\":{{\"x\":{fwd.x.ToString("F3", Inv)},\"y\":{fwd.y.ToString("F3", Inv)},\"z\":{fwd.z.ToString("F3", Inv)}}}";
+            Debug.LogWarning($"[SKEL] {user.userID} | SkeletonHelper NOT FOUND");
 
         string expModeField = !string.IsNullOrEmpty(ExperimentRunner.CurrentExperimentMode)
-            ? $"\"experiment_mode\":\"{Esc(ExperimentRunner.CurrentExperimentMode)}\"," : "";
+            ? $"\"experiment_mode\":\"{JsonUtil.Esc(ExperimentRunner.CurrentExperimentMode)}\"," : "";
 
         string virtualTimeFields =
-            $"\"virtual_hour\":{ExperimentRunner.CurrentVirtualHour.ToString("F1", Inv)},"
-          + $"\"virtual_day\":{ExperimentRunner.CurrentVirtualDay},"
-          + $"\"time_slot\":\"{Esc(ExperimentRunner.CurrentTimeSlot)}\",";
+              $"\"virtual_hour\":{ExperimentRunner.CurrentVirtualHour.ToString("F1", JsonUtil.Inv)},"
+            + $"\"virtual_day\":{ExperimentRunner.CurrentVirtualDay},"
+            + $"\"time_slot\":\"{JsonUtil.Esc(ExperimentRunner.CurrentTimeSlot)}\",";
+
+        string posJson = $"\"user_pos\":{{\"x\":{pos.x.ToString("F3", JsonUtil.Inv)},"
+                       + $"\"y\":{pos.y.ToString("F3", JsonUtil.Inv)},"
+                       + $"\"z\":{pos.z.ToString("F3", JsonUtil.Inv)}}}";
+        string fwdJson = $"\"user_forward\":{{\"x\":{fwd.x.ToString("F3", JsonUtil.Inv)},"
+                       + $"\"y\":{fwd.y.ToString("F3", JsonUtil.Inv)},"
+                       + $"\"z\":{fwd.z.ToString("F3", JsonUtil.Inv)}}}";
 
         string json = "{"
-            + $"\"userID\":\"{Esc(user.userID)}\","
-            + $"\"activity\":\"{Esc(activity)}\","
-            + $"\"room_name\":\"{Esc(roomName)}\","
+            + $"\"userID\":\"{JsonUtil.Esc(user.userID)}\","
+            + $"\"activity\":\"{JsonUtil.Esc(activity)}\","
+            + $"\"room_name\":\"{JsonUtil.Esc(roomName)}\","
             + $"\"t_capture\":\"{tCapture}\","
             + virtualTimeFields
             + expModeField
@@ -159,7 +151,7 @@ public class VirtualCameraBrain : MonoBehaviour
             + fwdJson
             + "}";
 
-        using var req = new UnityWebRequest(predictUrl, "POST");
+        using var req = new UnityWebRequest(PREDICT_URL, "POST");
         byte[] body = System.Text.Encoding.UTF8.GetBytes(json);
         req.uploadHandler   = new UploadHandlerRaw(body);
         req.downloadHandler = new DownloadHandlerBuffer();
@@ -168,13 +160,12 @@ public class VirtualCameraBrain : MonoBehaviour
         yield return req.SendWebRequest();
 
         if (req.result == UnityWebRequest.Result.Success)
-            Debug.Log($"[VCB] ok | {user.userID} | {activity} | day={ExperimentRunner.CurrentVirtualDay} slot={ExperimentRunner.CurrentTimeSlot} tv={_tvOn}");
+            Debug.Log($"[VCB] ok | {user.userID} | {activity} | "
+                    + $"day={ExperimentRunner.CurrentVirtualDay} "
+                    + $"slot={ExperimentRunner.CurrentTimeSlot} tv={_tvOn}");
         else
             Debug.LogWarning($"[VCB] failed: {req.error} | {user.userID} | {activity}");
     }
-
-    static readonly System.Globalization.CultureInfo Inv = System.Globalization.CultureInfo.InvariantCulture;
-    static string Esc(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
 
     static string StrArrayJson(List<string> list)
     {
@@ -182,7 +173,7 @@ public class VirtualCameraBrain : MonoBehaviour
         for (int i = 0; i < list.Count; i++)
         {
             if (i > 0) sb.Append(',');
-            sb.Append('"').Append(Esc(list[i])).Append('"');
+            sb.Append('"').Append(JsonUtil.Esc(list[i])).Append('"');
         }
         return sb.Append(']').ToString();
     }
@@ -190,7 +181,7 @@ public class VirtualCameraBrain : MonoBehaviour
     static string FloatArrayJson(List<float> list)
     {
         var parts = new List<string>();
-        foreach (var f in list) parts.Add(f.ToString("F4", Inv));
+        foreach (var f in list) parts.Add(f.ToString("F4", JsonUtil.Inv));
         return "[" + string.Join(",", parts) + "]";
     }
 }

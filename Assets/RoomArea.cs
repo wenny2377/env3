@@ -5,62 +5,74 @@ using UnityEngine;
 public class RoomArea : MonoBehaviour
 {
     [Header("Room Settings")]
+    [Tooltip("Must match CameraNode.roomName exactly.\nExamples: LivingRoom / Kitchen / DadRoom")]
     public string roomName = "LivingRoom";
 
-    [Header("Auto Fetch Camera Nodes")]
-    [Tooltip("Enabled: auto-find CameraNodes with matching roomName\nDisabled: manually assign cameraPivots")]
+    [Header("Camera Node Discovery")]
+    [Tooltip("On: auto-find CameraNodes whose roomName matches this area.\nOff: assign cameraPivots manually.")]
     public bool autoFetchByRoomName = true;
+
+    [Tooltip("Used only when autoFetchByRoomName is disabled.")]
     public Transform[] cameraPivots;
 
-    [Header("Debug Options")]
-    [Tooltip("Enabled: any collider triggers (recommended)\nDisabled: only objects tagged User trigger")]
-    public bool ignoreTagCheck = true;
+    [Header("Debug Visualisation")]
     public Color areaColor = new Color(0.1f, 1f, 0.1f, 0.2f);
+
+    List<CameraNode> _cachedNodes;
 
     void Start()
     {
         GetComponent<BoxCollider>().isTrigger = true;
-        if (autoFetchByRoomName) FetchNodesByRoomName();
-    }
+        _cachedNodes = BuildNodeList();
 
-    void FetchNodesByRoomName()
-    {
-        var allNodes = FindObjectsOfType<CameraNode>();
-        var matched = new List<Transform>();
-        foreach (var n in allNodes)
-            if (n.roomName == roomName) matched.Add(n.transform);
-        cameraPivots = matched.ToArray();
-
-        if (cameraPivots.Length > 0)
-            Debug.Log($"[RoomArea] {roomName} bound {cameraPivots.Length} camera node(s)");
+        if (_cachedNodes.Count == 0)
+            Debug.LogWarning($"[RoomArea] '{roomName}' — no CameraNodes found. Check roomName matches exactly.");
         else
-            Debug.LogWarning($"[RoomArea] {roomName} no CameraNode found — check roomName matches exactly");
+            Debug.Log($"[RoomArea] '{roomName}' — cached {_cachedNodes.Count} node(s).");
     }
 
     void OnTriggerEnter(Collider other)
     {
-        Debug.Log($"[RoomArea] {other.name} entered {roomName}");
-        if (!ignoreTagCheck && !other.CompareTag("User")) return;
-
         UserEntity user = other.GetComponentInParent<UserEntity>();
         if (user == null) return;
 
         if (StaticCameraManager.Instance == null)
         {
-            Debug.LogError("[RoomArea] StaticCameraManager.Instance is null");
+            Debug.LogError("[RoomArea] StaticCameraManager.Instance is null.");
             return;
         }
 
-        var nodeList = new List<CameraNode>();
-        foreach (var t in cameraPivots)
+        if (_cachedNodes == null || _cachedNodes.Count == 0)
         {
-            if (t == null) continue;
-            var n = t.GetComponent<CameraNode>();
-            if (n != null) nodeList.Add(n);
+            Debug.LogWarning($"[RoomArea] '{roomName}' — no nodes to register for {user.userID}.");
+            return;
         }
 
-        if (nodeList.Count > 0)
-            StaticCameraManager.Instance.RegisterRoomCameras(roomName, nodeList);
+        StaticCameraManager.Instance.RegisterRoomCameras(roomName, _cachedNodes);
+    }
+
+    List<CameraNode> BuildNodeList()
+    {
+        var result = new List<CameraNode>();
+
+        if (autoFetchByRoomName)
+        {
+            foreach (CameraNode node in FindObjectsOfType<CameraNode>())
+                if (node.roomName == roomName)
+                    result.Add(node);
+        }
+        else
+        {
+            if (cameraPivots == null) return result;
+            foreach (Transform t in cameraPivots)
+            {
+                if (t == null) continue;
+                CameraNode node = t.GetComponent<CameraNode>();
+                if (node != null) result.Add(node);
+            }
+        }
+
+        return result;
     }
 
     void OnDrawGizmos()
@@ -69,9 +81,9 @@ public class RoomArea : MonoBehaviour
         if (col == null) return;
 
         Gizmos.matrix = transform.localToWorldMatrix;
-        Gizmos.color = areaColor;
+        Gizmos.color  = areaColor;
         Gizmos.DrawCube(col.center, col.size);
-        Gizmos.color = new Color(areaColor.r, areaColor.g, areaColor.b, 1f);
+        Gizmos.color  = new Color(areaColor.r, areaColor.g, areaColor.b, 1f);
         Gizmos.DrawWireCube(col.center, col.size);
     }
 }

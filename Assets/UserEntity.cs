@@ -22,27 +22,6 @@ public class UserEntity : MonoBehaviour
     [Header("User ID")]
     public string userID = "User_Mom";
 
-    [Header("Kitchen Spots")]
-    public Transform drinkSpot;
-    public Transform sittingDrinkSpot;
-    public Transform eatSpot;
-    public Transform cookSpot;
-    public Transform openSpot;
-
-    [Header("LivingRoom Spots")]
-    public Transform layingSpot;
-    public Transform watchingSpot;
-    public Transform readingSpot;
-    public Transform cleanSpot;
-    public Transform phoneSpot;
-    public Transform sittingSpot;
-
-    [Header("DadRoom Spots")]
-    public Transform typingSpot;
-    public Transform dadReadingSpot;
-    public Transform dadPhoneSpot;
-    public Transform dadCleanSpot;
-
     [Header("Common")]
     public Transform standingSpot;
 
@@ -70,15 +49,11 @@ public class UserEntity : MonoBehaviour
     public float     fridgeOpenSpeed = 90f;
 
     [Header("Action Durations (seconds)")]
-    public float noddingDuration      = 1.5f;
     public float drinkDuration        = 2.0f;
     public float eatDuration          = 3.0f;
     public float cookDuration         = 3.0f;
     public float openDuration         = 2.0f;
     public float cleanDuration        = 3.0f;
-    public float pickUpDuration       = 1.0f;
-    public float putDownDuration      = 1.0f;
-    public float sittingDuration      = 3.0f;
     public float standUpDuration      = 0.8f;
     public float activityHoldDuration = 3.0f;
 
@@ -94,11 +69,18 @@ public class UserEntity : MonoBehaviour
     [Header("Backend")]
     public string backendUrl = "http://localhost:5000";
 
-    [Header("Corruption Model")]
-    [Range(0f, 1f)] public float pickupMissRate  = 0.0f;
-    [Range(0f, 1f)] public float putdownMissRate = 0.0f;
+    [HideInInspector] public float     pickupMissRate       = 0.0f;
+    [HideInInspector] public float     putdownMissRate      = 0.0f;
+    [HideInInspector] public bool      skipReturnToStanding = false;
+    [HideInInspector] public Transform overrideSpot         = null;
+    [HideInInspector] public float     currentVirtualHour   = -1f;
+    [HideInInspector] public string    lastAssignedActivity = "";
 
-    [HideInInspector] public bool skipReturnToStanding = false;
+    public string GroundTruthLabel =>
+        JsonUtil.ToGroundTruthLabel(
+            !string.IsNullOrEmpty(lastAssignedActivity)
+                ? lastAssignedActivity
+                : currentActivity);
 
     const float WALK_SPEED        = 1.4f;
     const float ARRIVAL_THRESHOLD = 0.15f;
@@ -107,40 +89,35 @@ public class UserEntity : MonoBehaviour
     const float SHADOW_INTERVAL   = 0.5f;
     const float JITTER_RADIUS     = 0.1f;
 
-    const string STATE_STANDING      = "Standing";
-    const string STATE_WALK          = "Walking";
-    const string STATE_DRINK         = "Drinking";
-    const string STATE_SITTING_DRINK = "SittingDrink";
-    const string STATE_SITTING       = "Sitting";
-    const string STATE_STAND_UP      = "StandUp";
-    const string STATE_LAYING        = "Laying";
-    const string STATE_READING       = "Reading";
-    const string STATE_TYPING        = "Typing";
-    const string STATE_WATCHING      = "Watching";
-    const string STATE_PHONE         = "PhoneUse";
-    const string STATE_NODDING       = "Nodding";
-    const string STATE_EATING        = "Eating";
-    const string STATE_COOKING       = "Cooking";
-    const string STATE_CLEANING      = "Cleaning";
-    const string STATE_OPENING       = "Opening";
-    const string STATE_PICKING_UP    = "PickingUp";
-    const string STATE_PUTTING_DOWN  = "PuttingDown";
+    const string STATE_STANDING        = "Standing";
+    const string STATE_WALK            = "Walking";
+    const string STATE_DRINK           = "Drinking";
+    const string STATE_DRINKING_SEATED = "SeatedDrinking";
+    const string STATE_SITTING         = "Sitting";
+    const string STATE_STAND_UP        = "StandUp";
+    const string STATE_LAYING          = "Laying";
+    const string STATE_READING         = "Reading";
+    const string STATE_TYPING          = "Typing";
+    const string STATE_WATCHING        = "Watching";
+    const string STATE_USING_PHONE     = "UsingPhone";
+    const string STATE_EATING          = "Eating";
+    const string STATE_COOKING         = "Cooking";
+    const string STATE_CLEANING        = "Cleaning";
+    const string STATE_OPENING         = "Opening";
+    const string STATE_PICKING_UP      = "PickingUp";
+    const string STATE_PUTTING_DOWN    = "PuttingDown";
 
-    public string currentActivity      { get; private set; } = "Standing";
-    public bool   IsBusy               { get; private set; } = false;
-    public string lastAssignedActivity = "";
-
-    [HideInInspector] public float     currentVirtualHour = -1f;
-    [HideInInspector] public Transform overrideSpot       = null;
+    public string currentActivity { get; private set; } = "Standing";
+    public bool   IsBusy          { get; private set; } = false;
 
     public Vector3        GetAimPosition()   => transform.position + Vector3.up * 1.2f;
     public void           ResetBusy()        => IsBusy = false;
     public BehaviorItem[] GetBehaviorItems() => _allItems;
 
-    public void SetSkeletonNoise(bool enabled)
+    public void SetSkeletonNoise(bool enabled, float std = 15f)
     {
         if (_skeletonHelper != null)
-            _skeletonHelper.skeletonNoiseEnabled = enabled;
+            _skeletonHelper.SetSkeletonNoise(enabled, std);
     }
 
     Animator           anim;
@@ -151,19 +128,16 @@ public class UserEntity : MonoBehaviour
     DynamicSyncManager _dsm;
     SkeletonHelper     _skeletonHelper;
 
-    static readonly System.Globalization.CultureInfo Inv =
-        System.Globalization.CultureInfo.InvariantCulture;
-
     static readonly HashSet<string> SeatActions = new HashSet<string>
     {
-        "Sitting", "SittingDrink", "Eating", "Laying",
+        "Sitting", "SeatedDrinking", "Eating", "Laying",
         "Watching", "Typing", "Reading"
     };
 
     static readonly HashSet<string> HeldActions = new HashSet<string>
     {
-        "SittingDrink", "Drinking", "Eating", "Cooking",
-        "Reading", "PhoneUse"
+        "SeatedDrinking", "Drinking", "Eating", "Cooking",
+        "Reading", "UsingPhone"
     };
 
     void Start()
@@ -192,12 +166,12 @@ public class UserEntity : MonoBehaviour
     void InitBehaviorItems()
     {
         drinkItem.activity        = "Drinking";
-        sittingDrinkItem.activity = "SittingDrink";
+        sittingDrinkItem.activity = "SeatedDrinking";
         eatItem.activity          = "Eating";
         cookItem.activity         = "Cooking";
         cleanItem.activity        = "Cleaning";
         readItem.activity         = "Reading";
-        phoneItem.activity        = "PhoneUse";
+        phoneItem.activity        = "UsingPhone";
 
         _allItems = new BehaviorItem[]
         {
@@ -224,7 +198,7 @@ public class UserEntity : MonoBehaviour
         PlayAnim(STATE_STANDING);
     }
 
-    Transform ConsumeOverride(Transform fallback)
+    Transform ConsumeOverride(Transform fallback = null)
     {
         Transform result = overrideSpot != null ? overrideSpot : fallback;
         overrideSpot = null;
@@ -233,19 +207,19 @@ public class UserEntity : MonoBehaviour
 
     string ActionToAnimState(string action) => action switch
     {
-        "Cooking"      => STATE_COOKING,
-        "Eating"       => STATE_EATING,
-        "Sitting"      => STATE_SITTING,
-        "SittingDrink" => STATE_SITTING_DRINK,
-        "Drinking"     => STATE_DRINK,
-        "Watching"     => STATE_WATCHING,
-        "Typing"       => STATE_TYPING,
-        "Reading"      => STATE_READING,
-        "Laying"       => STATE_LAYING,
-        "PhoneUse"     => STATE_PHONE,
-        "Cleaning"     => STATE_CLEANING,
-        "Opening"      => STATE_OPENING,
-        _              => STATE_STANDING,
+        "Cooking"        => STATE_COOKING,
+        "Eating"         => STATE_EATING,
+        "Sitting"        => STATE_SITTING,
+        "SeatedDrinking" => STATE_DRINKING_SEATED,
+        "Drinking"       => STATE_DRINK,
+        "Watching"       => STATE_WATCHING,
+        "Typing"         => STATE_TYPING,
+        "Reading"        => STATE_READING,
+        "Laying"         => STATE_LAYING,
+        "UsingPhone"     => STATE_USING_PHONE,
+        "Cleaning"       => STATE_CLEANING,
+        "Opening"        => STATE_OPENING,
+        _                => STATE_STANDING,
     };
 
     public IEnumerator SwitchActivity(string activity)
@@ -263,39 +237,39 @@ public class UserEntity : MonoBehaviour
         switch (actLower)
         {
             case "drink":
-            case "drinking":     yield return StartCoroutine(DoDrink());            break;
-            case "sittingdrink": yield return StartCoroutine(DoSittingDrink());     break;
-            case "sitting":      yield return StartCoroutine(DoSitting());          break;
+            case "drinking":        yield return StartCoroutine(DoDrink());        break;
+            case "seateddrinking":  yield return StartCoroutine(DoSittingDrink()); break;
+            case "sitting":         yield return StartCoroutine(DoSitting());      break;
             case "standup":
-            case "stand up":     yield return StartCoroutine(DoStandUp());          break;
+            case "stand up":        yield return StartCoroutine(DoStandUp());      break;
             case "eat":
-            case "eating":       yield return StartCoroutine(DoEat());              break;
+            case "eating":          yield return StartCoroutine(DoEat());          break;
             case "cook":
-            case "cooking":      yield return StartCoroutine(DoCook());             break;
+            case "cooking":         yield return StartCoroutine(DoCook());         break;
             case "open":
-            case "opening":      yield return StartCoroutine(DoOpen());             break;
+            case "opening":         yield return StartCoroutine(DoOpen());         break;
             case "laying":
-            case "sleep":        yield return StartCoroutine(DoLaying());           break;
+            case "sleep":           yield return StartCoroutine(DoLaying());       break;
             case "watch":
-            case "watching":     yield return StartCoroutine(DoWatching());         break;
+            case "watching":        yield return StartCoroutine(DoWatching());     break;
             case "read":
-            case "reading":      yield return StartCoroutine(DoReading());          break;
+            case "reading":
+            case "dadreading":      yield return StartCoroutine(DoReading());      break;
             case "clean":
-            case "cleaning":     yield return StartCoroutine(DoCleaning());         break;
-            case "phone":
-            case "phoneuse":     yield return StartCoroutine(DoPhoneUse());         break;
-            case "type":
-            case "typing":       yield return StartCoroutine(DoTyping());           break;
-            case "dadreading":   yield return StartCoroutine(DoDadReading());       break;
-            case "dadphone":     yield return StartCoroutine(DoDadPhone());         break;
+            case "cleaning":
             case "dadclean":
-            case "dadcleaning":  yield return StartCoroutine(DoDadCleaning());      break;
+            case "dadcleaning":     yield return StartCoroutine(DoCleaning());     break;
+            case "phone":
+            case "usingphone":
+            case "dadphone":        yield return StartCoroutine(DoPhoneUse());     break;
+            case "type":
+            case "typing":          yield return StartCoroutine(DoTyping());       break;
             case "pickup":
-            case "pickingup":    yield return StartCoroutine(DoPickUp());           break;
+            case "pickingup":       yield return StartCoroutine(DoPickUp());       break;
             case "putdown":
-            case "puttingdown":  yield return StartCoroutine(DoPutDown());          break;
-            case "standing":     yield return StartCoroutine(DoReturnToStanding()); break;
-            default: Debug.LogWarning($"[{userID}] Unknown activity: {activity}");  break;
+            case "puttingdown":     yield return StartCoroutine(DoPutDown());      break;
+            case "standing":        yield return StartCoroutine(DoReturnToStanding()); break;
+            default: Debug.LogWarning($"[{userID}] Unknown activity: {activity}"); break;
         }
 
         IsBusy = false;
@@ -315,7 +289,6 @@ public class UserEntity : MonoBehaviour
         IsBusy = true;
 
         bool useSeat = SeatActions.Contains(action);
-
         if (spot != null)
         {
             SetActivity("Walking");
@@ -343,13 +316,6 @@ public class UserEntity : MonoBehaviour
         IsBusy = false;
     }
 
-    public IEnumerator Nod()
-    {
-        PlayAnim(STATE_NODDING);
-        yield return new WaitForSeconds(noddingDuration);
-        PlayAnim(ActionToAnimState(currentActivity));
-    }
-
     public void SetAnim(string s) => PlayAnim(s);
 
     IEnumerator DoDrink()
@@ -362,7 +328,7 @@ public class UserEntity : MonoBehaviour
             PreActivateHeldObject("Drinking");
             yield return new WaitForSeconds(0.5f);
         }
-        Transform spot = ConsumeOverride(drinkSpot);
+        Transform spot = ConsumeOverride();
         if (spot != null)
         {
             yield return StartCoroutine(NavWalkTo(spot.position, false));
@@ -381,6 +347,8 @@ public class UserEntity : MonoBehaviour
         }
         if (!skipReturnToStanding && standingSpot != null)
             yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
+        SetActivity("Standing");
+        PlayAnim(STATE_STANDING);
     }
 
     IEnumerator DoSittingDrink()
@@ -390,18 +358,18 @@ public class UserEntity : MonoBehaviour
             SetActivity("Walking");
             yield return StartCoroutine(NavWalkTo(drinkingPickupSpot.position, false));
             yield return new WaitForSeconds(0.3f);
-            PreActivateHeldObject("SittingDrink");
+            PreActivateHeldObject("SeatedDrinking");
             yield return new WaitForSeconds(0.5f);
         }
-        Transform spot = ConsumeOverride(sittingDrinkSpot);
+        Transform spot = ConsumeOverride();
         if (spot != null)
         {
             yield return StartCoroutine(NavWalkTo(spot.position, true));
             yield return StartCoroutine(SmoothRotateTo(spot.forward));
             TeleportToSeat(spot);
         }
-        SetActivity("SittingDrink");
-        PlayAnim(STATE_SITTING_DRINK);
+        SetActivity("SeatedDrinking");
+        PlayAnim(STATE_DRINKING_SEATED);
         yield return new WaitForSeconds(drinkDuration);
         if (drinkingPutdownSpot != null)
         {
@@ -414,11 +382,13 @@ public class UserEntity : MonoBehaviour
         }
         if (!skipReturnToStanding && standingSpot != null)
             yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
+        SetActivity("Standing");
+        PlayAnim(STATE_STANDING);
     }
 
     IEnumerator DoSitting()
     {
-        Transform spot = ConsumeOverride(sittingSpot ?? sittingDrinkSpot);
+        Transform spot = ConsumeOverride();
         if (spot == null) { Warn("sittingSpot"); yield break; }
         SetActivity("Walking");
         yield return StartCoroutine(NavWalkTo(spot.position, true));
@@ -426,7 +396,12 @@ public class UserEntity : MonoBehaviour
         TeleportToSeat(spot);
         SetActivity("Sitting");
         PlayAnim(STATE_SITTING);
-        yield return new WaitForSeconds(sittingDuration);
+        yield return new WaitForSeconds(activityHoldDuration);
+        yield return StartCoroutine(DoStandUp());
+        if (!skipReturnToStanding && standingSpot != null)
+            yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
+        SetActivity("Standing");
+        PlayAnim(STATE_STANDING);
     }
 
     IEnumerator DoStandUp()
@@ -453,7 +428,7 @@ public class UserEntity : MonoBehaviour
             PreActivateHeldObject("Eating");
             yield return new WaitForSeconds(0.5f);
         }
-        Transform spot = ConsumeOverride(eatSpot);
+        Transform spot = ConsumeOverride();
         if (spot != null)
         {
             yield return StartCoroutine(NavWalkTo(spot.position, true));
@@ -474,6 +449,8 @@ public class UserEntity : MonoBehaviour
         }
         if (!skipReturnToStanding && standingSpot != null)
             yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
+        SetActivity("Standing");
+        PlayAnim(STATE_STANDING);
     }
 
     IEnumerator DoCook()
@@ -486,7 +463,7 @@ public class UserEntity : MonoBehaviour
             PreActivateHeldObject("Cooking");
             yield return new WaitForSeconds(0.5f);
         }
-        Transform spot = ConsumeOverride(cookSpot);
+        Transform spot = ConsumeOverride();
         if (spot != null)
         {
             yield return StartCoroutine(NavWalkTo(spot.position, false));
@@ -505,11 +482,13 @@ public class UserEntity : MonoBehaviour
         }
         if (!skipReturnToStanding && standingSpot != null)
             yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
+        SetActivity("Standing");
+        PlayAnim(STATE_STANDING);
     }
 
     IEnumerator DoOpen()
     {
-        Transform spot = ConsumeOverride(openSpot);
+        Transform spot = ConsumeOverride();
         if (spot == null) { Warn("openSpot"); yield break; }
         SetActivity("Walking");
         yield return StartCoroutine(NavWalkTo(spot.position, false));
@@ -520,6 +499,10 @@ public class UserEntity : MonoBehaviour
         if (fridgeDoor != null) yield return StartCoroutine(RotateFridgeDoor(true));
         yield return new WaitForSeconds(openDuration);
         if (fridgeDoor != null) yield return StartCoroutine(RotateFridgeDoor(false));
+        if (!skipReturnToStanding && standingSpot != null)
+            yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
+        SetActivity("Standing");
+        PlayAnim(STATE_STANDING);
     }
 
     IEnumerator RotateFridgeDoor(bool opening)
@@ -541,7 +524,7 @@ public class UserEntity : MonoBehaviour
 
     IEnumerator DoLaying()
     {
-        Transform spot = ConsumeOverride(layingSpot);
+        Transform spot = ConsumeOverride();
         if (spot == null) { Warn("layingSpot"); yield break; }
         SetActivity("Walking");
         yield return StartCoroutine(NavWalkTo(spot.position, true));
@@ -550,11 +533,16 @@ public class UserEntity : MonoBehaviour
         SetActivity("Laying");
         PlayAnim(STATE_LAYING);
         yield return new WaitForSeconds(activityHoldDuration);
+        yield return StartCoroutine(DoStandUp());
+        if (!skipReturnToStanding && standingSpot != null)
+            yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
+        SetActivity("Standing");
+        PlayAnim(STATE_STANDING);
     }
 
     IEnumerator DoWatching()
     {
-        Transform spot = ConsumeOverride(watchingSpot);
+        Transform spot = ConsumeOverride();
         if (spot == null) { Warn("watchingSpot"); yield break; }
         SetActivity("Walking");
         yield return StartCoroutine(NavWalkTo(spot.position, true));
@@ -565,6 +553,13 @@ public class UserEntity : MonoBehaviour
         SetTVActive(true);
         StartCoroutine(PostDeviceState("tv", "on"));
         yield return new WaitForSeconds(activityHoldDuration);
+        SetTVActive(false);
+        StartCoroutine(PostDeviceState("tv", "off"));
+        yield return StartCoroutine(DoStandUp());
+        if (!skipReturnToStanding && standingSpot != null)
+            yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
+        SetActivity("Standing");
+        PlayAnim(STATE_STANDING);
     }
 
     IEnumerator DoReading()
@@ -577,7 +572,7 @@ public class UserEntity : MonoBehaviour
             PreActivateHeldObject("Reading");
             yield return new WaitForSeconds(0.5f);
         }
-        Transform spot = ConsumeOverride(readingSpot);
+        Transform spot = ConsumeOverride();
         if (spot != null)
         {
             yield return StartCoroutine(NavWalkTo(spot.position, true));
@@ -598,6 +593,8 @@ public class UserEntity : MonoBehaviour
         }
         if (!skipReturnToStanding && standingSpot != null)
             yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
+        SetActivity("Standing");
+        PlayAnim(STATE_STANDING);
     }
 
     IEnumerator DoCleaning()
@@ -610,7 +607,7 @@ public class UserEntity : MonoBehaviour
             PreActivateHeldObject("Cleaning");
             yield return new WaitForSeconds(0.5f);
         }
-        Transform spot = ConsumeOverride(cleanSpot);
+        Transform spot = ConsumeOverride();
         if (spot != null)
         {
             yield return StartCoroutine(NavWalkTo(spot.position, false));
@@ -619,9 +616,6 @@ public class UserEntity : MonoBehaviour
         SetActivity("Cleaning");
         PlayAnim(STATE_CLEANING);
         lastAssignedActivity = "Cleaning";
-        var scm = StaticCameraManager.Instance;
-        if (scm != null)
-            yield return StartCoroutine(scm.TriggerManualCapture(this, "Cleaning"));
         yield return new WaitForSeconds(cleanDuration);
         if (cleaningPutdownSpot != null)
         {
@@ -633,6 +627,8 @@ public class UserEntity : MonoBehaviour
         }
         if (!skipReturnToStanding && standingSpot != null)
             yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
+        SetActivity("Standing");
+        PlayAnim(STATE_STANDING);
     }
 
     IEnumerator DoPhoneUse()
@@ -642,17 +638,17 @@ public class UserEntity : MonoBehaviour
             SetActivity("Walking");
             yield return StartCoroutine(NavWalkTo(phonePickupSpot.position, false));
             yield return new WaitForSeconds(0.3f);
-            PreActivateHeldObject("PhoneUse");
+            PreActivateHeldObject("UsingPhone");
             yield return new WaitForSeconds(0.5f);
         }
-        Transform spot = ConsumeOverride(phoneSpot);
+        Transform spot = ConsumeOverride();
         if (spot != null)
         {
             yield return StartCoroutine(NavWalkTo(spot.position, false));
             yield return StartCoroutine(SmoothRotateTo(spot.forward));
         }
-        SetActivity("PhoneUse");
-        PlayAnim(STATE_PHONE);
+        SetActivity("UsingPhone");
+        PlayAnim(STATE_USING_PHONE);
         yield return new WaitForSeconds(activityHoldDuration);
         if (phonePutdownSpot != null)
         {
@@ -664,11 +660,13 @@ public class UserEntity : MonoBehaviour
         }
         if (!skipReturnToStanding && standingSpot != null)
             yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
+        SetActivity("Standing");
+        PlayAnim(STATE_STANDING);
     }
 
     IEnumerator DoTyping()
     {
-        Transform spot = ConsumeOverride(typingSpot);
+        Transform spot = ConsumeOverride();
         if (spot == null) { Warn("typingSpot"); yield break; }
         SetActivity("Walking");
         yield return StartCoroutine(NavWalkTo(spot.position, true));
@@ -677,54 +675,18 @@ public class UserEntity : MonoBehaviour
         SetActivity("Typing");
         PlayAnim(STATE_TYPING);
         yield return new WaitForSeconds(activityHoldDuration);
-    }
-
-    IEnumerator DoDadReading()
-    {
-        Transform spot = ConsumeOverride(dadReadingSpot ?? readingSpot);
-        if (spot == null) { Warn("dadReadingSpot"); yield break; }
-        SetActivity("Walking");
-        yield return StartCoroutine(NavWalkTo(spot.position, true));
-        yield return StartCoroutine(SmoothRotateTo(spot.forward));
-        TeleportToSeat(spot);
-        SetActivity("Reading");
-        PlayAnim(STATE_READING);
-        yield return new WaitForSeconds(activityHoldDuration);
-    }
-
-    IEnumerator DoDadPhone()
-    {
-        Transform spot = ConsumeOverride(dadPhoneSpot ?? phoneSpot);
-        if (spot == null) { Warn("dadPhoneSpot"); yield break; }
-        SetActivity("Walking");
-        yield return StartCoroutine(NavWalkTo(spot.position, false));
-        yield return StartCoroutine(SmoothRotateTo(spot.forward));
-        SetActivity("PhoneUse");
-        PlayAnim(STATE_PHONE);
-        yield return new WaitForSeconds(activityHoldDuration);
-    }
-
-    IEnumerator DoDadCleaning()
-    {
-        Transform spot = ConsumeOverride(dadCleanSpot ?? cleanSpot);
-        if (spot == null) { Warn("dadCleanSpot"); yield break; }
-        SetActivity("Walking");
-        yield return StartCoroutine(NavWalkTo(spot.position, false));
-        yield return StartCoroutine(SmoothRotateTo(spot.forward));
-        SetActivity("Cleaning");
-        PlayAnim(STATE_CLEANING);
-        lastAssignedActivity = "Cleaning";
-        var scm = StaticCameraManager.Instance;
-        if (scm != null)
-            yield return StartCoroutine(scm.TriggerManualCapture(this, "Cleaning"));
-        yield return new WaitForSeconds(cleanDuration);
+        yield return StartCoroutine(DoStandUp());
+        if (!skipReturnToStanding && standingSpot != null)
+            yield return StartCoroutine(NavWalkTo(standingSpot.position, false));
+        SetActivity("Standing");
+        PlayAnim(STATE_STANDING);
     }
 
     IEnumerator DoPickUp()
     {
         SetActivity("PickingUp");
         PlayAnim(STATE_PICKING_UP);
-        yield return new WaitForSeconds(pickUpDuration);
+        yield return new WaitForSeconds(0.8f);
         SetActivity("Standing");
         PlayAnim(STATE_STANDING);
     }
@@ -733,7 +695,7 @@ public class UserEntity : MonoBehaviour
     {
         SetActivity("PuttingDown");
         PlayAnim(STATE_PUTTING_DOWN);
-        yield return new WaitForSeconds(putDownDuration);
+        yield return new WaitForSeconds(0.8f);
         SetActivity("Standing");
         PlayAnim(STATE_STANDING);
     }
@@ -790,10 +752,11 @@ public class UserEntity : MonoBehaviour
         PlayAnim(STATE_WALK);
         _shadowTimer = 0f;
 
-        foreach (var rawCorner in path.corners)
+        Vector3[] corners = path.corners;
+        for (int ci = 0; ci < corners.Length; ci++)
         {
-            Vector3 corner = new Vector3(rawCorner.x, 0f, rawCorner.z);
-            bool    isLast = System.Array.IndexOf(path.corners, rawCorner) == path.corners.Length - 1;
+            Vector3 corner = new Vector3(corners[ci].x, 0f, corners[ci].z);
+            bool    isLast = ci == corners.Length - 1;
             float   stop   = isLast ? ARRIVAL_THRESHOLD : 0.08f;
 
             while (true)
@@ -849,15 +812,19 @@ public class UserEntity : MonoBehaviour
         foreach (var bi in _allItems)
         {
             if (bi == null) continue;
-            if (!string.Equals(bi.activity, activityName, StringComparison.OrdinalIgnoreCase)) continue;
-            if (bi.item == null) { Debug.LogError($"[ERROR] bi.item is NULL for {activityName}"); return; }
+            if (!string.Equals(bi.activity, activityName,
+                StringComparison.OrdinalIgnoreCase)) continue;
+            if (bi.item == null)
+            {
+                Debug.LogError($"[ERROR] bi.item is NULL for {activityName}");
+                return;
+            }
             if (bi.item              != null) bi.item.SetActive(true);
             if (bi.item2             != null) bi.item2.SetActive(true);
             if (bi.sceneCounterpart  != null) bi.sceneCounterpart.SetActive(false);
             if (bi.sceneCounterpart2 != null) bi.sceneCounterpart2.SetActive(false);
             StartCoroutine(PostPickupEvent(bi.item.name));
             if (_dsm != null) _dsm.ForceObjectSync();
-            Debug.Log($"[PreActivate] {userID} | {activityName} | held object activated");
             return;
         }
     }
@@ -880,9 +847,6 @@ public class UserEntity : MonoBehaviour
         req.SetRequestHeader("Content-Type", "application/json");
         req.timeout = 2;
         yield return req.SendWebRequest();
-        Debug.Log(req.result == UnityWebRequest.Result.Success
-            ? $"[PickupEvent] OK: {userID} picked up {objectName}"
-            : $"[PickupEvent] FAILED: {req.error}");
     }
 
     IEnumerator PostPutdownEvent()
@@ -912,17 +876,14 @@ public class UserEntity : MonoBehaviour
         req.SetRequestHeader("Content-Type", "application/json");
         req.timeout = 2;
         yield return req.SendWebRequest();
-        Debug.Log(req.result == UnityWebRequest.Result.Success
-            ? $"[PutdownEvent] OK: {userID} put down"
-            : $"[PutdownEvent] FAILED: {req.error}");
         if (_dsm != null) _dsm.ForceObjectSync();
     }
 
     IEnumerator PostDeviceState(string label, string state)
     {
         string json = "{"
-            + $"\"label\":\"{EscJson(label)}\","
-            + $"\"state\":\"{EscJson(state)}\","
+            + $"\"label\":\"{JsonUtil.Esc(label)}\","
+            + $"\"state\":\"{JsonUtil.Esc(state)}\","
             + $"\"timestamp\":\"{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ss.fff}\","
             + "\"source\":\"unity\""
             + "}";
@@ -939,17 +900,17 @@ public class UserEntity : MonoBehaviour
         string intent  = !string.IsNullOrEmpty(lastAssignedActivity)
             ? lastAssignedActivity : "Walking";
         string hourStr = currentVirtualHour >= 0f
-            ? currentVirtualHour.ToString("F1", Inv)
-            : ((float)DateTime.Now.Hour).ToString("F1", Inv);
-        Vector3 fwd    = transform.forward;
+            ? currentVirtualHour.ToString("F1", JsonUtil.Inv)
+            : ((float)DateTime.Now.Hour).ToString("F1", JsonUtil.Inv);
+        Vector3 fwd = transform.forward;
         string json = "{"
-            + $"\"userID\":\"{EscJson(userID)}\","
-            + $"\"x\":{transform.position.x.ToString("F3", Inv)},"
-            + $"\"z\":{transform.position.z.ToString("F3", Inv)},"
-            + $"\"forward_x\":{fwd.x.ToString("F3", Inv)},"
-            + $"\"forward_z\":{fwd.z.ToString("F3", Inv)},"
+            + $"\"userID\":\"{JsonUtil.Esc(userID)}\","
+            + $"\"x\":{transform.position.x.ToString("F3", JsonUtil.Inv)},"
+            + $"\"z\":{transform.position.z.ToString("F3", JsonUtil.Inv)},"
+            + $"\"forward_x\":{fwd.x.ToString("F3", JsonUtil.Inv)},"
+            + $"\"forward_z\":{fwd.z.ToString("F3", JsonUtil.Inv)},"
             + "\"room_name\":\"\","
-            + $"\"intent_action\":\"{EscJson(intent)}\","
+            + $"\"intent_action\":\"{JsonUtil.Esc(intent)}\","
             + $"\"virtual_hour\":{hourStr},"
             + $"\"timestamp\":\"{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ss.fff}\""
             + "}";
@@ -992,12 +953,12 @@ public class UserEntity : MonoBehaviour
         {
             if (bi == null) continue;
             bool active = string.Equals(bi.activity, a, StringComparison.OrdinalIgnoreCase);
-            if (bi.item              != null && bi.item.activeSelf  != active)
-            { bi.item.SetActive(active);              stateChanged = true; }
-            if (bi.item2             != null && bi.item2.activeSelf != active)
-            { bi.item2.SetActive(active);             stateChanged = true; }
-            if (bi.sceneCounterpart  != null && bi.sceneCounterpart.activeSelf  == active)
-            { bi.sceneCounterpart.SetActive(!active);  stateChanged = true; }
+            if (bi.item != null && bi.item.activeSelf != active)
+            { bi.item.SetActive(active); stateChanged = true; }
+            if (bi.item2 != null && bi.item2.activeSelf != active)
+            { bi.item2.SetActive(active); stateChanged = true; }
+            if (bi.sceneCounterpart != null && bi.sceneCounterpart.activeSelf == active)
+            { bi.sceneCounterpart.SetActive(!active); stateChanged = true; }
             if (bi.sceneCounterpart2 != null && bi.sceneCounterpart2.activeSelf == active)
             { bi.sceneCounterpart2.SetActive(!active); stateChanged = true; }
         }
@@ -1016,23 +977,13 @@ public class UserEntity : MonoBehaviour
 
     void Warn(string s) => Debug.LogWarning($"[{userID}] {s} not set");
 
-    static string EscJson(string s) =>
-        s.Replace("\\", "\\\\").Replace("\"", "\\\"");
-
     void OnDrawGizmos()
     {
-        DrawSpot(drinkSpot,           Color.cyan,    "Drink");
-        DrawSpot(sittingDrinkSpot,    Color.blue,    "SitDrink");
-        DrawSpot(sittingSpot,         Color.blue,    "Sitting");
-        DrawSpot(eatSpot,             Color.yellow,  "Eat");
-        DrawSpot(cookSpot,            Color.red,     "Cook");
-        DrawSpot(openSpot,            Color.white,   "Open");
-        DrawSpot(layingSpot,          Color.green,   "Laying");
-        DrawSpot(watchingSpot,        Color.magenta, "Watch");
-        DrawSpot(readingSpot,         Color.blue,    "Read");
-        DrawSpot(cleanSpot,           Color.gray,    "Clean");
-        DrawSpot(phoneSpot,           Color.magenta, "Phone");
-        DrawSpot(typingSpot,          Color.red,     "Type");
+        if (standingSpot != null)
+        {
+            Gizmos.color = Color.white;
+            Gizmos.DrawWireSphere(standingSpot.position, 0.15f);
+        }
         DrawSpot(cleaningPickupSpot,  Color.cyan,    "CleanPickup");
         DrawSpot(cleaningPutdownSpot, Color.magenta, "CleanPutdown");
         DrawSpot(cookingPickupSpot,   Color.cyan,    "CookPickup");
@@ -1045,11 +996,6 @@ public class UserEntity : MonoBehaviour
         DrawSpot(readingPutdownSpot,  Color.magenta, "ReadPutdown");
         DrawSpot(phonePickupSpot,     Color.cyan,    "PhonePickup");
         DrawSpot(phonePutdownSpot,    Color.magenta, "PhonePutdown");
-        if (standingSpot != null)
-        {
-            Gizmos.color = Color.white;
-            Gizmos.DrawWireSphere(standingSpot.position, 0.15f);
-        }
     }
 
     void DrawSpot(Transform spot, Color c, string label)
