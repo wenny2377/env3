@@ -5155,7 +5155,7 @@ GameObject:
   m_Component:
   - component: {fileID: 836976212}
   m_Layer: 0
-  m_Name: Drinking Spot 1
+  m_Name: Drinking LIVINGROOM
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -5170,7 +5170,7 @@ Transform:
   m_GameObject: {fileID: 836976211}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.88993746, z: -0, w: 0.45608255}
-  m_LocalPosition: {x: 4.52, y: 0, z: -0.88}
+  m_LocalPosition: {x: 3.29, y: 0, z: 4.71}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -7692,7 +7692,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1170234918}
   m_Layer: 0
-  m_Name: SittingDrink Spot 3
+  m_Name: SittingDrink SOFA
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -9454,6 +9454,7 @@ Transform:
   m_Children:
   - {fileID: 1120326900}
   - {fileID: 1976242706}
+  - {fileID: 1700885053}
   - {fileID: 1469460016}
   m_Father: {fileID: 1937520298}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -10892,7 +10893,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1587946582}
   m_Layer: 0
-  m_Name: Drinking Spot 3
+  m_Name: Drinking DESK
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -10907,7 +10908,7 @@ Transform:
   m_GameObject: {fileID: 1587946581}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.90146947, z: -0, w: 0.43284273}
-  m_LocalPosition: {x: 3.44, y: 0, z: 6.44}
+  m_LocalPosition: {x: 0.75, y: 0, z: 0.96}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -11911,6 +11912,37 @@ Transform:
   - {fileID: 545758892}
   m_Father: {fileID: 21519209}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1700885052
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1700885053}
+  m_Layer: 0
+  m_Name: SittingDrink SOFA
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1700885053
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700885052}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: 0.7071068, z: -0, w: 0.7071068}
+  m_LocalPosition: {x: 2.789, y: 0.21, z: -0.52}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1360243775}
+  m_LocalEulerAnglesHint: {x: 0, y: 90, z: 0}
 --- !u!1 &1701440903
 GameObject:
   m_ObjectHideFlags: 0
@@ -12219,8 +12251,8 @@ MonoBehaviour:
   momSpot_CleanLiving: {fileID: 1838210510}
   momSpot_ReadSofa: {fileID: 2095499680}
   momSpot_ReadBedroom: {fileID: 1675914069}
-  momSpot_DrinkKitchen: {fileID: 0}
-  momSpot_SeatedDrinkSofa: {fileID: 0}
+  momSpot_DrinkKitchen: {fileID: 836976212}
+  momSpot_SeatedDrinkSofa: {fileID: 1700885053}
   momSpot_LaySofa: {fileID: 735215452}
   momSpot_LayBed: {fileID: 1577977980}
   momSpot_WatchSofa: {fileID: 2067145566}
@@ -12228,8 +12260,8 @@ MonoBehaviour:
   dadSpot_EatDining: {fileID: 761176943}
   dadSpot_EatSofa: {fileID: 1286939886}
   dadSpot_TypingDesk: {fileID: 283813366}
-  dadSpot_DrinkDesk: {fileID: 1434620827}
-  dadSpot_SeatedDrinkSofa: {fileID: 0}
+  dadSpot_DrinkDesk: {fileID: 1587946582}
+  dadSpot_SeatedDrinkSofa: {fileID: 1170234918}
   dadSpot_PhoneDesk: {fileID: 1434620827}
   dadSpot_PhoneSofa: {fileID: 545758892}
   dadSpot_LaySofa: {fileID: 566902054}

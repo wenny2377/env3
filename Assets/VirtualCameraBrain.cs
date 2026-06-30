@@ -12,9 +12,75 @@ public class VirtualCameraBrain : MonoBehaviour
     const float  BURST_INTERVAL = 0.3f;
     const int    RENDER_WIDTH   = 512;
     const int    RENDER_HEIGHT  = 512;
+    const float  SOM_RADIUS     = 2.0f;
+    const float  SOM_MIN_DEPTH  = 0.3f;
+    const int    SOM_MAX_OBJS   = 6;
 
     bool _tvOn = false;
     public void SetTVState(bool isOn) => _tvOn = isOn;
+
+    // ── SoM: project dynamic objects onto camera image plane ─────────────────
+
+    struct SomPoint2D
+    {
+        public string label;
+        public int    u;
+        public int    v;
+        public bool   isHeld;
+    }
+
+    List<SomPoint2D> _ProjectSomObjects(
+        Camera cam, UserEntity user,
+        DynamicSyncManager dsm,
+        int imgW, int imgH)
+    {
+        var result = new List<SomPoint2D>();
+        if (dsm == null || dsm.dynamicObjects == null) return result;
+
+        Vector3 uPos = user.transform.position;
+        var seen     = new HashSet<string>();
+
+        foreach (var obj in dsm.dynamicObjects)
+        {
+            if (obj == null) continue;
+
+            string label  = obj.name.ToLower().Trim();
+            if (string.IsNullOrEmpty(label) || seen.Contains(label)) continue;
+
+            // held判斷：scene counterpart hidden = being held
+            bool isHeld   = !obj.activeInHierarchy;
+            Vector3 wPos  = isHeld
+                ? uPos + Vector3.up * 1.0f   // held → 在手部位置
+                : obj.transform.position;
+
+            // distance filter（held objects always included）
+            float dist = Vector3.Distance(uPos, wPos);
+            if (!isHeld && dist > SOM_RADIUS) continue;
+
+            // project to screen
+            Vector3 sp = cam.WorldToScreenPoint(wPos);
+            if (sp.z < SOM_MIN_DEPTH) continue;
+
+            // Unity screen: (0,0)=bottom-left → flip Y for image
+            int u = Mathf.RoundToInt(sp.x / Screen.width  * imgW);
+            int v = Mathf.RoundToInt((1f - sp.y / Screen.height) * imgH);
+            if (u < 0 || u >= imgW || v < 0 || v >= imgH) continue;
+
+            seen.Add(label);
+            result.Add(new SomPoint2D {
+                label  = label,
+                u      = u,
+                v      = v,
+                isHeld = isHeld,
+            });
+
+            if (result.Count >= SOM_MAX_OBJS) break;
+        }
+
+        return result;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
 
     public IEnumerator ExecuteMultiCapture(
         UserEntity user, List<CameraNode> sortedNodes, string activity)
@@ -32,6 +98,9 @@ public class VirtualCameraBrain : MonoBehaviour
         var imageList  = new List<string>();
         var nodeNames  = new List<string>();
         var nodeScores = new List<float>();
+        var somPoints  = new List<SomPoint2D>();
+
+        var dsm = FindObjectOfType<DynamicSyncManager>();
 
         for (int i = 0; i < captureCount; i++)
         {
@@ -66,6 +135,20 @@ public class VirtualCameraBrain : MonoBehaviour
                 nodeNames.Add($"{node.nodeName}_b{b}");
                 nodeScores.Add(node.lastScore);
 
+                // Project SoM on first burst of each camera only
+                if (b == 0)
+                {
+                    var projected = _ProjectSomObjects(
+                        nodeCam, user, dsm, RENDER_WIDTH, RENDER_HEIGHT);
+                    foreach (var pt in projected)
+                    {
+                        bool alreadyHave = false;
+                        foreach (var existing in somPoints)
+                            if (existing.label == pt.label) { alreadyHave = true; break; }
+                        if (!alreadyHave) somPoints.Add(pt);
+                    }
+                }
+
                 Destroy(rt);
                 Destroy(tex);
             }
@@ -73,13 +156,13 @@ public class VirtualCameraBrain : MonoBehaviour
 
         if (imageList.Count == 0)
         {
-            Debug.LogWarning($"[VCB] No images captured for {user.userID} | {activity}.");
+            Debug.LogWarning($"[VCB] No images for {user.userID} | {activity}.");
             yield break;
         }
 
         yield return StartCoroutine(
             PostPredict(user, activity, imageList, nodeNames, nodeScores,
-                        tCapture, snapshotExpMode));
+                        somPoints, tCapture, snapshotExpMode));
     }
 
     public IEnumerator ExecuteCaptureSequence(
@@ -90,13 +173,14 @@ public class VirtualCameraBrain : MonoBehaviour
     }
 
     IEnumerator PostPredict(
-        UserEntity   user,
-        string       activity,
-        List<string> imageList,
-        List<string> nodeNames,
-        List<float>  nodeScores,
-        string       tCapture,
-        string       snapshotExpMode = "")
+        UserEntity       user,
+        string           activity,
+        List<string>     imageList,
+        List<string>     nodeNames,
+        List<float>      nodeScores,
+        List<SomPoint2D> somPoints,
+        string           tCapture,
+        string           snapshotExpMode = "")
     {
         string roomName = "";
         if (nodeNames.Count > 0)
@@ -134,6 +218,8 @@ public class VirtualCameraBrain : MonoBehaviour
                        + $"\"y\":{fwd.y.ToString("F3", JsonUtil.Inv)},"
                        + $"\"z\":{fwd.z.ToString("F3", JsonUtil.Inv)}}}";
 
+        string somJson = _BuildSomJson(somPoints);
+
         string json = "{"
             + $"\"userID\":\"{JsonUtil.Esc(user.userID)}\","
             + $"\"activity\":\"{JsonUtil.Esc(activity)}\","
@@ -147,6 +233,7 @@ public class VirtualCameraBrain : MonoBehaviour
             + $"\"image_list\":{StrArrayJson(imageList)},"
             + $"\"source_nodes\":{StrArrayJson(nodeNames)},"
             + $"\"node_scores\":{FloatArrayJson(nodeScores)},"
+            + $"\"objects_2d\":{somJson},"
             + posJson + ","
             + fwdJson
             + "}";
@@ -162,9 +249,29 @@ public class VirtualCameraBrain : MonoBehaviour
         if (req.result == UnityWebRequest.Result.Success)
             Debug.Log($"[VCB] ok | {user.userID} | {activity} | "
                     + $"day={ExperimentRunner.CurrentVirtualDay} "
-                    + $"slot={ExperimentRunner.CurrentTimeSlot} tv={_tvOn}");
+                    + $"slot={ExperimentRunner.CurrentTimeSlot} "
+                    + $"tv={_tvOn} som={somPoints.Count}obj");
         else
             Debug.LogWarning($"[VCB] failed: {req.error} | {user.userID} | {activity}");
+    }
+
+    static string _BuildSomJson(List<SomPoint2D> pts)
+    {
+        if (pts == null || pts.Count == 0) return "[]";
+        var sb = new System.Text.StringBuilder("[");
+        for (int i = 0; i < pts.Count; i++)
+        {
+            if (i > 0) sb.Append(',');
+            var p = pts[i];
+            sb.Append('{');
+            sb.Append($"\"label\":\"{JsonUtil.Esc(p.label)}\",");
+            sb.Append($"\"u\":{p.u},");
+            sb.Append($"\"v\":{p.v},");
+            sb.Append($"\"held\":{(p.isHeld ? "true" : "false")}");
+            sb.Append('}');
+        }
+        sb.Append(']');
+        return sb.ToString();
     }
 
     static string StrArrayJson(List<string> list)

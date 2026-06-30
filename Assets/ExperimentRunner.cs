@@ -121,14 +121,41 @@ public class ExperimentRunner : MonoBehaviour
         public ExperimentType expType;
         public string         collectionSuffix;
         public string         dbName;
+        public string         systemMode;
     }
 
     static readonly ExperimentSchedule[] AllSchedule = new ExperimentSchedule[]
     {
-        new ExperimentSchedule { expType=ExperimentType.Baseline,         collectionSuffix="",                   dbName=DB_BASELINE   },
-        new ExperimentSchedule { expType=ExperimentType.CorruptionLight,  collectionSuffix="_corruption_light",  dbName=DB_CORRUPTION },
-        new ExperimentSchedule { expType=ExperimentType.CorruptionMedium, collectionSuffix="_corruption_medium", dbName=DB_CORRUPTION },
-        new ExperimentSchedule { expType=ExperimentType.CorruptionHeavy,  collectionSuffix="_corruption_heavy",  dbName=DB_CORRUPTION },
+        new ExperimentSchedule {
+            expType          = ExperimentType.Baseline,
+            collectionSuffix = "_semantic",
+            dbName           = DB_BASELINE,
+            systemMode       = "semantic"
+        },
+        new ExperimentSchedule {
+            expType          = ExperimentType.Baseline,
+            collectionSuffix = "_vlm_som",
+            dbName           = DB_BASELINE,
+            systemMode       = "vlm_som"
+        },
+        new ExperimentSchedule {
+            expType          = ExperimentType.CorruptionLight,
+            collectionSuffix = "_corruption_light_semantic",
+            dbName           = DB_CORRUPTION,
+            systemMode       = "semantic"
+        },
+        new ExperimentSchedule {
+            expType          = ExperimentType.CorruptionMedium,
+            collectionSuffix = "_corruption_medium_semantic",
+            dbName           = DB_CORRUPTION,
+            systemMode       = "semantic"
+        },
+        new ExperimentSchedule {
+            expType          = ExperimentType.CorruptionHeavy,
+            collectionSuffix = "_corruption_heavy_semantic",
+            dbName           = DB_CORRUPTION,
+            systemMode       = "semantic"
+        },
     };
 
     static string DbNameFor(ExperimentType t) =>
@@ -136,10 +163,10 @@ public class ExperimentRunner : MonoBehaviour
 
     static string SuffixFor(ExperimentType t) => t switch
     {
-        ExperimentType.CorruptionLight  => "_corruption_light",
-        ExperimentType.CorruptionMedium => "_corruption_medium",
-        ExperimentType.CorruptionHeavy  => "_corruption_heavy",
-        _                               => "",
+        ExperimentType.CorruptionLight  => "_corruption_light_semantic",
+        ExperimentType.CorruptionMedium => "_corruption_medium_semantic",
+        ExperimentType.CorruptionHeavy  => "_corruption_heavy_semantic",
+        _                               => "_semantic",
     };
 
     int    successRuns          = 0;
@@ -291,7 +318,8 @@ public class ExperimentRunner : MonoBehaviour
             StartCoroutine(RunSingleExperiment(
                 experimentType,
                 SuffixFor(experimentType),
-                DbNameFor(experimentType)));
+                DbNameFor(experimentType),
+                "semantic"));
     }
 
     IEnumerator RunAllScheduled()
@@ -299,8 +327,10 @@ public class ExperimentRunner : MonoBehaviour
         for (int i = 0; i < AllSchedule.Length; i++)
         {
             var s = AllSchedule[i];
-            Debug.Log($"[Schedule] {i+1}/{AllSchedule.Length}: {s.expType} db={s.dbName}");
-            yield return StartCoroutine(RunSingleExperiment(s.expType, s.collectionSuffix, s.dbName));
+            Debug.Log($"[Schedule] {i+1}/{AllSchedule.Length}: {s.expType} "
+                    + $"system={s.systemMode} db={s.dbName}");
+            yield return StartCoroutine(
+                RunSingleExperiment(s.expType, s.collectionSuffix, s.dbName, s.systemMode));
             yield return new WaitForSeconds(3f);
         }
         isRunning = false;
@@ -308,7 +338,9 @@ public class ExperimentRunner : MonoBehaviour
         Debug.Log("[Schedule] All experiments complete!");
     }
 
-    IEnumerator RunSingleExperiment(ExperimentType expType, string collSuffix, string dbName)
+    IEnumerator RunSingleExperiment(
+        ExperimentType expType, string collSuffix,
+        string dbName, string systemMode)
     {
         successRuns = skippedRuns = 0;
 
@@ -319,14 +351,16 @@ public class ExperimentRunner : MonoBehaviour
 
         CurrentExperimentMode = expModeStr;
 
-        yield return StartCoroutine(PostStartExperiment(expModeStr, collSuffix, dbName));
+        yield return StartCoroutine(
+            PostStartExperiment(expModeStr, collSuffix, dbName, systemMode));
 
         ApplyNoiseTo(userMom, pickupRate, putdownRate, skelNoise);
         ApplyNoiseTo(userDad, pickupRate, putdownRate, skelNoise);
         var dsm = FindObjectOfType<DynamicSyncManager>();
         if (dsm != null) dsm.objectConfusionRate = objConfuse;
 
-        Debug.Log($"[Experiment] Start: {expModeStr} db={dbName} suffix={collSuffix}");
+        Debug.Log($"[Experiment] Start: {expModeStr} system={systemMode} "
+                + $"db={dbName} suffix={collSuffix}");
 
         yield return StartCoroutine(RunObservationExp());
 
@@ -570,19 +604,22 @@ public class ExperimentRunner : MonoBehaviour
         if (agent != null) agent.isStopped = false;
     }
 
-    IEnumerator PostStartExperiment(string expMode, string collSuffix, string dbName)
+    IEnumerator PostStartExperiment(
+        string expMode, string collSuffix, string dbName, string systemMode)
     {
         string json = $"{{\"experiment_mode\":\"{expMode}\","
                     + $"\"ablation_mode\":\"full\","
                     + $"\"collection_suffix\":\"{collSuffix}\","
-                    + $"\"db_name\":\"{dbName}\"}}";
+                    + $"\"db_name\":\"{dbName}\","
+                    + $"\"system_mode\":\"{systemMode}\"}}";
         using var req = new UnityWebRequest($"{BACKEND_URL}/start_experiment", "POST");
         req.uploadHandler   = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(json));
         req.downloadHandler = new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
         req.timeout = 5;
         yield return req.SendWebRequest();
-        Debug.Log($"[ExperimentRunner] started: {expMode} db={dbName} suffix={collSuffix}");
+        Debug.Log($"[ExperimentRunner] started: {expMode} system={systemMode} "
+                + $"db={dbName} suffix={collSuffix}");
     }
 
     IEnumerator PostExperimentDone(string expMode)
