@@ -94,6 +94,7 @@ public class ExperimentRunner : MonoBehaviour
     public enum RunMode        { Experiment, Demo }
     public enum ExperimentType { Baseline, CorruptionLight, CorruptionMedium, CorruptionHeavy }
     public enum DayType        { Weekday, Weekend }
+    enum DayDiffType { Remove, Replace }
 
     public static int    CurrentVirtualDay     = 1;
     public static float  CurrentVirtualHour    = 7f;
@@ -114,6 +115,15 @@ public class ExperimentRunner : MonoBehaviour
         public string    animation;
         public float     virtualHour;
         public Transform spot;
+    }
+
+    struct DayDiff
+    {
+        public int         dayIndex;
+        public DayDiffType type;
+        public string      targetAction;
+        public string      replaceWith;
+        public string      replaceAnim;
     }
 
     struct ExperimentSchedule
@@ -156,6 +166,52 @@ public class ExperimentRunner : MonoBehaviour
             dbName           = DB_CORRUPTION,
             systemMode       = "semantic"
         },
+    };
+
+    static readonly DayDiff[] MOM_WEEKDAY_DIFFS = new DayDiff[]
+    {
+        new DayDiff { dayIndex = 1, type = DayDiffType.Remove,
+                      targetAction = "UsingPhone" },
+        new DayDiff { dayIndex = 2, type = DayDiffType.Replace,
+                      targetAction = "Drinking", replaceWith = "SeatedDrinking",
+                      replaceAnim  = "SeatedDrinking" },
+        new DayDiff { dayIndex = 3, type = DayDiffType.Remove,
+                      targetAction = "Reading" },
+        new DayDiff { dayIndex = 4, type = DayDiffType.Replace,
+                      targetAction = "UsingPhone", replaceWith = "Reading",
+                      replaceAnim  = "Reading" },
+    };
+
+    static readonly DayDiff[] DAD_WEEKDAY_DIFFS = new DayDiff[]
+    {
+        new DayDiff { dayIndex = 1, type = DayDiffType.Remove,
+                      targetAction = "Drinking" },
+        new DayDiff { dayIndex = 2, type = DayDiffType.Replace,
+                      targetAction = "UsingPhone", replaceWith = "Watching",
+                      replaceAnim  = "Watching" },
+        new DayDiff { dayIndex = 3, type = DayDiffType.Remove,
+                      targetAction = "UsingPhone" },
+        new DayDiff { dayIndex = 4, type = DayDiffType.Replace,
+                      targetAction = "Typing", replaceWith = "Drinking",
+                      replaceAnim  = "Drinking" },
+    };
+
+    static readonly DayDiff[] MOM_WEEKEND_DIFFS = new DayDiff[]
+    {
+        new DayDiff { dayIndex = 0, type = DayDiffType.Remove,
+                      targetAction = "UsingPhone" },
+        new DayDiff { dayIndex = 1, type = DayDiffType.Replace,
+                      targetAction = "Drinking", replaceWith = "SeatedDrinking",
+                      replaceAnim  = "SeatedDrinking" },
+    };
+
+    static readonly DayDiff[] DAD_WEEKEND_DIFFS = new DayDiff[]
+    {
+        new DayDiff { dayIndex = 0, type = DayDiffType.Remove,
+                      targetAction = "UsingPhone" },
+        new DayDiff { dayIndex = 1, type = DayDiffType.Replace,
+                      targetAction = "Watching", replaceWith = "Drinking",
+                      replaceAnim  = "SeatedDrinking" },
     };
 
     static string DbNameFor(ExperimentType t) =>
@@ -248,6 +304,45 @@ public class ExperimentRunner : MonoBehaviour
         new BehaviorEvent { action="UsingPhone",animation="UsingPhone",     virtualHour=21.5f, spot=dadSpot_PhoneSofa      },
         new BehaviorEvent { action="Laying",    animation="Laying",         virtualHour=23.5f, spot=dadSpot_LayBed         },
     };
+
+    BehaviorEvent[] ApplyDayDiff(BehaviorEvent[] baseSchedule, DayDiff[] diffs, int dayIndex)
+    {
+        var todayDiffs = new List<DayDiff>();
+        foreach (var d in diffs)
+            if (d.dayIndex == dayIndex)
+                todayDiffs.Add(d);
+
+        if (todayDiffs.Count == 0)
+            return baseSchedule;
+
+        var result = new List<BehaviorEvent>(baseSchedule.Length);
+        foreach (var ev in baseSchedule)
+        {
+            BehaviorEvent current = ev;
+            bool removed = false;
+
+            foreach (var diff in todayDiffs)
+            {
+                if (current.action != diff.targetAction) continue;
+
+                if (diff.type == DayDiffType.Remove)
+                {
+                    removed = true;
+                    break;
+                }
+                else
+                {
+                    current.action    = diff.replaceWith;
+                    current.animation = string.IsNullOrEmpty(diff.replaceAnim)
+                                       ? diff.replaceWith : diff.replaceAnim;
+                }
+            }
+
+            if (!removed) result.Add(current);
+        }
+
+        return result.ToArray();
+    }
 
     void Start()
     {
@@ -384,13 +479,29 @@ public class ExperimentRunner : MonoBehaviour
         UseVirtualDay     = true;
         CurrentVirtualDay = 1;
 
+        int weekdayCounter = 0;
+        int weekendCounter = 0;
+
         for (int day = 0; day < WeekPattern.Length; day++)
         {
             CurrentVirtualDay = day + 1;
             DayType dayType   = WeekPattern[day];
 
-            var momSchedule = dayType == DayType.Weekday ? MomWeekday() : MomWeekend();
-            var dadSchedule = dayType == DayType.Weekday ? DadWeekday() : DadWeekend();
+            BehaviorEvent[] momSchedule;
+            BehaviorEvent[] dadSchedule;
+
+            if (dayType == DayType.Weekday)
+            {
+                momSchedule = ApplyDayDiff(MomWeekday(), MOM_WEEKDAY_DIFFS, weekdayCounter);
+                dadSchedule = ApplyDayDiff(DadWeekday(), DAD_WEEKDAY_DIFFS, weekdayCounter);
+                weekdayCounter++;
+            }
+            else
+            {
+                momSchedule = ApplyDayDiff(MomWeekend(), MOM_WEEKEND_DIFFS, weekendCounter);
+                dadSchedule = ApplyDayDiff(DadWeekend(), DAD_WEEKEND_DIFFS, weekendCounter);
+                weekendCounter++;
+            }
 
             var allEvents = new List<(UserEntity user, BehaviorEvent ev)>();
             foreach (var ev in momSchedule) allEvents.Add((userMom, ev));
