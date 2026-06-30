@@ -12,9 +12,10 @@ public class VirtualCameraBrain : MonoBehaviour
     const float  BURST_INTERVAL = 0.3f;
     const int    RENDER_WIDTH   = 512;
     const int    RENDER_HEIGHT  = 512;
-    const float  SOM_RADIUS     = 2.0f;
-    const float  SOM_MIN_DEPTH  = 0.3f;
-    const int    SOM_MAX_OBJS   = 6;
+    const float  SOM_RADIUS        = 3.0f;
+    const float  SOM_MIN_DEPTH     = 0.3f;
+    const int    SOM_MAX_OBJS      = 6;
+    const float  SOM_FACING_WEIGHT = 2.0f;
 
     bool _tvOn = false;
     public void SetTVState(bool isOn) => _tvOn = isOn;
@@ -29,6 +30,19 @@ public class VirtualCameraBrain : MonoBehaviour
         public bool   isHeld;
     }
 
+    bool _TryProjectToScreen(Camera cam, Vector3 worldPos, int imgW, int imgH,
+                              out int u, out int v)
+    {
+        u = v = 0;
+        Vector3 sp = cam.WorldToScreenPoint(worldPos);
+        if (sp.z < SOM_MIN_DEPTH) return false;
+
+        u = Mathf.RoundToInt(sp.x / Screen.width  * imgW);
+        v = Mathf.RoundToInt((1f - sp.y / Screen.height) * imgH);
+        if (u < 0 || u >= imgW || v < 0 || v >= imgH) return false;
+        return true;
+    }
+
     List<SomPoint2D> _ProjectSomObjects(
         Camera cam, UserEntity user,
         DynamicSyncManager dsm,
@@ -38,43 +52,59 @@ public class VirtualCameraBrain : MonoBehaviour
         if (dsm == null || dsm.dynamicObjects == null) return result;
 
         Vector3 uPos = user.transform.position;
+        Vector3 uFwd = user.transform.forward;
         var seen     = new HashSet<string>();
+
+        var heldCandidates    = new List<(GameObject obj, string label)>();
+        var nonHeldCandidates = new List<(GameObject obj, string label, float score)>();
 
         foreach (var obj in dsm.dynamicObjects)
         {
             if (obj == null) continue;
-
-            string label  = obj.name.ToLower().Trim();
+            string label = obj.name.ToLower().Trim();
             if (string.IsNullOrEmpty(label) || seen.Contains(label)) continue;
 
-            // held判斷：scene counterpart hidden = being held
-            bool isHeld   = !obj.activeInHierarchy;
-            Vector3 wPos  = isHeld
-                ? uPos + Vector3.up * 1.0f   // held → 在手部位置
-                : obj.transform.position;
+            bool isHeld = !obj.activeInHierarchy;
 
-            // distance filter（held objects always included）
-            float dist = Vector3.Distance(uPos, wPos);
-            if (!isHeld && dist > SOM_RADIUS) continue;
+            if (isHeld)
+            {
+                heldCandidates.Add((obj, label));
+                continue;
+            }
 
-            // project to screen
-            Vector3 sp = cam.WorldToScreenPoint(wPos);
-            if (sp.z < SOM_MIN_DEPTH) continue;
+            Vector3 wPos = obj.transform.position;
+            float   dist = Vector3.Distance(uPos, wPos);
+            if (dist > SOM_RADIUS) continue;
 
-            // Unity screen: (0,0)=bottom-left → flip Y for image
-            int u = Mathf.RoundToInt(sp.x / Screen.width  * imgW);
-            int v = Mathf.RoundToInt((1f - sp.y / Screen.height) * imgH);
-            if (u < 0 || u >= imgW || v < 0 || v >= imgH) continue;
+            Vector3 toObj      = (wPos - uPos).normalized;
+            float   facingDot  = Vector3.Dot(uFwd, toObj);
+            float   distScore  = Mathf.Max(0f, (SOM_RADIUS - dist) / SOM_RADIUS);
+            float   facingScore = Mathf.Max(0f, facingDot);
 
+            float score = distScore + facingScore * SOM_FACING_WEIGHT;
+
+            nonHeldCandidates.Add((obj, label, score));
+        }
+
+        foreach (var (obj, label) in heldCandidates)
+        {
+            if (seen.Contains(label)) continue;
             seen.Add(label);
-            result.Add(new SomPoint2D {
-                label  = label,
-                u      = u,
-                v      = v,
-                isHeld = isHeld,
-            });
+            if (!_TryProjectToScreen(cam, uPos + Vector3.up * 1.0f, imgW, imgH, out int u, out int v))
+                continue;
+            result.Add(new SomPoint2D { label = label, u = u, v = v, isHeld = true });
+            if (result.Count >= SOM_MAX_OBJS) return result;
+        }
 
+        nonHeldCandidates.Sort((a, b) => b.score.CompareTo(a.score));
+        foreach (var (obj, label, score) in nonHeldCandidates)
+        {
             if (result.Count >= SOM_MAX_OBJS) break;
+            if (seen.Contains(label)) continue;
+            seen.Add(label);
+            if (!_TryProjectToScreen(cam, obj.transform.position, imgW, imgH, out int u, out int v))
+                continue;
+            result.Add(new SomPoint2D { label = label, u = u, v = v, isHeld = false });
         }
 
         return result;
@@ -135,7 +165,6 @@ public class VirtualCameraBrain : MonoBehaviour
                 nodeNames.Add($"{node.nodeName}_b{b}");
                 nodeScores.Add(node.lastScore);
 
-                // Project SoM on first burst of each camera only
                 if (b == 0)
                 {
                     var projected = _ProjectSomObjects(
