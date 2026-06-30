@@ -94,6 +94,7 @@ public class ExperimentRunner : MonoBehaviour
     public enum RunMode        { Experiment, Demo }
     public enum ExperimentType { Baseline, CorruptionLight, CorruptionMedium, CorruptionHeavy }
     public enum DayType        { Weekday, Weekend }
+
     enum DayDiffType { Remove, Replace }
 
     public static int    CurrentVirtualDay     = 1;
@@ -102,7 +103,7 @@ public class ExperimentRunner : MonoBehaviour
     public static bool   UseVirtualDay         = false;
     public static string CurrentExperimentMode = "";
 
-    static readonly DayType[] WeekPattern = new DayType[]
+    static readonly DayType[] WeekPattern =
     {
         DayType.Weekday, DayType.Weekday, DayType.Weekday,
         DayType.Weekday, DayType.Weekday,
@@ -134,84 +135,41 @@ public class ExperimentRunner : MonoBehaviour
         public string         systemMode;
     }
 
-    static readonly ExperimentSchedule[] AllSchedule = new ExperimentSchedule[]
+    static readonly ExperimentSchedule[] AllSchedule =
     {
-        new ExperimentSchedule {
-            expType          = ExperimentType.Baseline,
-            collectionSuffix = "_semantic",
-            dbName           = DB_BASELINE,
-            systemMode       = "semantic"
-        },
-        new ExperimentSchedule {
-            expType          = ExperimentType.Baseline,
-            collectionSuffix = "_vlm_som",
-            dbName           = DB_BASELINE,
-            systemMode       = "vlm_som"
-        },
-        new ExperimentSchedule {
-            expType          = ExperimentType.CorruptionLight,
-            collectionSuffix = "_corruption_light_semantic",
-            dbName           = DB_CORRUPTION,
-            systemMode       = "semantic"
-        },
-        new ExperimentSchedule {
-            expType          = ExperimentType.CorruptionMedium,
-            collectionSuffix = "_corruption_medium_semantic",
-            dbName           = DB_CORRUPTION,
-            systemMode       = "semantic"
-        },
-        new ExperimentSchedule {
-            expType          = ExperimentType.CorruptionHeavy,
-            collectionSuffix = "_corruption_heavy_semantic",
-            dbName           = DB_CORRUPTION,
-            systemMode       = "semantic"
-        },
+        new ExperimentSchedule { expType = ExperimentType.Baseline,         collectionSuffix = "_semantic",                    dbName = DB_BASELINE,   systemMode = "semantic" },
+        new ExperimentSchedule { expType = ExperimentType.Baseline,         collectionSuffix = "_vlm_som",                     dbName = DB_BASELINE,   systemMode = "vlm_som"  },
+        new ExperimentSchedule { expType = ExperimentType.CorruptionLight,  collectionSuffix = "_corruption_light_semantic",   dbName = DB_CORRUPTION, systemMode = "semantic" },
+        new ExperimentSchedule { expType = ExperimentType.CorruptionMedium, collectionSuffix = "_corruption_medium_semantic",  dbName = DB_CORRUPTION, systemMode = "semantic" },
+        new ExperimentSchedule { expType = ExperimentType.CorruptionHeavy,  collectionSuffix = "_corruption_heavy_semantic",   dbName = DB_CORRUPTION, systemMode = "semantic" },
     };
 
-    static readonly DayDiff[] MOM_WEEKDAY_DIFFS = new DayDiff[]
+    static readonly DayDiff[] MOM_WEEKDAY_DIFFS =
     {
-        new DayDiff { dayIndex = 1, type = DayDiffType.Remove,
-                      targetAction = "UsingPhone" },
-        new DayDiff { dayIndex = 2, type = DayDiffType.Replace,
-                      targetAction = "Drinking", replaceWith = "SeatedDrinking",
-                      replaceAnim  = "SeatedDrinking" },
-        new DayDiff { dayIndex = 3, type = DayDiffType.Remove,
-                      targetAction = "Reading" },
-        new DayDiff { dayIndex = 4, type = DayDiffType.Replace,
-                      targetAction = "UsingPhone", replaceWith = "Reading",
-                      replaceAnim  = "Reading" },
+        new DayDiff { dayIndex=1, type=DayDiffType.Remove,  targetAction="UsingPhone" },
+        new DayDiff { dayIndex=2, type=DayDiffType.Replace, targetAction="Drinking",  replaceWith="SeatedDrinking", replaceAnim="SeatedDrinking" },
+        new DayDiff { dayIndex=3, type=DayDiffType.Remove,  targetAction="Reading" },
+        new DayDiff { dayIndex=4, type=DayDiffType.Replace, targetAction="UsingPhone", replaceWith="Reading", replaceAnim="Reading" },
     };
 
-    static readonly DayDiff[] DAD_WEEKDAY_DIFFS = new DayDiff[]
+    static readonly DayDiff[] DAD_WEEKDAY_DIFFS =
     {
-        new DayDiff { dayIndex = 1, type = DayDiffType.Remove,
-                      targetAction = "Drinking" },
-        new DayDiff { dayIndex = 2, type = DayDiffType.Replace,
-                      targetAction = "UsingPhone", replaceWith = "Watching",
-                      replaceAnim  = "Watching" },
-        new DayDiff { dayIndex = 3, type = DayDiffType.Remove,
-                      targetAction = "UsingPhone" },
-        new DayDiff { dayIndex = 4, type = DayDiffType.Replace,
-                      targetAction = "Typing", replaceWith = "Drinking",
-                      replaceAnim  = "Drinking" },
+        new DayDiff { dayIndex=1, type=DayDiffType.Remove,  targetAction="Drinking" },
+        new DayDiff { dayIndex=2, type=DayDiffType.Replace, targetAction="UsingPhone", replaceWith="Watching",  replaceAnim="Watching"  },
+        new DayDiff { dayIndex=3, type=DayDiffType.Remove,  targetAction="UsingPhone" },
+        new DayDiff { dayIndex=4, type=DayDiffType.Replace, targetAction="Typing",     replaceWith="Drinking",  replaceAnim="Drinking"  },
     };
 
-    static readonly DayDiff[] MOM_WEEKEND_DIFFS = new DayDiff[]
+    static readonly DayDiff[] MOM_WEEKEND_DIFFS =
     {
-        new DayDiff { dayIndex = 0, type = DayDiffType.Remove,
-                      targetAction = "UsingPhone" },
-        new DayDiff { dayIndex = 1, type = DayDiffType.Replace,
-                      targetAction = "Drinking", replaceWith = "SeatedDrinking",
-                      replaceAnim  = "SeatedDrinking" },
+        new DayDiff { dayIndex=0, type=DayDiffType.Remove,  targetAction="UsingPhone" },
+        new DayDiff { dayIndex=1, type=DayDiffType.Replace, targetAction="Drinking", replaceWith="SeatedDrinking", replaceAnim="SeatedDrinking" },
     };
 
-    static readonly DayDiff[] DAD_WEEKEND_DIFFS = new DayDiff[]
+    static readonly DayDiff[] DAD_WEEKEND_DIFFS =
     {
-        new DayDiff { dayIndex = 0, type = DayDiffType.Remove,
-                      targetAction = "UsingPhone" },
-        new DayDiff { dayIndex = 1, type = DayDiffType.Replace,
-                      targetAction = "Watching", replaceWith = "Drinking",
-                      replaceAnim  = "SeatedDrinking" },
+        new DayDiff { dayIndex=0, type=DayDiffType.Remove,  targetAction="UsingPhone" },
+        new DayDiff { dayIndex=1, type=DayDiffType.Replace, targetAction="Watching", replaceWith="Drinking", replaceAnim="SeatedDrinking" },
     };
 
     static string DbNameFor(ExperimentType t) =>
@@ -225,84 +183,84 @@ public class ExperimentRunner : MonoBehaviour
         _                               => "_semantic",
     };
 
-    int    successRuns          = 0;
-    int    skippedRuns          = 0;
-    float  currentVirtualHour   = 7f;
-    bool   isRunning            = false;
-    bool   flaskReady           = false;
-    bool   _demoWaterShouldShow = false;
-    string _demoMessage         = "Observing...";
+    int   _successRuns        = 0;
+    int   _skippedRuns        = 0;
+    float _currentVirtualHour = 7f;
+    bool  _isRunning          = false;
+    bool  _flaskReady         = false;
+    bool  _demoWaterShouldShow = false;
+    string _demoMessage       = "Observing...";
 
     BehaviorEvent[] MomWeekday() => new BehaviorEvent[]
     {
-        new BehaviorEvent { action="Opening",   animation="Opening",        virtualHour=7.0f,  spot=momSpot_OpenKitchen    },
-        new BehaviorEvent { action="Cooking",   animation="Cooking",        virtualHour=7.3f,  spot=momSpot_CookKitchen    },
-        new BehaviorEvent { action="Eating",    animation="Eating",         virtualHour=7.5f,  spot=momSpot_EatDining      },
-        new BehaviorEvent { action="Cleaning",  animation="Cleaning",       virtualHour=8.0f,  spot=momSpot_CleanKitchen   },
-        new BehaviorEvent { action="Reading",   animation="Reading",        virtualHour=10.0f, spot=momSpot_ReadSofa       },
-        new BehaviorEvent { action="Drinking",  animation="Drinking",       virtualHour=10.5f, spot=momSpot_DrinkKitchen   },
-        new BehaviorEvent { action="Eating",    animation="Eating",         virtualHour=12.0f, spot=momSpot_EatSofa        },
-        new BehaviorEvent { action="Laying",    animation="Laying",         virtualHour=13.0f, spot=momSpot_LaySofa        },
-        new BehaviorEvent { action="Cleaning",  animation="Cleaning",       virtualHour=15.0f, spot=momSpot_CleanLiving    },
-        new BehaviorEvent { action="UsingPhone",animation="UsingPhone",     virtualHour=16.0f, spot=momSpot_PhoneSofa      },
-        new BehaviorEvent { action="Cooking",   animation="Cooking",        virtualHour=18.0f, spot=momSpot_CookKitchen    },
-        new BehaviorEvent { action="Eating",    animation="Eating",         virtualHour=18.5f, spot=momSpot_EatDining      },
-        new BehaviorEvent { action="Watching",  animation="Watching",       virtualHour=19.5f, spot=momSpot_WatchSofa      },
-        new BehaviorEvent { action="Drinking",  animation="SeatedDrinking", virtualHour=20.0f, spot=momSpot_SeatedDrinkSofa},
-        new BehaviorEvent { action="Reading",   animation="Reading",        virtualHour=21.5f, spot=momSpot_ReadBedroom    },
-        new BehaviorEvent { action="Laying",    animation="Laying",         virtualHour=23.0f, spot=momSpot_LayBed         },
+        new BehaviorEvent { action="Opening",    animation="Opening",        virtualHour=7.0f,  spot=momSpot_OpenKitchen     },
+        new BehaviorEvent { action="Cooking",    animation="Cooking",        virtualHour=7.3f,  spot=momSpot_CookKitchen     },
+        new BehaviorEvent { action="Eating",     animation="Eating",         virtualHour=7.5f,  spot=momSpot_EatDining       },
+        new BehaviorEvent { action="Cleaning",   animation="Cleaning",       virtualHour=8.0f,  spot=momSpot_CleanKitchen    },
+        new BehaviorEvent { action="Reading",    animation="Reading",        virtualHour=10.0f, spot=momSpot_ReadSofa        },
+        new BehaviorEvent { action="Drinking",   animation="Drinking",       virtualHour=10.5f, spot=momSpot_DrinkKitchen    },
+        new BehaviorEvent { action="Eating",     animation="Eating",         virtualHour=12.0f, spot=momSpot_EatSofa         },
+        new BehaviorEvent { action="Laying",     animation="Laying",         virtualHour=13.0f, spot=momSpot_LaySofa         },
+        new BehaviorEvent { action="Cleaning",   animation="Cleaning",       virtualHour=15.0f, spot=momSpot_CleanLiving     },
+        new BehaviorEvent { action="UsingPhone", animation="UsingPhone",     virtualHour=16.0f, spot=momSpot_PhoneSofa       },
+        new BehaviorEvent { action="Cooking",    animation="Cooking",        virtualHour=18.0f, spot=momSpot_CookKitchen     },
+        new BehaviorEvent { action="Eating",     animation="Eating",         virtualHour=18.5f, spot=momSpot_EatDining       },
+        new BehaviorEvent { action="Watching",   animation="Watching",       virtualHour=19.5f, spot=momSpot_WatchSofa       },
+        new BehaviorEvent { action="Drinking",   animation="SeatedDrinking", virtualHour=20.0f, spot=momSpot_SeatedDrinkSofa },
+        new BehaviorEvent { action="Reading",    animation="Reading",        virtualHour=21.5f, spot=momSpot_ReadBedroom     },
+        new BehaviorEvent { action="Laying",     animation="Laying",         virtualHour=23.0f, spot=momSpot_LayBed          },
     };
 
     BehaviorEvent[] MomWeekend() => new BehaviorEvent[]
     {
-        new BehaviorEvent { action="Eating",    animation="Eating",         virtualHour=8.5f,  spot=momSpot_EatDining      },
-        new BehaviorEvent { action="Opening",   animation="Opening",        virtualHour=9.0f,  spot=momSpot_OpenKitchen    },
-        new BehaviorEvent { action="Cooking",   animation="Cooking",        virtualHour=10.0f, spot=momSpot_CookKitchen    },
-        new BehaviorEvent { action="Eating",    animation="Eating",         virtualHour=10.5f, spot=momSpot_EatSofa        },
-        new BehaviorEvent { action="Reading",   animation="Reading",        virtualHour=11.5f, spot=momSpot_ReadSofa       },
-        new BehaviorEvent { action="UsingPhone",animation="UsingPhone",     virtualHour=12.5f, spot=momSpot_PhoneSofa      },
-        new BehaviorEvent { action="Eating",    animation="Eating",         virtualHour=13.0f, spot=momSpot_EatDining      },
-        new BehaviorEvent { action="Laying",    animation="Laying",         virtualHour=14.0f, spot=momSpot_LaySofa        },
-        new BehaviorEvent { action="Watching",  animation="Watching",       virtualHour=16.0f, spot=momSpot_WatchSofa      },
-        new BehaviorEvent { action="Drinking",  animation="SeatedDrinking", virtualHour=17.0f, spot=momSpot_SeatedDrinkSofa},
-        new BehaviorEvent { action="Cooking",   animation="Cooking",        virtualHour=18.5f, spot=momSpot_CookKitchen    },
-        new BehaviorEvent { action="Eating",    animation="Eating",         virtualHour=19.0f, spot=momSpot_EatDining      },
-        new BehaviorEvent { action="Watching",  animation="Watching",       virtualHour=20.0f, spot=momSpot_WatchSofa      },
-        new BehaviorEvent { action="Reading",   animation="Reading",        virtualHour=22.0f, spot=momSpot_ReadBedroom    },
-        new BehaviorEvent { action="Laying",    animation="Laying",         virtualHour=23.5f, spot=momSpot_LayBed         },
+        new BehaviorEvent { action="Eating",     animation="Eating",         virtualHour=8.5f,  spot=momSpot_EatDining       },
+        new BehaviorEvent { action="Opening",    animation="Opening",        virtualHour=9.0f,  spot=momSpot_OpenKitchen     },
+        new BehaviorEvent { action="Cooking",    animation="Cooking",        virtualHour=10.0f, spot=momSpot_CookKitchen     },
+        new BehaviorEvent { action="Eating",     animation="Eating",         virtualHour=10.5f, spot=momSpot_EatSofa         },
+        new BehaviorEvent { action="Reading",    animation="Reading",        virtualHour=11.5f, spot=momSpot_ReadSofa        },
+        new BehaviorEvent { action="UsingPhone", animation="UsingPhone",     virtualHour=12.5f, spot=momSpot_PhoneSofa       },
+        new BehaviorEvent { action="Eating",     animation="Eating",         virtualHour=13.0f, spot=momSpot_EatDining       },
+        new BehaviorEvent { action="Laying",     animation="Laying",         virtualHour=14.0f, spot=momSpot_LaySofa         },
+        new BehaviorEvent { action="Watching",   animation="Watching",       virtualHour=16.0f, spot=momSpot_WatchSofa       },
+        new BehaviorEvent { action="Drinking",   animation="SeatedDrinking", virtualHour=17.0f, spot=momSpot_SeatedDrinkSofa },
+        new BehaviorEvent { action="Cooking",    animation="Cooking",        virtualHour=18.5f, spot=momSpot_CookKitchen     },
+        new BehaviorEvent { action="Eating",     animation="Eating",         virtualHour=19.0f, spot=momSpot_EatDining       },
+        new BehaviorEvent { action="Watching",   animation="Watching",       virtualHour=20.0f, spot=momSpot_WatchSofa       },
+        new BehaviorEvent { action="Reading",    animation="Reading",        virtualHour=22.0f, spot=momSpot_ReadBedroom     },
+        new BehaviorEvent { action="Laying",     animation="Laying",         virtualHour=23.5f, spot=momSpot_LayBed          },
     };
 
     BehaviorEvent[] DadWeekday() => new BehaviorEvent[]
     {
-        new BehaviorEvent { action="Eating",    animation="Eating",         virtualHour=7.0f,  spot=dadSpot_EatDining      },
-        new BehaviorEvent { action="Typing",    animation="Typing",         virtualHour=8.0f,  spot=dadSpot_TypingDesk     },
-        new BehaviorEvent { action="Drinking",  animation="Drinking",       virtualHour=9.0f,  spot=dadSpot_DrinkDesk      },
-        new BehaviorEvent { action="Typing",    animation="Typing",         virtualHour=9.5f,  spot=dadSpot_TypingDesk     },
-        new BehaviorEvent { action="UsingPhone",animation="UsingPhone",     virtualHour=10.5f, spot=dadSpot_PhoneDesk      },
-        new BehaviorEvent { action="Eating",    animation="Eating",         virtualHour=12.0f, spot=dadSpot_EatSofa        },
-        new BehaviorEvent { action="Laying",    animation="Laying",         virtualHour=13.0f, spot=dadSpot_LaySofa        },
-        new BehaviorEvent { action="Typing",    animation="Typing",         virtualHour=14.0f, spot=dadSpot_TypingDesk     },
-        new BehaviorEvent { action="UsingPhone",animation="UsingPhone",     virtualHour=16.0f, spot=dadSpot_PhoneDesk      },
-        new BehaviorEvent { action="Eating",    animation="Eating",         virtualHour=18.5f, spot=dadSpot_EatDining      },
-        new BehaviorEvent { action="Watching",  animation="Watching",       virtualHour=19.5f, spot=dadSpot_WatchSofa      },
-        new BehaviorEvent { action="UsingPhone",animation="UsingPhone",     virtualHour=21.0f, spot=dadSpot_PhoneSofa      },
-        new BehaviorEvent { action="Laying",    animation="Laying",         virtualHour=23.0f, spot=dadSpot_LayBed         },
+        new BehaviorEvent { action="Eating",     animation="Eating",         virtualHour=7.0f,  spot=dadSpot_EatDining       },
+        new BehaviorEvent { action="Typing",     animation="Typing",         virtualHour=8.0f,  spot=dadSpot_TypingDesk      },
+        new BehaviorEvent { action="Drinking",   animation="Drinking",       virtualHour=9.0f,  spot=dadSpot_DrinkDesk       },
+        new BehaviorEvent { action="Typing",     animation="Typing",         virtualHour=9.5f,  spot=dadSpot_TypingDesk      },
+        new BehaviorEvent { action="UsingPhone", animation="UsingPhone",     virtualHour=10.5f, spot=dadSpot_PhoneDesk       },
+        new BehaviorEvent { action="Eating",     animation="Eating",         virtualHour=12.0f, spot=dadSpot_EatSofa         },
+        new BehaviorEvent { action="Laying",     animation="Laying",         virtualHour=13.0f, spot=dadSpot_LaySofa         },
+        new BehaviorEvent { action="Typing",     animation="Typing",         virtualHour=14.0f, spot=dadSpot_TypingDesk      },
+        new BehaviorEvent { action="UsingPhone", animation="UsingPhone",     virtualHour=16.0f, spot=dadSpot_PhoneDesk       },
+        new BehaviorEvent { action="Eating",     animation="Eating",         virtualHour=18.5f, spot=dadSpot_EatDining       },
+        new BehaviorEvent { action="Watching",   animation="Watching",       virtualHour=19.5f, spot=dadSpot_WatchSofa       },
+        new BehaviorEvent { action="UsingPhone", animation="UsingPhone",     virtualHour=21.0f, spot=dadSpot_PhoneSofa       },
+        new BehaviorEvent { action="Laying",     animation="Laying",         virtualHour=23.0f, spot=dadSpot_LayBed          },
     };
 
     BehaviorEvent[] DadWeekend() => new BehaviorEvent[]
     {
-        new BehaviorEvent { action="Laying",    animation="Laying",         virtualHour=9.0f,  spot=dadSpot_LayBed         },
-        new BehaviorEvent { action="Eating",    animation="Eating",         virtualHour=10.0f, spot=dadSpot_EatDining      },
-        new BehaviorEvent { action="Watching",  animation="Watching",       virtualHour=11.0f, spot=dadSpot_WatchSofa      },
-        new BehaviorEvent { action="UsingPhone",animation="UsingPhone",     virtualHour=12.0f, spot=dadSpot_PhoneSofa      },
-        new BehaviorEvent { action="Eating",    animation="Eating",         virtualHour=13.0f, spot=dadSpot_EatSofa        },
-        new BehaviorEvent { action="Laying",    animation="Laying",         virtualHour=14.5f, spot=dadSpot_LaySofa        },
-        new BehaviorEvent { action="Watching",  animation="Watching",       virtualHour=16.0f, spot=dadSpot_WatchSofa      },
-        new BehaviorEvent { action="Drinking",  animation="SeatedDrinking", virtualHour=17.5f, spot=dadSpot_SeatedDrinkSofa},
-        new BehaviorEvent { action="Eating",    animation="Eating",         virtualHour=19.0f, spot=dadSpot_EatDining      },
-        new BehaviorEvent { action="Watching",  animation="Watching",       virtualHour=20.0f, spot=dadSpot_WatchSofa      },
-        new BehaviorEvent { action="UsingPhone",animation="UsingPhone",     virtualHour=21.5f, spot=dadSpot_PhoneSofa      },
-        new BehaviorEvent { action="Laying",    animation="Laying",         virtualHour=23.5f, spot=dadSpot_LayBed         },
+        new BehaviorEvent { action="Laying",     animation="Laying",         virtualHour=9.0f,  spot=dadSpot_LayBed          },
+        new BehaviorEvent { action="Eating",     animation="Eating",         virtualHour=10.0f, spot=dadSpot_EatDining       },
+        new BehaviorEvent { action="Watching",   animation="Watching",       virtualHour=11.0f, spot=dadSpot_WatchSofa       },
+        new BehaviorEvent { action="UsingPhone", animation="UsingPhone",     virtualHour=12.0f, spot=dadSpot_PhoneSofa       },
+        new BehaviorEvent { action="Eating",     animation="Eating",         virtualHour=13.0f, spot=dadSpot_EatSofa         },
+        new BehaviorEvent { action="Laying",     animation="Laying",         virtualHour=14.5f, spot=dadSpot_LaySofa         },
+        new BehaviorEvent { action="Watching",   animation="Watching",       virtualHour=16.0f, spot=dadSpot_WatchSofa       },
+        new BehaviorEvent { action="Drinking",   animation="SeatedDrinking", virtualHour=17.5f, spot=dadSpot_SeatedDrinkSofa },
+        new BehaviorEvent { action="Eating",     animation="Eating",         virtualHour=19.0f, spot=dadSpot_EatDining       },
+        new BehaviorEvent { action="Watching",   animation="Watching",       virtualHour=20.0f, spot=dadSpot_WatchSofa       },
+        new BehaviorEvent { action="UsingPhone", animation="UsingPhone",     virtualHour=21.5f, spot=dadSpot_PhoneSofa       },
+        new BehaviorEvent { action="Laying",     animation="Laying",         virtualHour=23.5f, spot=dadSpot_LayBed          },
     };
 
     BehaviorEvent[] ApplyDayDiff(BehaviorEvent[] baseSchedule, DayDiff[] diffs, int dayIndex)
@@ -312,35 +270,25 @@ public class ExperimentRunner : MonoBehaviour
             if (d.dayIndex == dayIndex)
                 todayDiffs.Add(d);
 
-        if (todayDiffs.Count == 0)
-            return baseSchedule;
+        if (todayDiffs.Count == 0) return baseSchedule;
 
         var result = new List<BehaviorEvent>(baseSchedule.Length);
         foreach (var ev in baseSchedule)
         {
-            BehaviorEvent current = ev;
-            bool removed = false;
+            BehaviorEvent cur     = ev;
+            bool          removed = false;
 
             foreach (var diff in todayDiffs)
             {
-                if (current.action != diff.targetAction) continue;
-
+                if (cur.action != diff.targetAction) continue;
                 if (diff.type == DayDiffType.Remove)
-                {
-                    removed = true;
-                    break;
-                }
-                else
-                {
-                    current.action    = diff.replaceWith;
-                    current.animation = string.IsNullOrEmpty(diff.replaceAnim)
-                                       ? diff.replaceWith : diff.replaceAnim;
-                }
+                    { removed = true; break; }
+                cur.action    = diff.replaceWith;
+                cur.animation = string.IsNullOrEmpty(diff.replaceAnim) ? diff.replaceWith : diff.replaceAnim;
             }
 
-            if (!removed) result.Add(current);
+            if (!removed) result.Add(cur);
         }
-
         return result.ToArray();
     }
 
@@ -354,10 +302,7 @@ public class ExperimentRunner : MonoBehaviour
 
         if (mode == RunMode.Demo)
         {
-            if (demoEgg         != null) demoEgg.SetActive(false);
-            if (demoMiniPCLight != null) demoMiniPCLight.SetActive(false);
-            if (demoWater       != null) demoWater.SetActive(false);
-            if (demoBowl        != null) demoBowl.SetActive(false);
+            SetDemoItemsActive(false);
             StartCoroutine(KeepDemoWaterHidden());
             StartCoroutine(RunDemoScan());
         }
@@ -367,17 +312,25 @@ public class ExperimentRunner : MonoBehaviour
         }
     }
 
+    void SetDemoItemsActive(bool active)
+    {
+        if (demoEgg         != null) demoEgg.SetActive(active);
+        if (demoMiniPCLight != null) demoMiniPCLight.SetActive(active);
+        if (demoWater       != null) demoWater.SetActive(active);
+        if (demoBowl        != null) demoBowl.SetActive(active);
+    }
+
     void Update()
     {
         if (mode == RunMode.Demo) return;
-        if (flaskReady && !RUN_ON_START && !isRunning &&
+        if (_flaskReady && !RUN_ON_START && !_isRunning &&
             Input.GetKeyDown(KeyCode.Space))
             StartExperiment();
-        if (Input.GetKeyDown(KeyCode.Escape) && isRunning)
+        if (Input.GetKeyDown(KeyCode.Escape) && _isRunning)
         {
             StopAllCoroutines();
             CurrentExperimentMode = "";
-            isRunning = false;
+            _isRunning = false;
         }
     }
 
@@ -390,10 +343,10 @@ public class ExperimentRunner : MonoBehaviour
             yield return req.SendWebRequest();
             if (req.result == UnityWebRequest.Result.Success)
             {
-                var data = req.downloadHandler.text;
+                string data = req.downloadHandler.text;
                 if (data.Contains("\"ready\": true") || data.Contains("\"ready\":true"))
                 {
-                    flaskReady = true;
+                    _flaskReady = true;
                     if (RUN_ON_START) { yield return new WaitForSeconds(2f); StartExperiment(); }
                     else Debug.Log("[ExperimentRunner] Press Space to start.");
                     yield break;
@@ -405,8 +358,8 @@ public class ExperimentRunner : MonoBehaviour
 
     public void StartExperiment()
     {
-        if (mode == RunMode.Demo || isRunning) return;
-        isRunning = true;
+        if (mode == RunMode.Demo || _isRunning) return;
+        _isRunning = true;
         if (autoRunAll)
             StartCoroutine(RunAllScheduled());
         else
@@ -428,48 +381,44 @@ public class ExperimentRunner : MonoBehaviour
                 RunSingleExperiment(s.expType, s.collectionSuffix, s.dbName, s.systemMode));
             yield return new WaitForSeconds(3f);
         }
-        isRunning = false;
+        _isRunning = false;
         CurrentExperimentMode = "";
         Debug.Log("[Schedule] All experiments complete!");
     }
 
     IEnumerator RunSingleExperiment(
-        ExperimentType expType, string collSuffix,
-        string dbName, string systemMode)
+        ExperimentType expType, string collSuffix, string dbName, string systemMode)
     {
-        successRuns = skippedRuns = 0;
+        _successRuns = _skippedRuns = 0;
 
-        float  pickupRate, putdownRate, objConfuse, skelNoise;
-        string expModeStr;
-        GetNoiseSettings(expType, out pickupRate, out putdownRate,
-                         out objConfuse, out skelNoise, out expModeStr);
+        GetNoiseSettings(expType,
+            out float pickupRate, out float putdownRate,
+            out float objConfuse, out float skelNoise, out string expModeStr);
 
         CurrentExperimentMode = expModeStr;
 
-        yield return StartCoroutine(
-            PostStartExperiment(expModeStr, collSuffix, dbName, systemMode));
+        yield return StartCoroutine(PostStartExperiment(expModeStr, collSuffix, dbName, systemMode));
 
         ApplyNoiseTo(userMom, pickupRate, putdownRate, skelNoise);
         ApplyNoiseTo(userDad, pickupRate, putdownRate, skelNoise);
+
         var dsm = FindObjectOfType<DynamicSyncManager>();
         if (dsm != null) dsm.objectConfusionRate = objConfuse;
 
-        Debug.Log($"[Experiment] Start: {expModeStr} system={systemMode} "
-                + $"db={dbName} suffix={collSuffix}");
+        Debug.Log($"[Experiment] Start: {expModeStr} system={systemMode} db={dbName} suffix={collSuffix}");
 
         yield return StartCoroutine(RunObservationExp());
-
         yield return StartCoroutine(PostExperimentDone(expModeStr));
 
         ApplyNoiseTo(userMom, 0f, 0f, 0f);
         ApplyNoiseTo(userDad, 0f, 0f, 0f);
         if (dsm != null) dsm.objectConfusionRate = 0f;
 
-        Debug.Log($"[Experiment] Done: {expModeStr} success={successRuns} skip={skippedRuns}");
+        Debug.Log($"[Experiment] Done: {expModeStr} success={_successRuns} skip={_skippedRuns}");
 
         if (!autoRunAll)
         {
-            isRunning = false;
+            _isRunning = false;
             CurrentExperimentMode = "";
         }
     }
@@ -510,9 +459,9 @@ public class ExperimentRunner : MonoBehaviour
 
             foreach (var (user, ev) in allEvents)
             {
-                if (user == null) { skippedRuns++; continue; }
+                if (user == null) { _skippedRuns++; continue; }
 
-                UserEntity other = (user == userMom) ? userDad : userMom;
+                UserEntity other = user == userMom ? userDad : userMom;
                 if (other != null) other.gameObject.SetActive(false);
                 user.gameObject.SetActive(true);
 
@@ -523,24 +472,23 @@ public class ExperimentRunner : MonoBehaviour
                     WarpUserToSpot(other);
                     other.gameObject.SetActive(true);
                 }
-                successRuns++;
+                _successRuns++;
             }
 
             Debug.Log($"[Experiment] Day {day+1}/{WeekPattern.Length} "
-                    + $"success={successRuns} skip={skippedRuns}");
+                    + $"success={_successRuns} skip={_skippedRuns}");
         }
     }
 
     IEnumerator RunBehaviorEvent(UserEntity user, BehaviorEvent ev)
     {
-        currentVirtualHour = ev.virtualHour;
-        CurrentVirtualHour = ev.virtualHour;
-        CurrentTimeSlot    = GetSlotName(ev.virtualHour);
+        _currentVirtualHour    = ev.virtualHour;
+        CurrentVirtualHour     = ev.virtualHour;
+        CurrentTimeSlot        = GetSlotName(ev.virtualHour);
         SetUsersVirtualHour(ev.virtualHour);
         PostVirtualHourFireAndForget(ev.virtualHour);
 
-        if (ev.spot != null)
-            user.overrideSpot = ev.spot;
+        if (ev.spot != null) user.overrideSpot = ev.spot;
 
         bool tvOn = ev.action == "Watching";
         yield return StartCoroutine(SetDeviceState("tv", tvOn ? "on" : "off"));
@@ -560,7 +508,7 @@ public class ExperimentRunner : MonoBehaviour
 
     void GetNoiseSettings(ExperimentType t,
         out float pickup, out float putdown,
-        out float obj, out float skel, out string modeStr)
+        out float obj,    out float skel, out string modeStr)
     {
         switch (t)
         {
@@ -604,6 +552,7 @@ public class ExperimentRunner : MonoBehaviour
     {
         yield return new WaitForSeconds(2.0f);
         yield return StartCoroutine(PostDemoScene(1, "User_Mom"));
+
         _demoMessage = "Mami is observing Mom...";
         userDad.gameObject.SetActive(false);
         userMom.gameObject.SetActive(true);
@@ -611,32 +560,40 @@ public class ExperimentRunner : MonoBehaviour
         CurrentTimeSlot    = "Evening";
         SetUsersVirtualHour(19f);
         PostVirtualHourFireAndForget(19f);
+
         if (demoCameraController != null)
             demoCameraController.SetActiveCamera("Cam_Overview", userMom);
+
         yield return StartCoroutine(SetDeviceState("tv", "off"));
         userMom.overrideSpot = demoMomOpenSpot;
         userMom.ResetBusy();
         yield return StartCoroutine(userMom.SwitchActivity("Opening"));
         yield return new WaitForSeconds(1.0f);
+
         userMom.ResetBusy();
         if (demoEgg != null) demoEgg.SetActive(true);
         yield return StartCoroutine(userMom.MoveToSpotAndHold("Cooking", demoMomCookSpot));
         yield return new WaitForSeconds(DEMO_SCENE_TIME);
-        if (demoEgg != null) demoEgg.SetActive(false);
+
+        if (demoEgg  != null) demoEgg.SetActive(false);
         yield return userMom.ClearHeldObject();
         if (demoBowl != null) demoBowl.SetActive(false);
         yield return userMom.ClearHeldObject();
         yield return new WaitForSeconds(0.3f);
+
         yield return StartCoroutine(userMom.MoveToSpotAndHold("Eating", demoMomEatSpot));
         yield return new WaitForSeconds(DEMO_SCENE_TIME);
         yield return userMom.ClearHeldObject();
+
         if (demoBowl != null) demoBowl.SetActive(true);
         yield return StartCoroutine(userMom.MoveToSpotAndHold("Sitting", demoMomSittingSpot));
         yield return new WaitForSeconds(1.0f);
+
         yield return StartCoroutine(SetDeviceState("tv", "on"));
         if (virtualCameraBrain != null) virtualCameraBrain.SetTVState(true);
-        if (demoTVScreen != null) demoTVScreen.SetActive(true);
+        if (demoTVScreen        != null) demoTVScreen.SetActive(true);
         userMom.SetAnim("Watching");
+
         if (demoCameraController != null)
             demoCameraController.SetActiveCamera("Cam_Overview", userMom);
         yield return new WaitForSeconds(2.0f);
@@ -646,6 +603,7 @@ public class ExperimentRunner : MonoBehaviour
         if (demoCameraController != null)
             demoCameraController.SetActiveCamera("Cam_Overview", userMom);
         yield return new WaitForSeconds(2.0f);
+
         yield return StartCoroutine(PostDemoScene(2, "User_Mom"));
         _demoMessage = "Mami detected behavior change...";
         if (demoMiniPCLight != null) demoMiniPCLight.SetActive(true);
@@ -653,58 +611,71 @@ public class ExperimentRunner : MonoBehaviour
         yield return new WaitForSeconds(5.0f);
         if (demoMiniPCLight != null) demoMiniPCLight.SetActive(false);
         yield return StartCoroutine(WaitForSceneDone(60f));
+
         userMom.PreActivateHeldObject("SeatedDrinking");
         userMom.SetAnim("SeatedDrinking");
         yield return new WaitForSeconds(6.0f);
         yield return userMom.ClearHeldObject();
+
         _demoWaterShouldShow = true;
         if (demoWater != null) demoWater.SetActive(true);
         yield return new WaitForSeconds(0.5f);
+
         _demoMessage = "Mom calls Mami...";
         yield return userMom.ClearHeldObject();
         userMom.SetAnim("Watching");
         yield return new WaitForSeconds(1.5f);
+
         if (demoCameraController != null)
             demoCameraController.SetActiveCamera("Cam_Overview", userMom);
         yield return new WaitForSeconds(2.0f);
         if (demoCameraController != null)
             demoCameraController.SetActiveCamera("Cam_MamiCall", userMom);
         yield return new WaitForSeconds(1.5f);
+
         yield return StartCoroutine(PostDemoScene(3, "User_Mom"));
         yield return StartCoroutine(WaitForSceneDone(120f));
         yield return new WaitForSeconds(3.0f);
+
         ReleaseActor(userMom);
         if (demoCameraController != null)
             demoCameraController.SetActiveCamera("Cam_Overview", userMom);
         yield return new WaitForSeconds(2.5f);
+
         _demoMessage = "Dad calls Mami while typing...";
         yield return StartCoroutine(SetDeviceState("tv", "off"));
         if (virtualCameraBrain != null) virtualCameraBrain.SetTVState(false);
-        if (demoTVScreen != null) demoTVScreen.SetActive(false);
+        if (demoTVScreen        != null) demoTVScreen.SetActive(false);
         yield return userMom.ClearHeldObject();
         yield return StartCoroutine(userMom.ReturnToStanding());
+
         userMom.gameObject.SetActive(false);
         userDad.gameObject.SetActive(true);
         if (demoCameraController != null)
             demoCameraController.SetActiveCamera("Cam_Overview", userDad);
         yield return StartCoroutine(userDad.MoveToSpotAndHold("Typing", demoDadTypingSpot));
         yield return new WaitForSeconds(2.0f);
+
         yield return StartCoroutine(PostDemoScene(4, "User_Dad"));
         yield return StartCoroutine(WaitForSceneDone(120f));
         yield return new WaitForSeconds(1.5f);
+
         _demoMessage = "Dad asks for cookie...";
         yield return StartCoroutine(PostDemoScene(5, "User_Dad"));
         yield return StartCoroutine(WaitForSceneDone(120f));
         yield return StartCoroutine(PostDemoScene(6, ""));
+
         _demoMessage = "Mami has learned the preferences of both residents.";
         yield return StartCoroutine(SetDeviceState("tv", "off"));
         if (virtualCameraBrain != null) virtualCameraBrain.SetTVState(false);
         yield return StartCoroutine(userDad.ReturnToStanding());
+
         userMom.gameObject.SetActive(true);
         WarpUserToSpot(userMom);
         yield return new WaitForSeconds(2.0f);
         if (demoCameraController != null)
             demoCameraController.SetActiveCamera("Cam_Overview", userMom);
+
         Debug.Log("[Demo] Complete.");
     }
 
@@ -723,14 +694,8 @@ public class ExperimentRunner : MonoBehaviour
                     + $"\"collection_suffix\":\"{collSuffix}\","
                     + $"\"db_name\":\"{dbName}\","
                     + $"\"system_mode\":\"{systemMode}\"}}";
-        using var req = new UnityWebRequest($"{BACKEND_URL}/start_experiment", "POST");
-        req.uploadHandler   = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(json));
-        req.downloadHandler = new DownloadHandlerBuffer();
-        req.SetRequestHeader("Content-Type", "application/json");
-        req.timeout = 5;
-        yield return req.SendWebRequest();
-        Debug.Log($"[ExperimentRunner] started: {expMode} system={systemMode} "
-                + $"db={dbName} suffix={collSuffix}");
+        yield return StartCoroutine(PostJson($"{BACKEND_URL}/start_experiment", json, timeout: 5));
+        Debug.Log($"[ExperimentRunner] started: {expMode} system={systemMode} db={dbName} suffix={collSuffix}");
     }
 
     IEnumerator PostExperimentDone(string expMode)
@@ -751,12 +716,7 @@ public class ExperimentRunner : MonoBehaviour
     IEnumerator PostDemoScene(int scene, string userId)
     {
         string json = $"{{\"scene\":{scene},\"user_id\":\"{userId}\"}}";
-        using var req = new UnityWebRequest($"{BACKEND_URL}/demo/scene_ready", "POST");
-        req.uploadHandler   = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(json));
-        req.downloadHandler = new DownloadHandlerBuffer();
-        req.SetRequestHeader("Content-Type", "application/json");
-        req.timeout = 5;
-        yield return req.SendWebRequest();
+        yield return StartCoroutine(PostJson($"{BACKEND_URL}/demo/scene_ready", json, timeout: 5));
     }
 
     IEnumerator PostActionEvent(string userId, string prevAction,
@@ -766,12 +726,7 @@ public class ExperimentRunner : MonoBehaviour
                     + $"\"prev_action\":\"{prevAction}\","
                     + $"\"curr_action\":\"{currAction}\","
                     + $"\"time_slot\":\"{timeSlot}\"}}";
-        using var req = new UnityWebRequest($"{BACKEND_URL}/demo/action_event", "POST");
-        req.uploadHandler   = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(json));
-        req.downloadHandler = new DownloadHandlerBuffer();
-        req.SetRequestHeader("Content-Type", "application/json");
-        req.timeout = 5;
-        yield return req.SendWebRequest();
+        yield return StartCoroutine(PostJson($"{BACKEND_URL}/demo/action_event", json, timeout: 5));
     }
 
     IEnumerator WaitForSceneDone(float maxWait = 120f)
@@ -784,7 +739,7 @@ public class ExperimentRunner : MonoBehaviour
             yield return req.SendWebRequest();
             if (req.result == UnityWebRequest.Result.Success &&
                 req.downloadHandler.text.Contains("\"done\":true"))
-            { yield break; }
+                yield break;
             yield return new WaitForSeconds(2f);
             waited += 2f;
         }
@@ -794,12 +749,7 @@ public class ExperimentRunner : MonoBehaviour
     IEnumerator SetDeviceState(string label, string state)
     {
         string json = $"{{\"label\":\"{label}\",\"state\":\"{state}\"}}";
-        using var req = new UnityWebRequest($"{BACKEND_URL}/set_device_state", "POST");
-        req.uploadHandler   = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(json));
-        req.downloadHandler = new DownloadHandlerBuffer();
-        req.SetRequestHeader("Content-Type", "application/json");
-        req.timeout = 3;
-        yield return req.SendWebRequest();
+        yield return StartCoroutine(PostJson($"{BACKEND_URL}/set_device_state", json, timeout: 3));
     }
 
     void PostVirtualHourFireAndForget(float hour) =>
@@ -808,11 +758,16 @@ public class ExperimentRunner : MonoBehaviour
     IEnumerator PostVirtualHourRoutine(float hour)
     {
         string json = $"{{\"virtual_hour\":{hour.ToString("F1", JsonUtil.Inv)}}}";
-        using var req = new UnityWebRequest($"{BACKEND_URL}/set_virtual_hour", "POST");
+        yield return StartCoroutine(PostJson($"{BACKEND_URL}/set_virtual_hour", json, timeout: 3));
+    }
+
+    IEnumerator PostJson(string url, string json, int timeout = 5)
+    {
+        using var req = new UnityWebRequest(url, "POST");
         req.uploadHandler   = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(json));
         req.downloadHandler = new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");
-        req.timeout = 3;
+        req.timeout = timeout;
         yield return req.SendWebRequest();
     }
 
@@ -831,10 +786,11 @@ public class ExperimentRunner : MonoBehaviour
             cameraManager = StaticCameraManager.Instance
                          ?? FindObjectOfType<StaticCameraManager>();
         if (cameraManager == null) return;
+
         if (kitchenNodes?.Count    > 0) cameraManager.RegisterRoomCameras("Kitchen",    kitchenNodes);
         if (livingRoomNodes?.Count > 0) cameraManager.RegisterRoomCameras("LivingRoom", livingRoomNodes);
         if (dadRoomNodes?.Count    > 0) cameraManager.RegisterRoomCameras("DadRoom",    dadRoomNodes);
-        if (virtualCameraBrain != null) cameraManager.virtualCameraBrain = virtualCameraBrain;
+        if (virtualCameraBrain     != null) cameraManager.virtualCameraBrain = virtualCameraBrain;
     }
 
     void SetUsersVirtualHour(float hour)
@@ -854,20 +810,19 @@ public class ExperimentRunner : MonoBehaviour
         if (mode == RunMode.Demo)
         {
             GUI.Box(new Rect(10, Screen.height - 60, 600, 50), "");
-            GUI.Label(new Rect(20, Screen.height - 50, 580, 40),
-                $"Mami: {_demoMessage}");
+            GUI.Label(new Rect(20, Screen.height - 50, 580, 40), $"Mami: {_demoMessage}");
             return;
         }
 
         string expLabel = autoRunAll ? "Auto All" : experimentType.ToString();
-        string status   = isRunning ? "" :
-            (flaskReady ? "[Ready] Press Space" : "[Waiting Flask...]");
+        string status   = _isRunning ? "" :
+            (_flaskReady ? "[Ready] Press Space" : "[Waiting Flask...]");
 
         GUI.Label(
             new Rect(10, 10, 1400, 22),
-            $"[{expLabel}] {GetSlotName(currentVirtualHour)} "
-          + $"{currentVirtualHour:F0}:00  "
+            $"[{expLabel}] {GetSlotName(_currentVirtualHour)} "
+          + $"{_currentVirtualHour:F0}:00  "
           + $"Day={CurrentVirtualDay}/{WeekPattern.Length}  "
-          + $"Success={successRuns}  Skip={skippedRuns}  {status}");
+          + $"Success={_successRuns}  Skip={_skippedRuns}  {status}");
     }
 }

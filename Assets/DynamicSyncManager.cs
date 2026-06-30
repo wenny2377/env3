@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -30,9 +29,11 @@ public class DynamicSyncManager : MonoBehaviour
         { "bowl",   "cup"    }, { "cup",    "bowl"   },
     };
 
-    Dictionary<string, Vector3>    lastPos    = new Dictionary<string, Vector3>();
-    Dictionary<string, Quaternion> lastRot    = new Dictionary<string, Quaternion>();
-    Dictionary<string, Vector3>    lastObjPos = new Dictionary<string, Vector3>();
+    readonly Dictionary<string, Vector3>    _lastPos    = new();
+    readonly Dictionary<string, Quaternion> _lastRot    = new();
+    readonly Dictionary<string, Vector3>    _lastObjPos = new();
+
+    UserEntity[] AllUsers => new UserEntity[] { userMom, userDad };
 
     void Start()
     {
@@ -43,9 +44,9 @@ public class DynamicSyncManager : MonoBehaviour
     string ApplyConfusion(string label)
     {
         if (objectConfusionRate <= 0f) return label;
-        if (ConfusionMap.TryGetValue(label, out string confused))
-            if (UnityEngine.Random.value < objectConfusionRate)
-                return confused;
+        if (ConfusionMap.TryGetValue(label, out string confused) &&
+            UnityEngine.Random.value < objectConfusionRate)
+            return confused;
         return label;
     }
 
@@ -67,25 +68,24 @@ public class DynamicSyncManager : MonoBehaviour
     {
         var entries = new List<string>();
 
-        foreach (var user in new UserEntity[] { userMom, userDad })
+        foreach (var user in AllUsers)
         {
             if (user == null) continue;
 
             Vector3    pos = user.transform.position;
             Quaternion rot = user.transform.rotation;
 
-            bool posMoved = !lastPos.ContainsKey(user.userID) ||
-                            Vector3.Distance(pos, lastPos[user.userID]) >= MOVE_TOLERANCE;
-            bool rotMoved = !lastRot.ContainsKey(user.userID) ||
-                            Quaternion.Angle(rot, lastRot[user.userID]) >= 1f;
+            bool posMoved = !_lastPos.TryGetValue(user.userID, out Vector3 lp) ||
+                            Vector3.Distance(pos, lp) >= MOVE_TOLERANCE;
+            bool rotMoved = !_lastRot.TryGetValue(user.userID, out Quaternion lr) ||
+                            Quaternion.Angle(rot, lr) >= 1f;
 
             if (!posMoved && !rotMoved) continue;
 
-            lastPos[user.userID] = pos;
-            lastRot[user.userID] = rot;
+            _lastPos[user.userID] = pos;
+            _lastRot[user.userID] = rot;
 
             Vector3 fwd = user.transform.forward;
-
             entries.Add("{"
                 + $"\"label\":\"{JsonUtil.Esc(user.userID.ToLower())}\","
                 + $"\"room\":\"\","
@@ -97,10 +97,10 @@ public class DynamicSyncManager : MonoBehaviour
                 + "}");
         }
 
-        if (entries.Count == 0) yield break;
-        yield return StartCoroutine(Post(
-            BACKEND_URL + "/dynamic_sync",
-            "{\"objects\":[" + string.Join(",", entries) + "]}"));
+        if (entries.Count > 0)
+            yield return StartCoroutine(Post(
+                BACKEND_URL + "/dynamic_sync",
+                "{\"objects\":[" + string.Join(",", entries) + "]}"));
     }
 
     IEnumerator ObjectLoop()
@@ -137,10 +137,13 @@ public class DynamicSyncManager : MonoBehaviour
                 pos = obj.transform.position;
             }
 
-            string key   = obj.name;
-            bool   moved = !lastObjPos.ContainsKey(key) ||
-                           Vector3.Distance(pos, lastObjPos[key]) > MOVE_TOLERANCE;
-            if (moved) lastObjPos[key] = pos;
+            string key = obj.name;
+            if (_lastObjPos.TryGetValue(key, out Vector3 lastP) &&
+                Vector3.Distance(pos, lastP) <= MOVE_TOLERANCE &&
+                !isHeld)
+                continue;
+
+            _lastObjPos[key] = pos;
 
             string room  = DetectRoom(pos);
             string label = ApplyConfusion(obj.name.ToLower());
@@ -158,15 +161,15 @@ public class DynamicSyncManager : MonoBehaviour
             entries.Add(entry + "}");
         }
 
-        if (entries.Count == 0) yield break;
-        yield return StartCoroutine(Post(
-            BACKEND_URL + "/dynamic_sync",
-            "{\"objects\":[" + string.Join(",", entries) + "]}"));
+        if (entries.Count > 0)
+            yield return StartCoroutine(Post(
+                BACKEND_URL + "/dynamic_sync",
+                "{\"objects\":[" + string.Join(",", entries) + "]}"));
     }
 
     string FindHolderOf(GameObject obj)
     {
-        foreach (var user in new UserEntity[] { userMom, userDad })
+        foreach (var user in AllUsers)
         {
             if (user == null) continue;
             var items = user.GetBehaviorItems();

@@ -24,18 +24,24 @@ public class StaticCameraManager : MonoBehaviour
     const float CAPTURE_COOLDOWN      = 3.0f;
     const float MIN_VIEW_ANGLE        = 30f;
     const float ROOM_RECHECK_DIST     = 1.0f;
+    const float LOCK_TIMEOUT          = 15f;
 
     static readonly HashSet<string> CaptureStateSet = new HashSet<string>
     {
         "Drinking", "SeatedDrinking", "Sitting", "Eating",
         "Cooking",  "Opening",        "Laying",  "Watching",
-        "Reading",  "Cleaning",       "UsingPhone", "Typing", "StandUp"
+        "Reading",  "Cleaning",       "UsingPhone", "Typing", "StandUp",
     };
 
-    Dictionary<string, List<CameraNode>> roomCameras      = new();
-    Dictionary<string, bool>             _isCapturingDict = new();
+    static readonly HashSet<string> SkipStates = new HashSet<string>
+    {
+        "Walking", "StandUp", "PickingUp", "PuttingDown",
+    };
+
+    Dictionary<string, List<CameraNode>> _roomCameras      = new();
+    Dictionary<string, bool>             _isCapturingDict  = new();
     Dictionary<string, Vector3>          _lastRoomCheckPos = new();
-    Dictionary<string, List<CameraNode>> _cachedUserCams  = new();
+    Dictionary<string, List<CameraNode>> _cachedUserCams   = new();
 
     bool IsCapturing(string userId) =>
         _isCapturingDict.TryGetValue(userId, out bool v) && v;
@@ -49,30 +55,32 @@ public class StaticCameraManager : MonoBehaviour
             virtualCameraBrain = FindObjectOfType<VirtualCameraBrain>();
         if (virtualCameraBrain == null)
             Debug.LogError("[SCM] VirtualCameraBrain not found.");
+
         if (userMom != null) StartCoroutine(SmartScanRoutine(userMom));
         else Debug.LogWarning("[SCM] userMom not assigned");
+
         if (userDad != null) StartCoroutine(SmartScanRoutine(userDad));
         else Debug.LogWarning("[SCM] userDad not assigned");
     }
 
     void Update()
     {
-        if (!Input.GetKeyDown(KeyCode.T)) return;
-        if (userMom == null) return;
+        if (!Input.GetKeyDown(KeyCode.T) || userMom == null) return;
         var cams = FindCamerasForUser(userMom);
-        if (cams == null || cams.Count == 0) return;
-        StartCoroutine(CaptureWithBestNodes(userMom, "Drinking", cams));
+        if (cams != null && cams.Count > 0)
+            StartCoroutine(CaptureWithBestNodes(userMom, "Drinking", cams));
     }
 
     public void RegisterRoomCameras(string roomName, List<CameraNode> cameras)
     {
         if (cameras == null || cameras.Count == 0) return;
-        roomCameras[roomName] = cameras;
+        _roomCameras[roomName] = cameras;
         _cachedUserCams.Clear();
         Debug.Log($"[SCM] Registered '{roomName}': {cameras.Count} node(s)");
     }
 
-    public List<CameraNode> GetCamerasForUser(UserEntity user) => FindCamerasForUser(user);
+    public List<CameraNode> GetCamerasForUser(UserEntity user) =>
+        FindCamerasForUser(user);
 
     public List<CameraNode> GetScoredCamerasForUser(UserEntity user)
     {
@@ -82,7 +90,7 @@ public class StaticCameraManager : MonoBehaviour
 
     public IEnumerator TriggerManualCapture(UserEntity user, string activity)
     {
-        List<CameraNode> cams = GetScoredCamerasForUser(user);
+        var cams = GetScoredCamerasForUser(user);
         if (cams == null || cams.Count == 0)
         {
             Debug.LogWarning($"[SCM] TriggerManualCapture: no cameras for {user.userID}");
@@ -104,7 +112,7 @@ public class StaticCameraManager : MonoBehaviour
 
             Vector3 curPos = user.transform.position;
             float   speed  = Vector3.Distance(curPos, lastPos) / 0.1f;
-            lastPos  = curPos;
+            lastPos   = curPos;
             cooldown -= 0.1f;
 
             string cur = user.currentActivity;
@@ -128,7 +136,7 @@ public class StaticCameraManager : MonoBehaviour
             stillTimer   = 0f;
 
             float lockWait = 0f;
-            while (IsCapturing(user.userID) && lockWait < 15f)
+            while (IsCapturing(user.userID) && lockWait < LOCK_TIMEOUT)
             {
                 yield return new WaitForSeconds(0.1f);
                 lockWait += 0.1f;
@@ -139,17 +147,14 @@ public class StaticCameraManager : MonoBehaviour
                 continue;
             }
 
-            if (!CaptureStateSet.Contains(user.currentActivity)) continue;
-
             string curAct = user.currentActivity;
-            if (curAct == "Walking"   || curAct == "StandUp" ||
-                curAct == "PickingUp" || curAct == "PuttingDown") continue;
+            if (!CaptureStateSet.Contains(curAct)) continue;
+            if (SkipStates.Contains(curAct))       continue;
 
             string assigned = user.lastAssignedActivity;
-            if (assigned == "Walking" || assigned == "Standing" ||
-                assigned == "StandUp") continue;
+            if (assigned == "Walking" || assigned == "Standing" || assigned == "StandUp") continue;
 
-            List<CameraNode> cams = FindCamerasForUser(user);
+            var cams = FindCamerasForUser(user);
             if (cams == null || cams.Count == 0)
             {
                 Debug.LogWarning($"[SCM] {user.userID}: no cameras.");
@@ -168,36 +173,7 @@ public class StaticCameraManager : MonoBehaviour
         SetCapturing(user.userID, true);
 
         List<CameraNode> ranked = ScoreCamerasRanked(user, cameras);
-        List<CameraNode> toUse  = new List<CameraNode>();
-
-        int     topN = 2;
-        Vector3 dir1 = Vector3.zero;
-        Vector3 uPos = user.transform.position;
-
-        if (ranked != null)
-        {
-            foreach (var node in ranked)
-            {
-                if (toUse.Count >= topN) break;
-                if (toUse.Count == 0)
-                {
-                    toUse.Add(node);
-                    dir1 = (node.transform.position - uPos).normalized;
-                }
-                else
-                {
-                    Vector3 dirI = (node.transform.position - uPos).normalized;
-                    if (Vector3.Angle(dir1, dirI) >= MIN_VIEW_ANGLE)
-                        toUse.Add(node);
-                }
-            }
-        }
-
-        if (toUse.Count == 0)
-        {
-            if (ranked != null && ranked.Count > 0) toUse.Add(ranked[0]);
-            else if (cameras.Count > 0)             toUse.Add(cameras[0]);
-        }
+        List<CameraNode> toUse  = SelectDiverseNodes(ranked, cameras, user.transform.position);
 
         string names = string.Join(", ",
             toUse.ConvertAll(n => $"{n.nodeName}({n.lastScore:F2})"));
@@ -215,6 +191,40 @@ public class StaticCameraManager : MonoBehaviour
 
         Debug.Log($"[SCM] done: {user.userID} | {activity}");
         SetCapturing(user.userID, false);
+    }
+
+    List<CameraNode> SelectDiverseNodes(
+        List<CameraNode> ranked, List<CameraNode> fallback, Vector3 uPos)
+    {
+        var     toUse = new List<CameraNode>();
+        Vector3 dir1  = Vector3.zero;
+
+        if (ranked != null)
+        {
+            foreach (var node in ranked)
+            {
+                if (toUse.Count >= 2) break;
+                if (toUse.Count == 0)
+                {
+                    toUse.Add(node);
+                    dir1 = (node.transform.position - uPos).normalized;
+                }
+                else
+                {
+                    Vector3 dirI = (node.transform.position - uPos).normalized;
+                    if (Vector3.Angle(dir1, dirI) >= MIN_VIEW_ANGLE)
+                        toUse.Add(node);
+                }
+            }
+        }
+
+        if (toUse.Count == 0)
+        {
+            if (ranked != null && ranked.Count > 0)  toUse.Add(ranked[0]);
+            else if (fallback != null && fallback.Count > 0) toUse.Add(fallback[0]);
+        }
+
+        return toUse;
     }
 
     List<CameraNode> ScoreCamerasRanked(UserEntity user, List<CameraNode> cameras)
@@ -245,7 +255,7 @@ public class StaticCameraManager : MonoBehaviour
             }
 
             float distScore = Mathf.Max(0f, (25f - distance) * 2f);
-            node.lastScore  = (facingDot * 50f) + visScore + distScore;
+            node.lastScore  = facingDot * 50f + visScore + distScore;
 
             if (visScore > 0f) scored.Add(node);
         }
@@ -256,25 +266,23 @@ public class StaticCameraManager : MonoBehaviour
 
     List<CameraNode> FindCamerasForUser(UserEntity user)
     {
-        if (roomCameras.Count == 0) return null;
-        if (roomCameras.Count == 1)
+        if (_roomCameras.Count == 0) return null;
+        if (_roomCameras.Count == 1)
         {
-            foreach (var v in roomCameras.Values) return v;
+            foreach (var v in _roomCameras.Values) return v;
         }
 
         Vector3 uPos = user.transform.position;
 
-        if (_cachedUserCams.TryGetValue(user.userID, out var cached))
-        {
-            if (_lastRoomCheckPos.TryGetValue(user.userID, out Vector3 lastCheck) &&
-                Vector3.Distance(uPos, lastCheck) < ROOM_RECHECK_DIST)
-                return cached;
-        }
+        if (_cachedUserCams.TryGetValue(user.userID, out var cached) &&
+            _lastRoomCheckPos.TryGetValue(user.userID, out Vector3 lastCheck) &&
+            Vector3.Distance(uPos, lastCheck) < ROOM_RECHECK_DIST)
+            return cached;
 
-        string  nearest = null;
-        float   minDist = float.MaxValue;
+        string nearest = null;
+        float  minDist = float.MaxValue;
 
-        foreach (var kv in roomCameras)
+        foreach (var kv in _roomCameras)
         {
             Vector3 center = Vector3.zero;
             int     cnt    = 0;
@@ -288,15 +296,15 @@ public class StaticCameraManager : MonoBehaviour
 
         if (nearest == null) return null;
 
-        _cachedUserCams[user.userID]  = roomCameras[nearest];
+        _cachedUserCams[user.userID]   = _roomCameras[nearest];
         _lastRoomCheckPos[user.userID] = uPos;
-        return roomCameras[nearest];
+        return _roomCameras[nearest];
     }
 
     void OnDrawGizmos()
     {
         if (!Application.isPlaying) return;
-        foreach (var kv in roomCameras)
+        foreach (var kv in _roomCameras)
             foreach (var cam in kv.Value)
             {
                 if (cam == null) continue;
