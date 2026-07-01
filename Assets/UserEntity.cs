@@ -237,39 +237,121 @@ public class UserEntity : MonoBehaviour
         switch (actLower)
         {
             case "drink":
-            case "drinking":        yield return StartCoroutine(DoDrink());        break;
-            case "seateddrinking":  yield return StartCoroutine(DoSittingDrink()); break;
-            case "sitting":         yield return StartCoroutine(DoSitting());      break;
+            case "drinking":
+                lastAssignedActivity = "Drinking";
+                yield return StartCoroutine(DoDrink());
+                lastAssignedActivity = "";
+                break;
+
+            case "seateddrinking":
+                lastAssignedActivity = "SeatedDrinking";
+                yield return StartCoroutine(DoSittingDrink());
+                lastAssignedActivity = "";
+                break;
+
+            case "sitting":
+                lastAssignedActivity = "Sitting";
+                yield return StartCoroutine(DoSitting());
+                lastAssignedActivity = "";
+                break;
+
             case "standup":
-            case "stand up":        yield return StartCoroutine(DoStandUp());      break;
+            case "stand up":
+                lastAssignedActivity = "StandUp";
+                yield return StartCoroutine(DoStandUp());
+                lastAssignedActivity = "";
+                break;
+
             case "eat":
-            case "eating":          yield return StartCoroutine(DoEat());          break;
+            case "eating":
+                lastAssignedActivity = "Eating";
+                yield return StartCoroutine(DoEat());
+                lastAssignedActivity = "";
+                break;
+
             case "cook":
-            case "cooking":         yield return StartCoroutine(DoCook());         break;
+            case "cooking":
+                lastAssignedActivity = "Cooking";
+                yield return StartCoroutine(DoCook());
+                lastAssignedActivity = "";
+                break;
+
             case "open":
-            case "opening":         yield return StartCoroutine(DoOpen());         break;
+            case "opening":
+                lastAssignedActivity = "Opening";
+                yield return StartCoroutine(DoOpen());
+                lastAssignedActivity = "";
+                break;
+
             case "laying":
-            case "sleep":           yield return StartCoroutine(DoLaying());       break;
+            case "sleep":
+                lastAssignedActivity = "Laying";
+                yield return StartCoroutine(DoLaying());
+                lastAssignedActivity = "";
+                break;
+
             case "watch":
-            case "watching":        yield return StartCoroutine(DoWatching());     break;
+            case "watching":
+                lastAssignedActivity = "Watching";
+                yield return StartCoroutine(DoWatching());
+                lastAssignedActivity = "";
+                break;
+
             case "read":
             case "reading":
-            case "dadreading":      yield return StartCoroutine(DoReading());      break;
+            case "dadreading":
+                lastAssignedActivity = "Reading";
+                yield return StartCoroutine(DoReading());
+                lastAssignedActivity = "";
+                break;
+
             case "clean":
             case "cleaning":
             case "dadclean":
-            case "dadcleaning":     yield return StartCoroutine(DoCleaning());     break;
+            case "dadcleaning":
+                lastAssignedActivity = "Cleaning";
+                yield return StartCoroutine(DoCleaning());
+                lastAssignedActivity = "";
+                break;
+
             case "phone":
             case "usingphone":
-            case "dadphone":        yield return StartCoroutine(DoPhoneUse());     break;
+            case "dadphone":
+                lastAssignedActivity = "UsingPhone";
+                yield return StartCoroutine(DoPhoneUse());
+                lastAssignedActivity = "";
+                break;
+
             case "type":
-            case "typing":          yield return StartCoroutine(DoTyping());       break;
+            case "typing":
+                lastAssignedActivity = "Typing";
+                yield return StartCoroutine(DoTyping());
+                lastAssignedActivity = "";
+                break;
+
             case "pickup":
-            case "pickingup":       yield return StartCoroutine(DoPickUp());       break;
+            case "pickingup":
+                lastAssignedActivity = "PickingUp";
+                yield return StartCoroutine(DoPickUp());
+                lastAssignedActivity = "";
+                break;
+
             case "putdown":
-            case "puttingdown":     yield return StartCoroutine(DoPutDown());      break;
-            case "standing":        yield return StartCoroutine(DoReturnToStanding()); break;
-            default: Debug.LogWarning($"[{userID}] Unknown activity: {activity}"); break;
+            case "puttingdown":
+                lastAssignedActivity = "PuttingDown";
+                yield return StartCoroutine(DoPutDown());
+                lastAssignedActivity = "";
+                break;
+
+            case "standing":
+                lastAssignedActivity = "Standing";
+                yield return StartCoroutine(DoReturnToStanding());
+                lastAssignedActivity = "";
+                break;
+
+            default:
+                Debug.LogWarning($"[{userID}] Unknown activity: {activity}");
+                break;
         }
 
         IsBusy = false;
@@ -615,7 +697,6 @@ public class UserEntity : MonoBehaviour
         }
         SetActivity("Cleaning");
         PlayAnim(STATE_CLEANING);
-        lastAssignedActivity = "Cleaning";
         yield return new WaitForSeconds(cleanDuration);
         if (cleaningPutdownSpot != null)
         {
@@ -736,6 +817,7 @@ public class UserEntity : MonoBehaviour
         {
             Debug.LogWarning($"[{userID}] No NavMesh within {radius}m of {spotPos}.");
             PlayAnim(STATE_STANDING);
+            lastAssignedActivity = savedActivity;
             yield break;
         }
 
@@ -746,6 +828,7 @@ public class UserEntity : MonoBehaviour
         {
             Debug.LogWarning($"[{userID}] Path invalid to {walkTarget}.");
             PlayAnim(STATE_STANDING);
+            lastAssignedActivity = savedActivity;
             yield break;
         }
 
@@ -887,7 +970,7 @@ public class UserEntity : MonoBehaviour
             + $"\"timestamp\":\"{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ss.fff}\","
             + "\"source\":\"unity\""
             + "}";
-        using var req = new UnityWebRequest($"{backendUrl}/device_state", "POST");
+        using var req = new UnityWebRequest($"{backendUrl}/set_device_state", "POST");
         req.uploadHandler   = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(json));
         req.downloadHandler = new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json");

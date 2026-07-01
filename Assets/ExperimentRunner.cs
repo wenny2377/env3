@@ -75,7 +75,7 @@ public class ExperimentRunner : MonoBehaviour
     const string DB_BASELINE           = "robot_exp_baseline";
     const string DB_CORRUPTION         = "robot_exp_corruption";
     const float  WAIT_BETWEEN_EPISODES = 2.0f;
-    const bool   RUN_ON_START          = true;
+    [SerializeField] bool runOnStart = true;
     const float  DEMO_SCENE_TIME       = 5.0f;
 
     const float PICKUP_MISS_LIGHT   = 0.15f;
@@ -374,7 +374,7 @@ public class ExperimentRunner : MonoBehaviour
     void Update()
     {
         if (mode == RunMode.Demo) return;
-        if (flaskReady && !RUN_ON_START && !isRunning &&
+        if (flaskReady && !runOnStart && !isRunning &&
             Input.GetKeyDown(KeyCode.Space))
             StartExperiment();
         if (Input.GetKeyDown(KeyCode.Escape) && isRunning)
@@ -399,7 +399,7 @@ public class ExperimentRunner : MonoBehaviour
                 if (data.Contains("\"ready\": true") || data.Contains("\"ready\":true"))
                 {
                     flaskReady = true;
-                    if (RUN_ON_START) { yield return new WaitForSeconds(2f); StartExperiment(); }
+                    if (runOnStart) { yield return new WaitForSeconds(2f); StartExperiment(); }
                     else Debug.Log("[ExperimentRunner] Press Space to start.");
                     yield break;
                 }
@@ -552,13 +552,11 @@ public class ExperimentRunner : MonoBehaviour
         yield return StartCoroutine(SetDeviceState("tv", tvOn ? "on" : "off"));
         if (virtualCameraBrain != null) virtualCameraBrain.SetTVState(tvOn);
 
-        user.lastAssignedActivity = ev.action;
         user.ResetBusy();
 
         string anim = string.IsNullOrEmpty(ev.animation) ? ev.action : ev.animation;
         yield return StartCoroutine(user.SwitchActivity(anim));
 
-        user.lastAssignedActivity = "";
         yield return StartCoroutine(SetDeviceState("tv", "off"));
         if (virtualCameraBrain != null) virtualCameraBrain.SetTVState(false);
         yield return new WaitForSeconds(WAIT_BETWEEN_EPISODES);
@@ -609,6 +607,7 @@ public class ExperimentRunner : MonoBehaviour
     IEnumerator RunDemoScan()
     {
         yield return new WaitForSeconds(2.0f);
+        yield return StartCoroutine(SetDemoMode(true));
         yield return StartCoroutine(PostDemoScene(1, "User_Mom"));
         _demoMessage = "Mami is observing Mom...";
         userDad.gameObject.SetActive(false);
@@ -711,6 +710,7 @@ public class ExperimentRunner : MonoBehaviour
         yield return new WaitForSeconds(2.0f);
         if (demoCameraController != null)
             demoCameraController.SetActiveCamera("Cam_Overview", userMom);
+        yield return StartCoroutine(SetDemoMode(false));
         Debug.Log("[Demo] Complete.");
     }
 
@@ -729,14 +729,35 @@ public class ExperimentRunner : MonoBehaviour
                     + $"\"collection_suffix\":\"{collSuffix}\","
                     + $"\"db_name\":\"{dbName}\","
                     + $"\"system_mode\":\"{systemMode}\"}}";
-        using var req = new UnityWebRequest($"{BACKEND_URL}/start_experiment", "POST");
-        req.uploadHandler   = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(json));
-        req.downloadHandler = new DownloadHandlerBuffer();
-        req.SetRequestHeader("Content-Type", "application/json");
-        req.timeout = 5;
-        yield return req.SendWebRequest();
-        Debug.Log($"[ExperimentRunner] started: {expMode} system={systemMode} "
-                + $"db={dbName} suffix={collSuffix}");
+
+        int  maxRetries = 3;
+        bool success    = false;
+
+        for (int attempt = 0; attempt < maxRetries && !success; attempt++)
+        {
+            using var req = new UnityWebRequest($"{BACKEND_URL}/start_experiment", "POST");
+            req.uploadHandler   = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(json));
+            req.downloadHandler = new DownloadHandlerBuffer();
+            req.SetRequestHeader("Content-Type", "application/json");
+            req.timeout = 90;
+            yield return req.SendWebRequest();
+
+            if (req.result == UnityWebRequest.Result.Success)
+            {
+                success = true;
+                Debug.Log($"[ExperimentRunner] started: {expMode} system={systemMode} "
+                        + $"db={dbName} suffix={collSuffix}");
+            }
+            else
+            {
+                Debug.LogWarning($"[ExperimentRunner] start_experiment attempt {attempt+1} failed: {req.error}");
+                if (attempt < maxRetries - 1)
+                    yield return new WaitForSeconds(3f);
+            }
+        }
+
+        if (!success)
+            Debug.LogError($"[ExperimentRunner] start_experiment failed after {maxRetries} attempts, proceeding anyway");
     }
 
     IEnumerator PostExperimentDone(string expMode)
@@ -795,6 +816,21 @@ public class ExperimentRunner : MonoBehaviour
             waited += 2f;
         }
         Debug.LogWarning("[Demo] WaitForSceneDone timeout");
+    }
+
+    IEnumerator SetDemoMode(bool isDemo)
+    {
+        string json = "{\"is_demo\":" + (isDemo ? "true" : "false") + "}";
+        using var req = new UnityWebRequest($"{BACKEND_URL}/set_demo_mode", "POST");
+        req.uploadHandler   = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(json));
+        req.downloadHandler = new DownloadHandlerBuffer();
+        req.SetRequestHeader("Content-Type", "application/json");
+        req.timeout = 5;
+        yield return req.SendWebRequest();
+        if (req.result == UnityWebRequest.Result.Success)
+            Debug.Log($"[ExperimentRunner] Demo mode → {isDemo}");
+        else
+            Debug.LogWarning($"[ExperimentRunner] set_demo_mode failed: {req.error}");
     }
 
     IEnumerator SetDeviceState(string label, string state)
