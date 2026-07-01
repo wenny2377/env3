@@ -19,6 +19,6 @@ public static class JsonUtil
         "DadReading"     => "Reading",
         "DadCleaning"    => "Cleaning",
         "DadPhone"       => "UsingPhone",
-        _                => animOrAction,
+        _                => animOrAction
     };
 }

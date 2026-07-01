@@ -12208,8 +12208,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mode: 0
-  autoRunAll: 1
-  experimentType: 0
+  autoRunAll: 0
+  experimentType: 1
   userMom: {fileID: 1464156698}
   userDad: {fileID: 426001001}
   cameraManager: {fileID: 921712171}
@@ -14265,16 +14265,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6f6f0ee0b9f6d5e42b199b793f97cc04, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  backendURL: http://localhost:5000
-  pollInterval: 3
-  userID: User_Mom
-  proposalPanel: {fileID: 0}
-  questionText: {fileID: 0}
-  confidenceText: {fileID: 0}
-  userEntity: {fileID: 1464156698}
-  _hasPending: 0
-  _pendingProposalId: 
-  _pendingAction: 
 --- !u!1 &1976242705
 GameObject:
   m_ObjectHideFlags: 0

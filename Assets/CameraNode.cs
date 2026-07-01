@@ -25,30 +25,33 @@ public class CameraNode : MonoBehaviour
 
     void OnDrawGizmosSelected()
     {
-        float   halfRad = fieldOfView * 0.5f * Mathf.Deg2Rad;
-        float   len     = 4f;
-        Vector3 fwd     = transform.forward;
-        Vector3 right   = transform.right;
-        Vector3 up      = transform.up;
-        Vector3 origin  = transform.position;
+        float halfRad = fieldOfView * 0.5f * Mathf.Deg2Rad;
+        float len     = 4f;
+        Vector3 fwd   = transform.forward;
+        Vector3 right = transform.right;
+        Vector3 up    = transform.up;
 
-        Vector3 tl = origin + (fwd * Mathf.Cos(halfRad) + (-right + up).normalized * Mathf.Sin(halfRad)) * len;
-        Vector3 tr = origin + (fwd * Mathf.Cos(halfRad) + ( right + up).normalized * Mathf.Sin(halfRad)) * len;
-        Vector3 bl = origin + (fwd * Mathf.Cos(halfRad) + (-right - up).normalized * Mathf.Sin(halfRad)) * len;
-        Vector3 br = origin + (fwd * Mathf.Cos(halfRad) + ( right - up).normalized * Mathf.Sin(halfRad)) * len;
+        Vector3 tl = transform.position + (fwd * Mathf.Cos(halfRad) + (-right + up).normalized * Mathf.Sin(halfRad)) * len;
+        Vector3 tr = transform.position + (fwd * Mathf.Cos(halfRad) + ( right + up).normalized * Mathf.Sin(halfRad)) * len;
+        Vector3 bl = transform.position + (fwd * Mathf.Cos(halfRad) + (-right - up).normalized * Mathf.Sin(halfRad)) * len;
+        Vector3 br = transform.position + (fwd * Mathf.Cos(halfRad) + ( right - up).normalized * Mathf.Sin(halfRad)) * len;
 
         Gizmos.color = new Color(0f, 1f, 1f, 0.7f);
-        Gizmos.DrawLine(origin, tl); Gizmos.DrawLine(origin, tr);
-        Gizmos.DrawLine(origin, bl); Gizmos.DrawLine(origin, br);
-        Gizmos.DrawLine(tl, tr);    Gizmos.DrawLine(tr, br);
-        Gizmos.DrawLine(br, bl);    Gizmos.DrawLine(bl, tl);
+        Gizmos.DrawLine(transform.position, tl);
+        Gizmos.DrawLine(transform.position, tr);
+        Gizmos.DrawLine(transform.position, bl);
+        Gizmos.DrawLine(transform.position, br);
+        Gizmos.DrawLine(tl, tr);
+        Gizmos.DrawLine(tr, br);
+        Gizmos.DrawLine(br, bl);
+        Gizmos.DrawLine(bl, tl);
 
         Gizmos.color = Color.yellow;
-        Gizmos.DrawRay(origin, fwd * len);
+        Gizmos.DrawRay(transform.position, transform.forward * len);
 
 #if UNITY_EDITOR
         UnityEditor.Handles.Label(
-            origin + Vector3.up * 0.3f,
+            transform.position + Vector3.up * 0.3f,
             $"{nodeName}  FOV {fieldOfView}°\nscore {lastScore:F2}");
 #endif
     }

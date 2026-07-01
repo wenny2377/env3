@@ -5,8 +5,8 @@ using System.Text;
 public class SkeletonHelper : MonoBehaviour
 {
     Animator _anim;
-    bool     _noiseEnabled    = false;
-    float    _noiseStd        = 15f;
+    bool     _noiseEnabled  = false;
+    float    _noiseStd      = 15f;
     float    _cachedBodyHeight = -1f;
 
     readonly StringBuilder _sb = new StringBuilder(256);
@@ -20,7 +20,10 @@ public class SkeletonHelper : MonoBehaviour
             Debug.LogError("[SkeletonHelper] Animator is not Humanoid on " + gameObject.name);
     }
 
-    public void OnActivityChanged(string activity) => _cachedBodyHeight = -1f;
+    public void OnActivityChanged(string activity)
+    {
+        _cachedBodyHeight = -1f;
+    }
 
     public void SetSkeletonNoise(bool enabled, float std = 15f)
     {
@@ -36,10 +39,23 @@ public class SkeletonHelper : MonoBehaviour
         return (a.position + b.position) * 0.5f;
     }
 
-    float AngleBetween(Vector3 a, Vector3 b)
+    float Angle(Vector3 a, Vector3 b)
     {
         if (a.sqrMagnitude < 1e-6f || b.sqrMagnitude < 1e-6f) return -1f;
         return Vector3.Angle(a, b);
+    }
+
+    float BodyHeight()
+    {
+        if (_cachedBodyHeight > 0f) return _cachedBodyHeight;
+        var head   = Bone(HumanBodyBones.Head);
+        var lAnkle = Bone(HumanBodyBones.LeftFoot);
+        var rAnkle = Bone(HumanBodyBones.RightFoot);
+        if (head == null || lAnkle == null || rAnkle == null) return 1.7f;
+        float ankleY = (lAnkle.position.y + rAnkle.position.y) * 0.5f;
+        float h      = head.position.y - ankleY;
+        if (h > 0.3f) { _cachedBodyHeight = h; return _cachedBodyHeight; }
+        return 1.7f;
     }
 
     Vector3 BodyAxis()
@@ -53,20 +69,7 @@ public class SkeletonHelper : MonoBehaviour
         return Mid(lShoulder, rShoulder) - Mid(lHip, rHip);
     }
 
-    float BodyHeight()
-    {
-        if (_cachedBodyHeight > 0f) return _cachedBodyHeight;
-        var head   = Bone(HumanBodyBones.Head);
-        var lAnkle = Bone(HumanBodyBones.LeftFoot);
-        var rAnkle = Bone(HumanBodyBones.RightFoot);
-        if (head == null || lAnkle == null || rAnkle == null) return 1.7f;
-        float ankleY = (lAnkle.position.y + rAnkle.position.y) * 0.5f;
-        float h      = head.position.y - ankleY;
-        if (h > 0.3f) { _cachedBodyHeight = h; return h; }
-        return 1.7f;
-    }
-
-    public float BodyAxisAngle() => AngleBetween(BodyAxis(), Vector3.up);
+    public float BodyAxisAngle() => Angle(BodyAxis(), Vector3.up);
 
     public float HeadPitch()
     {
@@ -74,7 +77,7 @@ public class SkeletonHelper : MonoBehaviour
         var lShoulder = Bone(HumanBodyBones.LeftUpperArm);
         var rShoulder = Bone(HumanBodyBones.RightUpperArm);
         if (head == null || lShoulder == null || rShoulder == null) return -1f;
-        return AngleBetween(head.position - Mid(lShoulder, rShoulder), BodyAxis());
+        return Angle(head.position - Mid(lShoulder, rShoulder), BodyAxis());
     }
 
     public float HandToHead(bool useLeft)
@@ -97,11 +100,9 @@ public class SkeletonHelper : MonoBehaviour
         var rHip   = Bone(HumanBodyBones.RightUpperLeg);
         if (lKnee == null || rKnee == null || lAnkle == null ||
             rAnkle == null || lHip == null || rHip == null) return -1f;
-
         float lDenom = lHip.position.y - lAnkle.position.y;
         float rDenom = rHip.position.y - rAnkle.position.y;
         if (Mathf.Abs(lDenom) < 0.01f || Mathf.Abs(rDenom) < 0.01f) return -1f;
-
         float lRatio = (lKnee.position.y - lAnkle.position.y) / lDenom;
         float rRatio = (rKnee.position.y - rAnkle.position.y) / rDenom;
         return (lRatio + rRatio) * 0.5f;
@@ -109,10 +110,10 @@ public class SkeletonHelper : MonoBehaviour
 
     public float ArmElevation(bool useLeft)
     {
-        var shoulder = Bone(useLeft ? HumanBodyBones.LeftUpperArm  : HumanBodyBones.RightUpperArm);
-        var wrist    = Bone(useLeft ? HumanBodyBones.LeftHand       : HumanBodyBones.RightHand);
+        var shoulder = Bone(useLeft ? HumanBodyBones.LeftUpperArm : HumanBodyBones.RightUpperArm);
+        var wrist    = Bone(useLeft ? HumanBodyBones.LeftHand      : HumanBodyBones.RightHand);
         if (shoulder == null || wrist == null) return -1f;
-        return AngleBetween(wrist.position - shoulder.position, BodyAxis());
+        return Angle(wrist.position - shoulder.position, BodyAxis());
     }
 
     float MaybeNoise(float val, float std)
@@ -135,11 +136,11 @@ public class SkeletonHelper : MonoBehaviour
         float distStd  = _noiseStd * 0.003f;
         float ratioStd = _noiseStd * 0.001f;
 
-        float bodyAxis  = MaybeNoise(BodyAxisAngle(),     _noiseStd);
-        float headPitch = MaybeNoise(HeadPitch(),         _noiseStd);
-        float rH2h      = MaybeNoise(HandToHead(false),   distStd);
-        float lH2h      = MaybeNoise(HandToHead(true),    distStd);
-        float kneeHip   = MaybeNoise(KneeHipRatio(),      ratioStd);
+        float bodyAxis  = MaybeNoise(BodyAxisAngle(),    _noiseStd);
+        float headPitch = MaybeNoise(HeadPitch(),        _noiseStd);
+        float rH2h      = MaybeNoise(HandToHead(false),  distStd);
+        float lH2h      = MaybeNoise(HandToHead(true),   distStd);
+        float kneeHip   = MaybeNoise(KneeHipRatio(),     ratioStd);
         float rArm      = MaybeNoise(ArmElevation(false), _noiseStd);
         float lArm      = MaybeNoise(ArmElevation(true),  _noiseStd);
 

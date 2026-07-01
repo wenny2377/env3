@@ -26,14 +26,15 @@ public class RoomArea : MonoBehaviour
         _cachedNodes = BuildNodeList();
 
         if (_cachedNodes.Count == 0)
-            Debug.LogWarning($"[RoomArea] '{roomName}' — no CameraNodes found.");
+            Debug.LogWarning($"[RoomArea] '{roomName}' — no CameraNodes found. Check roomName matches exactly.");
         else
             Debug.Log($"[RoomArea] '{roomName}' — cached {_cachedNodes.Count} node(s).");
     }
 
     void OnTriggerEnter(Collider other)
     {
-        if (other.GetComponentInParent<UserEntity>() == null) return;
+        UserEntity user = other.GetComponentInParent<UserEntity>();
+        if (user == null) return;
 
         if (StaticCameraManager.Instance == null)
         {
@@ -43,7 +44,7 @@ public class RoomArea : MonoBehaviour
 
         if (_cachedNodes == null || _cachedNodes.Count == 0)
         {
-            Debug.LogWarning($"[RoomArea] '{roomName}' — no nodes to register.");
+            Debug.LogWarning($"[RoomArea] '{roomName}' — no nodes to register for {user.userID}.");
             return;
         }
 
