@@ -644,13 +644,13 @@ public class ExperimentRunner : MonoBehaviour
         userMom.SetAnim("Watching");
         if (demoCameraController != null)
             demoCameraController.SetActiveCamera("Cam_Overview", userMom);
-        yield return new WaitForSeconds(2.0f);
+        yield return new WaitForSeconds(1.0f);
         if (demoCameraController != null)
             demoCameraController.SetActiveCamera("Cam_TV", userMom);
-        yield return new WaitForSeconds(2.0f);
+        yield return new WaitForSeconds(1.5f);
         if (demoCameraController != null)
             demoCameraController.SetActiveCamera("Cam_Overview", userMom);
-        yield return new WaitForSeconds(2.0f);
+        yield return new WaitForSeconds(1.0f);
         yield return StartCoroutine(PostDemoScene(2, "User_Mom"));
         _demoMessage = "Mami detected behavior change...";
         if (demoMiniPCLight != null) demoMiniPCLight.SetActive(true);

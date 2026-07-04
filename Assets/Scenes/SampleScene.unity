@@ -12133,9 +12133,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ec3eec881a531a94ca3baa8e92f469d7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mode: 0
+  mode: 1
   autoRunAll: 0
-  experimentType: 1
+  experimentType: 0
   userMom: {fileID: 1464156698}
   userDad: {fileID: 426001001}
   cameraManager: {fileID: 921712171}
@@ -12193,6 +12193,7 @@ MonoBehaviour:
   dadSpot_LaySofa: {fileID: 566902054}
   dadSpot_LayBed: {fileID: 175477716}
   dadSpot_WatchSofa: {fileID: 278638933}
+  runOnStart: 1
 --- !u!1 &1738125032
 GameObject:
   m_ObjectHideFlags: 0
